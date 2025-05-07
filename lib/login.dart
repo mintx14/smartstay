@@ -4,7 +4,7 @@ import 'register.dart';
 import 'package:my_app/services/api_service.dart'; // Import the API service
 import 'package:my_app/models/user_model.dart'; // Import the User model
 // Import your home page
-import 'pages/home_page.dart';
+import 'pages/tenant/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -207,7 +207,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF190152),
+                            backgroundColor: const Color(0xFF190152),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
