@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 // Reservations Page
 class ReservationsPage extends StatelessWidget {
+  const ReservationsPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: PreferredSize(
+        appBar: const PreferredSize(
           preferredSize: Size.fromHeight(kToolbarHeight),
           child: Padding(
-            padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0),
+            padding: EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0),
             child: TabBar(
               tabs: [
                 Tab(text: 'Pending (3)'),
@@ -46,7 +48,7 @@ class ReservationsPage extends StatelessWidget {
         itemCount: count,
         itemBuilder: (context, index) {
           return Card(
-            margin: EdgeInsets.only(bottom: 16.0),
+            margin: const EdgeInsets.only(bottom: 16.0),
             elevation: 2.0,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -58,14 +60,14 @@ class ReservationsPage extends StatelessWidget {
                     children: [
                       Text(
                         'Reservation #${10023 + index}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16.0,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: statusColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -77,19 +79,19 @@ class ReservationsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   Row(
                     children: [
                       CircleAvatar(
                         child: Text('S${index + 1}'),
                       ),
-                      SizedBox(width: 12.0),
+                      const SizedBox(width: 12.0),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Student Name ${index + 1}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -104,9 +106,9 @@ class ReservationsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 12.0),
-                  Divider(),
-                  SizedBox(height: 8.0),
+                  const SizedBox(height: 12.0),
+                  const Divider(),
+                  const SizedBox(height: 8.0),
                   Row(
                     children: [
                       Expanded(
@@ -120,7 +122,7 @@ class ReservationsPage extends StatelessWidget {
                                 fontSize: 12.0,
                               ),
                             ),
-                            SizedBox(height: 4.0),
+                            const SizedBox(height: 4.0),
                             Text('Hostel ${index + 1}'),
                           ],
                         ),
@@ -136,14 +138,14 @@ class ReservationsPage extends StatelessWidget {
                                 fontSize: 12.0,
                               ),
                             ),
-                            SizedBox(height: 4.0),
+                            const SizedBox(height: 4.0),
                             Text('Room ${101 + index}'),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   Row(
                     children: [
                       Expanded(
@@ -157,7 +159,7 @@ class ReservationsPage extends StatelessWidget {
                                 fontSize: 12.0,
                               ),
                             ),
-                            SizedBox(height: 4.0),
+                            const SizedBox(height: 4.0),
                             Text('June ${10 + index}, 2025'),
                           ],
                         ),
@@ -173,14 +175,14 @@ class ReservationsPage extends StatelessWidget {
                                 fontSize: 12.0,
                               ),
                             ),
-                            SizedBox(height: 4.0),
+                            const SizedBox(height: 4.0),
                             Text('${6 + index} months'),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 16.0),
+                  const SizedBox(height: 16.0),
                   if (status == 'Pending')
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -189,21 +191,21 @@ class ReservationsPage extends StatelessWidget {
                           onPressed: () {
                             // Reject logic
                           },
-                          child: Text('Decline'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                           ),
+                          child: Text('Decline'),
                         ),
-                        SizedBox(width: 12.0),
+                        const SizedBox(width: 12.0),
                         ElevatedButton(
                           onPressed: () {
                             // Accept logic
                           },
-                          child: Text('Accept'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
                           ),
+                          child: Text('Accept'),
                         ),
                       ],
                     ),
@@ -215,10 +217,10 @@ class ReservationsPage extends StatelessWidget {
                           onPressed: () {
                             // Send message logic
                           },
-                          child: Text('Message Student'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.blue,
                           ),
+                          child: Text('Message Student'),
                         ),
                       ],
                     ),

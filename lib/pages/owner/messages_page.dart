@@ -5,6 +5,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -19,6 +21,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MessagesPage extends StatefulWidget {
+  const MessagesPage({super.key});
+
   @override
   _MessagesPageState createState() => _MessagesPageState();
 }
@@ -39,10 +43,10 @@ class _MessagesPageState extends State<MessagesPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Messages'),
+        title: const Text('Messages'),
         actions: [
           IconButton(
-            icon: Icon(Icons.edit_square),
+            icon: const Icon(Icons.edit_square),
             onPressed: () {},
             tooltip: 'New Message',
           ),
@@ -74,7 +78,7 @@ class _MessagesPageState extends State<MessagesPage> {
           ),
           filled: true,
           fillColor: Colors.grey[100],
-          contentPadding: EdgeInsets.symmetric(vertical: 0),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
         ),
       ),
     );
@@ -86,7 +90,7 @@ class _MessagesPageState extends State<MessagesPage> {
       itemBuilder: (context, index) {
         bool isSelected = index == _selectedIndex;
         return AnimatedContainer(
-          duration: Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 200),
           color: isSelected ? selectedChatColor : null,
           child: Material(
             color: Colors.transparent,
@@ -119,7 +123,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           backgroundColor: _getAvatarColor(index),
                           child: Text(
                             'S${index + 1}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
@@ -142,7 +146,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           ),
                       ],
                     ),
-                    SizedBox(width: 16.0),
+                    const SizedBox(width: 16.0),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,7 +164,7 @@ class _MessagesPageState extends State<MessagesPage> {
                                 ),
                               ),
                               Text(
-                                '${index == 0 ? 'Now' : '${index}h ago'}',
+                                index == 0 ? 'Now' : '${index}h ago',
                                 style: TextStyle(
                                   fontSize: 12.0,
                                   color: Colors.grey[600],
@@ -168,7 +172,7 @@ class _MessagesPageState extends State<MessagesPage> {
                               ),
                             ],
                           ),
-                          SizedBox(height: 4.0),
+                          const SizedBox(height: 4.0),
                           Row(
                             children: [
                               Expanded(
@@ -186,15 +190,15 @@ class _MessagesPageState extends State<MessagesPage> {
                               ),
                               if (index < 3)
                                 Container(
-                                  margin: EdgeInsets.only(left: 8.0),
-                                  padding: EdgeInsets.all(6.0),
+                                  margin: const EdgeInsets.only(left: 8.0),
+                                  padding: const EdgeInsets.all(6.0),
                                   decoration: BoxDecoration(
                                     color: primaryColor,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text(
                                     '${index + 1}',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10.0,
                                       fontWeight: FontWeight.bold,
@@ -234,7 +238,8 @@ class ChatScreen extends StatefulWidget {
   final int studentIndex;
   final Color avatarColor;
 
-  ChatScreen({required this.studentIndex, required this.avatarColor});
+  const ChatScreen(
+      {super.key, required this.studentIndex, required this.avatarColor});
 
   @override
   _ChatScreenState createState() => _ChatScreenState();
@@ -265,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   backgroundColor: widget.avatarColor,
                   child: Text(
                     'S${widget.studentIndex + 1}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
@@ -286,18 +291,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-            SizedBox(width: 12.0),
+            const SizedBox(width: 12.0),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Student ${widget.studentIndex + 1}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16.0,
                   ),
                 ),
-                Text(
+                const Text(
                   'Online',
                   style: TextStyle(
                     color: Colors.green,
@@ -310,17 +315,17 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.phone),
+            icon: const Icon(Icons.phone),
             onPressed: () {},
             tooltip: 'Call',
           ),
           IconButton(
-            icon: Icon(Icons.videocam),
+            icon: const Icon(Icons.videocam),
             onPressed: () {},
             tooltip: 'Video Call',
           ),
           IconButton(
-            icon: Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert),
             onPressed: () {},
             tooltip: 'More Options',
           ),
@@ -329,7 +334,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Container(
         decoration: BoxDecoration(
           color: backgroundColor,
-          image: DecorationImage(
+          image: const DecorationImage(
             image: AssetImage('assets/chat_bg.png'),
             opacity: 0.05,
             repeat: ImageRepeat.repeat,
@@ -351,7 +356,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessagesList() {
     return ListView(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
       reverse: true,
       controller: _scrollController,
       children: [
@@ -385,19 +390,19 @@ class _ChatScreenState extends State<ChatScreen> {
             radius: 16.0,
             backgroundColor: widget.avatarColor,
             child: Text('S${widget.studentIndex + 1}',
-                style: TextStyle(fontSize: 12.0, color: Colors.white)),
+                style: const TextStyle(fontSize: 12.0, color: Colors.white)),
           ),
-          SizedBox(width: 8.0),
+          const SizedBox(width: 8.0),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(18.0),
                       topRight: Radius.circular(18.0),
                       bottomRight: Radius.circular(18.0),
@@ -406,20 +411,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 3,
-                        offset: Offset(0, 1),
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
                   child: Text(
                     message,
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                   ),
                 ),
-                SizedBox(height: 4.0),
+                const SizedBox(height: 4.0),
                 Row(
                   children: [
                     Icon(Icons.check, size: 14.0, color: Colors.grey[400]),
-                    SizedBox(width: 4.0),
+                    const SizedBox(width: 4.0),
                     Text(
                       time,
                       style: TextStyle(
@@ -449,11 +454,11 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
                   decoration: BoxDecoration(
                     color: accentColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(18.0),
                       topRight: Radius.circular(18.0),
                       bottomLeft: Radius.circular(18.0),
@@ -462,16 +467,16 @@ class _ChatScreenState extends State<ChatScreen> {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 3,
-                        offset: Offset(0, 1),
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
                   child: Text(
                     message,
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                   ),
                 ),
-                SizedBox(height: 4.0),
+                const SizedBox(height: 4.0),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -482,7 +487,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         fontSize: 11.0,
                       ),
                     ),
-                    SizedBox(width: 4.0),
+                    const SizedBox(width: 4.0),
                     Icon(Icons.done_all, size: 14.0, color: accentColor),
                   ],
                 ),
@@ -496,14 +501,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       decoration: BoxDecoration(
         color: cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 5,
-            offset: Offset(0, -2),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -519,7 +524,7 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {},
             tooltip: 'Attachments',
           ),
-          SizedBox(width: 8.0),
+          const SizedBox(width: 8.0),
           Expanded(
             child: TextField(
               controller: _messageController,
@@ -532,7 +537,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 filled: true,
                 fillColor: Colors.grey[100],
-                contentPadding: EdgeInsets.symmetric(
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20.0,
                   vertical: 10.0,
                 ),
@@ -542,7 +547,7 @@ class _ChatScreenState extends State<ChatScreen> {
               onSubmitted: (_) => _sendMessage(),
             ),
           ),
-          SizedBox(width: 8.0),
+          const SizedBox(width: 8.0),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -555,12 +560,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 BoxShadow(
                   color: accentColor.withOpacity(0.3),
                   blurRadius: 8,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: IconButton(
-              icon: Icon(Icons.send, color: Colors.white),
+              icon: const Icon(Icons.send, color: Colors.white),
               onPressed: _sendMessage,
               tooltip: 'Send Message',
             ),
@@ -577,10 +582,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _messageController.clear();
 
       // Scroll to bottom of message list
-      Future.delayed(Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 100), () {
         _scrollController.animateTo(
           0.0,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       });

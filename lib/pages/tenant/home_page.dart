@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// Import your screen classes
+import 'favorites_page.dart';
+import 'map_page.dart';
+import 'messages_screen.dart';
+import 'profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   final User user;
@@ -49,6 +54,22 @@ class _HomePageState extends State<HomePage> {
     ),
   ];
 
+  // List of screens to be displayed based on the selected index
+  late List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the screens list
+    _screens = [
+      _buildExploreScreen(), // Your existing home/explore screen content
+      FavoritesPage(user: widget.user), // Pass user if needed
+      MapPage(user: widget.user),
+      MessagesScreen(), // Pass user if needed
+      ProfileScreen(user: widget.user), // Pass user if needed
+    ];
+  }
+
   // Logout function
   Future<void> _logout() async {
     // Show confirmation dialog
@@ -78,6 +99,44 @@ class _HomePageState extends State<HomePage> {
       // Navigate back to login page
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
+  }
+
+  // Create the explore screen (original home content)
+  Widget _buildExploreScreen() {
+    return Column(
+      children: [
+        // Search Bar
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: const TextField(
+              decoration: InputDecoration(
+                hintText: 'Search for student housing',
+                prefixIcon: Icon(Icons.search),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ),
+
+        // Property Listings
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: dummyListings.length,
+            itemBuilder: (context, index) {
+              final listing = dummyListings[index];
+              return RentalCard(listing: listing);
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -115,87 +174,8 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search for student housing',
-                    prefixIcon: Icon(Icons.search),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ),
-
-            // Categories
-            // SizedBox(
-            //   height: 80,
-            //   child: ListView(
-            //     scrollDirection: Axis.horizontal,
-            //     padding: EdgeInsets.symmetric(horizontal: 16),
-            //     children: [
-            //       _buildCategoryItem('Near Campus', Icons.school,
-            //           isSelected: true),
-            //       _buildCategoryItem('Shared', Icons.people),
-            //       _buildCategoryItem('Private', Icons.person),
-            //       _buildCategoryItem('Affordable', Icons.attach_money),
-            //       _buildCategoryItem('Furnished', Icons.chair),
-            //     ],
-            //   ),
-            // ),
-
-            // // Special banner for students
-            // Container(
-            //   padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            //   child: Row(
-            //     children: [
-            //       Container(
-            //         padding: EdgeInsets.all(4),
-            //         decoration: BoxDecoration(
-            //           color: Colors.blue[100],
-            //           borderRadius: BorderRadius.circular(4),
-            //         ),
-            //         child: Icon(Icons.school, color: Colors.blue),
-            //       ),
-            //       SizedBox(width: 8),
-            //       RichText(
-            //         text: TextSpan(
-            //           style: TextStyle(color: Colors.black),
-            //           children: [
-            //             TextSpan(text: 'Special rates for '),
-            //             TextSpan(
-            //               text: 'students',
-            //               style: TextStyle(fontWeight: FontWeight.bold),
-            //             ),
-            //           ],
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
-
-            // Property Listings
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: dummyListings.length,
-                itemBuilder: (context, index) {
-                  final listing = dummyListings[index];
-                  return RentalCard(listing: listing);
-                },
-              ),
-            ),
-          ],
-        ),
+        // Display the selected screen based on current index
+        child: _screens[_currentIndex],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
