@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/user_model.dart';
+import 'package:my_app/widgets/profile_menu_item.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User user;
@@ -20,14 +21,6 @@ class ProfileScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {
-              // Open settings
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -90,18 +83,13 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
 
-            // Profile sections
+            // Account section
             _buildSection(
               title: 'Account',
               items: [
                 ProfileMenuItem(
                   icon: Icons.person_outline,
                   title: 'Personal Information',
-                  onTap: () {},
-                ),
-                ProfileMenuItem(
-                  icon: Icons.school_outlined,
-                  title: 'Student Verification',
                   onTap: () {},
                 ),
                 ProfileMenuItem(
@@ -112,6 +100,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
 
+            // Housing section
             _buildSection(
               title: 'Housing',
               items: [
@@ -120,40 +109,16 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Rental History',
                   onTap: () {},
                 ),
-                ProfileMenuItem(
-                  icon: Icons.description_outlined,
-                  title: 'Applications',
-                  onTap: () {},
-                ),
-                ProfileMenuItem(
-                  icon: Icons.bookmark_border,
-                  title: 'Saved Searches',
-                  onTap: () {},
-                ),
               ],
             ),
 
+            // Support section
             _buildSection(
               title: 'Support',
               items: [
                 ProfileMenuItem(
                   icon: Icons.help_outline,
-                  title: 'Help Center',
-                  onTap: () {},
-                ),
-                ProfileMenuItem(
-                  icon: Icons.support_agent_outlined,
-                  title: 'Contact Support',
-                  onTap: () {},
-                ),
-                ProfileMenuItem(
-                  icon: Icons.privacy_tip_outlined,
-                  title: 'Privacy Policy',
-                  onTap: () {},
-                ),
-                ProfileMenuItem(
-                  icon: Icons.info_outline,
-                  title: 'About SmartStay',
+                  title: 'Help & Support',
                   onTap: () {},
                 ),
               ],
@@ -246,8 +211,7 @@ class ProfileScreen extends StatelessWidget {
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
               onPressed: () {
                 Navigator.of(context).pop();
-                // In production code, you would implement actual logout functionality here
-                // For this demo without login functionality, we'll just navigate back to home
+                // Handle logout
               },
             ),
           ],
@@ -255,16 +219,4 @@ class ProfileScreen extends StatelessWidget {
       },
     );
   }
-}
-
-class ProfileMenuItem {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap; // Change this line
-
-  ProfileMenuItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
 }
