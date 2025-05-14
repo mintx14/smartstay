@@ -3,8 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'register.dart';
 import 'package:my_app/services/api_service.dart'; // Import the API service
 import 'package:my_app/models/user_model.dart'; // Import the User model
-// Import your home page
-import 'pages/tenant/home_page.dart';
+// Import your pages
+import 'package:my_app/pages/tenant/home_page.dart';
+import 'package:my_app/pages/owner/owner_page.dart'; // Add this import
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -39,6 +40,26 @@ class _LoginPageState extends State<LoginPage> {
     await prefs.setBool('isLoggedIn', true);
   }
 
+  // Navigate based on user type
+  void _navigateBasedOnUserType(User user) {
+    // Check user type and navigate accordingly
+    if (user.userType.toLowerCase() == 'tenant') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomePage(user: user)),
+      );
+    } else if (user.userType.toLowerCase() == 'owner') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => OwnerPage(user: user)),
+      );
+    } else {
+      // Fallback for any other user type or if user type is not recognized
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Unknown user type. Please contact support.')),
+      );
+    }
+  }
+
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -67,10 +88,8 @@ class _LoginPageState extends State<LoginPage> {
             SnackBar(content: Text('Welcome back, ${user.fullName}!')),
           );
 
-          // Navigate to home page
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => HomePage(user: user)),
-          );
+          // Navigate based on user type
+          _navigateBasedOnUserType(user);
         } else {
           // Login failed
           ScaffoldMessenger.of(context).showSnackBar(
@@ -102,9 +121,6 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 // Logo or App Name
                 const Icon(
-                  // Icons.lock,
-                  // size: 80,
-                  // color: Color(0xFF190152),
                   Icons.home,
                   size: 100,
                   color: Color(0xFF190152),
