@@ -6,15 +6,15 @@ class RentalCard extends StatelessWidget {
   final Function()? onFavoriteToggle;
 
   const RentalCard({
-    Key? key,
+    super.key,
     required this.listing,
     this.onFavoriteToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -57,7 +57,7 @@ class RentalCard extends StatelessWidget {
                           children: [
                             Icon(Icons.error_outline,
                                 color: Colors.red[300], size: 40),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text("Couldn't load image",
                                 style: TextStyle(color: Colors.grey[600])),
                           ],
@@ -71,12 +71,13 @@ class RentalCard extends StatelessWidget {
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.thumb_up, color: Colors.blue, size: 16),
                       SizedBox(width: 4),
@@ -116,18 +117,18 @@ class RentalCard extends StatelessWidget {
                   children: [
                     Text(
                       listing.location,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                     Row(
                       children: [
-                        Icon(Icons.star, size: 16, color: Colors.amber),
-                        SizedBox(width: 4),
+                        const Icon(Icons.star, size: 16, color: Colors.amber),
+                        const SizedBox(width: 4),
                         Text(
                           listing.rating.toString(),
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -135,20 +136,21 @@ class RentalCard extends StatelessWidget {
                 ),
                 Text(
                   listing.propertyName,
-                  style: TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 14),
                 ),
                 Text(
                   listing.distance,
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 // Amenities
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: listing.amenities.map((amenity) {
                     return Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.blue[50],
                         borderRadius: BorderRadius.circular(12),
@@ -160,19 +162,19 @@ class RentalCard extends StatelessWidget {
                     );
                   }).toList(),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 RichText(
                   text: TextSpan(
-                    style: TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.black),
                     children: [
                       TextSpan(
                         text: '\$${listing.price} ',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      TextSpan(
+                      const TextSpan(
                         text: '/ month',
                         style: TextStyle(color: Colors.grey),
                       ),

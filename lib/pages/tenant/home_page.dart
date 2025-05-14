@@ -67,7 +67,7 @@ class _HomePageState extends State<HomePage> {
       _buildExploreScreen(), // Your existing home/explore screen content
       FavoritesPage(user: widget.user), // Pass user if needed
       MapPage(user: widget.user),
-      MessagesScreen(), // Pass user if needed
+      const MessagesScreen(), // Pass user if needed
       ProfileScreen(user: widget.user), // Pass user if needed
     ];
   }

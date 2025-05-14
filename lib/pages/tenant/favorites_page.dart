@@ -6,7 +6,7 @@ import 'package:my_app/widgets/rental_card.dart';
 class FavoritesPage extends StatefulWidget {
   final User user;
 
-  const FavoritesPage({Key? key, required this.user}) : super(key: key);
+  const FavoritesPage({super.key, required this.user});
 
   @override
   _FavoritesPageState createState() => _FavoritesPageState();
@@ -84,7 +84,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             size: 80,
             color: Colors.grey[400],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'No favorites yet',
             style: TextStyle(
@@ -93,7 +93,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               color: Colors.grey[700],
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Text(
@@ -104,22 +104,23 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
           ),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () {
               // Navigate to explore page through parent widget
               // This would be handled better with state management
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Go to Explore tab to view properties')),
+                const SnackBar(
+                    content: Text('Go to Explore tab to view properties')),
               );
             },
-            child: Text('Browse Properties'),
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            child: Text('Browse Properties'),
           ),
         ],
       ),
@@ -129,8 +130,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Widget _buildListView() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
+        const Padding(
+          padding: EdgeInsets.all(16.0),
           child: Row(
             children: [
               Icon(Icons.favorite, color: Colors.red),
@@ -147,7 +148,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         ),
         Expanded(
           child: ListView.builder(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             itemCount: favoriteListings.length,
             itemBuilder: (context, index) {
               return RentalCard(

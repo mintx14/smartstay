@@ -155,8 +155,8 @@ class AddListingPage extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 alignment: Alignment.center,
-                padding: EdgeInsets.symmetric(vertical: 15.0),
-                child: Text(
+                padding: const EdgeInsets.symmetric(vertical: 15.0),
+                child: const Text(
                   'Create Listing',
                   style: TextStyle(fontSize: 16.0),
                 ),

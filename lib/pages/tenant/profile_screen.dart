@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/widgets/profile_menu_item.dart';
+import 'package:my_app/pages/owner/personal_info_page.dart';
+import 'package:my_app/pages/owner/payment_methods_page.dart';
+import 'package:my_app/pages/owner/rental_history_page.dart';
+import 'package:my_app/pages/owner/help_support_page.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User user;
@@ -66,7 +71,8 @@ class ProfileScreen extends StatelessWidget {
                     // Edit profile button
                     ElevatedButton(
                       onPressed: () {
-                        // Navigate to edit profile
+                        // Navigate to edit profile page
+                        _navigateToEditProfile(context);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
@@ -90,12 +96,16 @@ class ProfileScreen extends StatelessWidget {
                 ProfileMenuItem(
                   icon: Icons.person_outline,
                   title: 'Personal Information',
-                  onTap: () {},
+                  onTap: () {
+                    _navigateToPersonalInfo(context);
+                  },
                 ),
                 ProfileMenuItem(
                   icon: Icons.payment_outlined,
                   title: 'Payment Methods',
-                  onTap: () {},
+                  onTap: () {
+                    _navigateToPaymentMethods(context);
+                  },
                 ),
               ],
             ),
@@ -107,7 +117,9 @@ class ProfileScreen extends StatelessWidget {
                 ProfileMenuItem(
                   icon: Icons.history_outlined,
                   title: 'Rental History',
-                  onTap: () {},
+                  onTap: () {
+                    _navigateToRentalHistory(context);
+                  },
                 ),
               ],
             ),
@@ -119,7 +131,9 @@ class ProfileScreen extends StatelessWidget {
                 ProfileMenuItem(
                   icon: Icons.help_outline,
                   title: 'Help & Support',
-                  onTap: () {},
+                  onTap: () {
+                    _navigateToHelpSupport(context);
+                  },
                 ),
               ],
             ),
@@ -193,6 +207,53 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  // Navigate to Edit Profile page
+  void _navigateToEditProfile(BuildContext context) {
+    // Navigate to personal info which doubles as edit profile
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PersonalInfoPage(user: user),
+      ),
+    );
+  }
+
+  // Navigate to Personal Information page
+  void _navigateToPersonalInfo(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PersonalInfoPage(user: user),
+      ),
+    );
+  }
+
+  // Navigate to Payment Methods page
+  void _navigateToPaymentMethods(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const PaymentMethodsPage(),
+      ),
+    );
+  }
+
+  // Navigate to Rental History page
+  void _navigateToRentalHistory(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const RentalHistoryPage(),
+      ),
+    );
+  }
+
+  // Navigate to Help & Support page
+  void _navigateToHelpSupport(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const HelpSupportPage(),
+      ),
+    );
+  }
+
+  // Show logout dialog and handle logout action
   Future<void> _showLogoutDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
@@ -210,13 +271,58 @@ class ProfileScreen extends StatelessWidget {
             TextButton(
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
               onPressed: () {
-                Navigator.of(context).pop();
-                // Handle logout
+                // Handle logout process
+                _handleLogout(context);
               },
             ),
           ],
         );
       },
     );
+  }
+
+  // Handle the logout process
+  void _handleLogout(BuildContext context) {
+    // Close the dialog
+    Navigator.of(context).pop();
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF190152)),
+          ),
+        );
+      },
+    );
+
+    // Simulate logout process with a delay
+    Future.delayed(const Duration(seconds: 2), () {
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Navigate to login screen (replace with your actual navigation)
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const Scaffold(
+            body: Center(
+              child: Text('Login Screen'),
+            ),
+          ),
+        ),
+        (route) => false, // This clears the navigation stack
+      );
+
+      // Optional: Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Successfully logged out'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    });
   }
 }

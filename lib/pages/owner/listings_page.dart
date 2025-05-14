@@ -24,7 +24,8 @@ class ListingsPage extends StatelessWidget {
                     // Navigate to add new listing page
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => AddListingPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const AddListingPage()),
                     );
                   },
                   icon: const Icon(Icons.add),

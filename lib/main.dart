@@ -81,9 +81,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (isLoggedIn) {
       // Get saved user info
-      final userId = prefs.getInt('userId') ?? 0;
+      final userId = prefs.getString('userId') ?? '';
       final fullName = prefs.getString('fullName') ?? '';
       final email = prefs.getString('email') ?? '';
+      final phoneNum = prefs.getString('phoneNum') ?? '';
       final userType = prefs.getString('userType') ?? '';
 
       // Create user object
@@ -91,6 +92,7 @@ class _SplashScreenState extends State<SplashScreen> {
         id: userId,
         fullName: fullName,
         email: email,
+        phoneNumber: phoneNum,
         userType: userType,
       );
 

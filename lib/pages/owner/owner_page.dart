@@ -28,9 +28,9 @@ class _OwnerPageState extends State<OwnerPage> {
     // Initialize the screens list
     _screens = [
       _buildDashboardScreen(), // Your main dashboard screen
-      ListingsPage(),
-      ReservationsPage(),
-      MessagesPage(),
+      const ListingsPage(),
+      const ReservationsPage(),
+      const MessagesPage(),
       ProfilePage(user: widget.user), // Pass user data to profile page
     ];
   }
