@@ -275,7 +275,7 @@ class _MapPageState extends State<MapPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text('View Details'),
+                  child: const Text('View Details'),
                 ),
               ),
             ],
@@ -336,7 +336,7 @@ class _MapPageState extends State<MapPage> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: Text('Reset'),
+                      child: const Text('Reset'),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -348,7 +348,7 @@ class _MapPageState extends State<MapPage> {
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: Text('Apply Filters'),
+                      child: const Text('Apply Filters'),
                     ),
                   ),
                 ],

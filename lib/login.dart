@@ -33,7 +33,8 @@ class _LoginPageState extends State<LoginPage> {
   // Save user session data
   Future<void> _saveUserSession(User user) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userId', user.id);
+    // await prefs.setString('userId', user.id);
+    await prefs.setString('user_id', user.id);
     await prefs.setString('fullName', user.fullName);
     await prefs.setString('email', user.email);
     await prefs.setString('userType', user.userType);

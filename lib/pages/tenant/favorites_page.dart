@@ -120,7 +120,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text('Browse Properties'),
+            child: const Text('Browse Properties'),
           ),
         ],
       ),
