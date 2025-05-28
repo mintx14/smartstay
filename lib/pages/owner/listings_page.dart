@@ -29,12 +29,6 @@ class _ListingsPageState extends State<ListingsPage> {
     _checkConnectionAndLoadListings();
   }
 
-  @override
-  void dispose() {
-    _databaseService.dispose();
-    super.dispose();
-  }
-
   Future<void> _checkConnectionAndLoadListings() async {
     try {
       setState(() {
@@ -129,148 +123,27 @@ class _ListingsPageState extends State<ListingsPage> {
     }
   }
 
-  Widget _buildImageGrid(List<String> imageUrls) {
-    print('Building image grid with ${imageUrls.length} URLs');
-
-    // Ensure we have exactly 4 slots, fill with placeholders if needed
-    List<String?> displayImages = List.filled(4, null);
-
-    for (int i = 0; i < 4 && i < imageUrls.length; i++) {
-      displayImages[i] = imageUrls[i];
-      print('Display image $i: ${displayImages[i]}');
+  // New inline image slider widget
+  Widget _buildInlineImageSlider(List<String> imageUrls, String title) {
+    if (imageUrls.isEmpty) {
+      return Container(
+        height: 200,
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(4),
+            topRight: Radius.circular(4),
+          ),
+        ),
+        child: _buildPlaceholder(true, 'No Images'),
+      );
     }
 
-    return Container(
+    return SizedBox(
+      // Changed from Container to SizedBox
       height: 200,
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(4),
-          topRight: Radius.circular(4),
-        ),
-      ),
-      child: Stack(
-        children: [
-          Row(
-            children: [
-              // Large image on the left (takes 2/3 of width)
-              Expanded(
-                flex: 2,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                    ),
-                    child: _buildNetworkImage(displayImages[0], isLarge: true),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              // Column of 3 smaller images on the right (takes 1/3 of width)
-              Expanded(
-                flex: 1,
-                child: Column(
-                  children: [
-                    // Top right image
-                    Expanded(
-                      child: Container(
-                        width: double.infinity,
-                        decoration: const BoxDecoration(
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(4),
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(4),
-                          ),
-                          child: _buildNetworkImage(displayImages[1]),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    // Middle right image
-                    Expanded(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ClipRRect(
-                          child: _buildNetworkImage(displayImages[2]),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    // Bottom right image
-                    Expanded(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ClipRRect(
-                          child: _buildNetworkImage(displayImages[3]),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // Optional: Add image count indicator for additional images
-          if (imageUrls.length > 4)
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '+${imageUrls.length - 4}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          // Photo count indicator
-          Positioned(
-            bottom: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.photo_library,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${imageUrls.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+      child: InlineImageSlider(
+        imageUrls: imageUrls,
+        title: title,
       ),
     );
   }
@@ -460,15 +333,9 @@ class _ListingsPageState extends State<ListingsPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        // Updated image grid layout
-                                        GestureDetector(
-                                          onTap: () {
-                                            // Optional: Add image gallery view
-                                            _showImageDebugInfo(listing);
-                                          },
-                                          child: _buildImageGrid(
-                                              listing.imageUrls),
-                                        ),
+                                        // Updated to use inline image slider
+                                        _buildInlineImageSlider(
+                                            listing.imageUrls, listing.title),
                                         Padding(
                                           padding: const EdgeInsets.all(12),
                                           child: Column(
@@ -664,37 +531,464 @@ class _ListingsPageState extends State<ListingsPage> {
       ),
     );
   }
+}
 
-  void _showImageDebugInfo(Listing listing) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Debug: ${listing.title}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+// New Inline Image Slider Widget
+
+// Hybrid Grid + Individual Image Slider Widget
+class InlineImageSlider extends StatefulWidget {
+  final List<String> imageUrls;
+  final String title;
+
+  const InlineImageSlider({
+    super.key,
+    required this.imageUrls,
+    required this.title,
+  });
+
+  @override
+  State<InlineImageSlider> createState() => _InlineImageSliderState();
+}
+
+class _InlineImageSliderState extends State<InlineImageSlider> {
+  late PageController _pageController;
+  int _currentIndex = 0;
+  late int _totalSlides;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    // Total slides = 1 (grid view) + individual images
+    _totalSlides =
+        widget.imageUrls.length > 0 ? widget.imageUrls.length + 1 : 0;
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildNetworkImage(String imageUrl, {bool isGridItem = false}) {
+    // Handle empty or null URLs for grid placeholders
+    if (imageUrl.isEmpty) {
+      return _buildPlaceholder(isGridItem);
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+              strokeWidth: isGridItem ? 1 : 2,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return _buildPlaceholder(isGridItem, isError: true);
+      },
+    );
+  }
+
+  Widget _buildPlaceholder(bool isGridItem, {bool isError = false}) {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Image URLs (${listing.imageUrls.length}):'),
-            const SizedBox(height: 8),
-            ...listing.imageUrls.asMap().entries.map((entry) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  '${entry.key + 1}. ${entry.value}',
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            Icon(
+              isError ? Icons.error_outline : Icons.image_outlined,
+              size: isGridItem ? 20 : 40,
+              color: isError ? Colors.red[400] : Colors.grey[400],
+            ),
+            if (!isGridItem) ...[
+              const SizedBox(height: 4),
+              Text(
+                isError ? 'Load Failed' : 'No Image',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isError ? Colors.red[400] : Colors.grey[600],
                 ),
-              );
-            }),
-            if (listing.imageUrls.isEmpty)
-              const Text('No image URLs found',
-                  style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      ),
+    );
+  }
+
+  Widget _buildGridView() {
+    print('Building image grid with ${widget.imageUrls.length} URLs');
+
+    // Ensure we have exactly 4 slots, fill with placeholders if needed
+    List<String?> displayImages = List.filled(4, null);
+
+    for (int i = 0; i < 4 && i < widget.imageUrls.length; i++) {
+      displayImages[i] = widget.imageUrls[i];
+      print('Display image $i: ${displayImages[i]}');
+    }
+
+    return Stack(
+      children: [
+        Row(
+          children: [
+            // Large image on the left (takes 2/3 of width)
+            Expanded(
+              flex: 2,
+              child: GestureDetector(
+                onTap: () {
+                  // Navigate to image 1 (index 1 in PageView since 0 is grid)
+                  _pageController.animateToPage(
+                    1,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.ease,
+                  );
+                },
+                child: Container(
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                    ),
+                    child: _buildNetworkImage(displayImages[0] ?? '',
+                        isGridItem: true),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
+            // Column of 3 smaller images on the right (takes 1/3 of width)
+            Expanded(
+              flex: 1,
+              child: Column(
+                children: [
+                  // Top right image
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to image 2 (index 2 in PageView)
+                        _pageController.animateToPage(
+                          2,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.ease,
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(4),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(4),
+                          ),
+                          child: _buildNetworkImage(displayImages[1] ?? '',
+                              isGridItem: true),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Middle right image
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to image 3 (index 3 in PageView)
+                        _pageController.animateToPage(
+                          3,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.ease,
+                        );
+                      },
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ClipRRect(
+                          child: _buildNetworkImage(displayImages[2] ?? '',
+                              isGridItem: true),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Bottom right image with potential overlay
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to image 4 (index 4 in PageView) or show more images
+                        _pageController.animateToPage(
+                          4,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.ease,
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ClipRRect(
+                              child: _buildNetworkImage(displayImages[3] ?? '',
+                                  isGridItem: true),
+                            ),
+                          ),
+                          // Show "+X more" overlay on the bottom right image if there are more than 4 images
+                          if (widget.imageUrls.length > 4)
+                            Container(
+                              width: double.infinity,
+                              color: Colors.black.withOpacity(0.6),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.photo_library,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '+${widget.imageUrls.length - 4}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        // Photo count indicator
+        Positioned(
+          bottom: 8,
+          left: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.photo_library,
+                  color: Colors.white,
+                  size: 14,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.imageUrls.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ],
+    );
+  }
+
+  String _getSlideIndicatorText() {
+    if (_currentIndex == 0) {
+      return 'Grid View';
+    } else {
+      return '${_currentIndex}/${widget.imageUrls.length}';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.imageUrls.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.image_outlined,
+                size: 40,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'No Images',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // If only one image, show it directly without slider
+    if (widget.imageUrls.length == 1) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(4),
+          topRight: Radius.circular(4),
+        ),
+        child: _buildNetworkImage(widget.imageUrls[0]),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(4),
+        topRight: Radius.circular(4),
+      ),
+      child: Stack(
+        children: [
+          // Main slider
+          SizedBox(
+            height: double.infinity,
+            width: double.infinity,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemCount: _totalSlides,
+              allowImplicitScrolling: true,
+              pageSnapping: true,
+              physics: const PageScrollPhysics(),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  // First slide: Grid view
+                  return _buildGridView();
+                } else {
+                  // Individual image slides
+                  final imageIndex = index - 1;
+                  return _buildNetworkImage(widget.imageUrls[imageIndex]);
+                }
+              },
+            ),
+          ),
+
+          // Page indicators (dots)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                _totalSlides,
+                (index) => Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentIndex == index
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Slide indicator
+          Positioned(
+            top: 8,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _currentIndex == 0 ? Icons.grid_view : Icons.photo_library,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _getSlideIndicatorText(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Navigation hint for the first slide
+          if (_currentIndex == 0 && widget.imageUrls.length > 1)
+            Positioned(
+              bottom: 40,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Swipe for individual photos',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.swipe,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -31,14 +31,11 @@ class DatabaseService {
 
   // Test server connection
   Future<bool> testConnection() async {
+    print("Testing server connection...");
     try {
-      final response = await _client
-          .get(
-            Uri.parse('$baseUrl/test_connection.php'),
-            headers: _getHeaders(),
-          )
-          .timeout(_timeout);
-
+      final response = await http
+          .get(Uri.parse('http://10.0.2.2/smartstay/test_connection.php'));
+      print('Server response: ${response.body}');
       return response.statusCode == 200;
     } catch (e) {
       print('Connection test failed: $e');
@@ -75,12 +72,12 @@ class DatabaseService {
         }
 
         // Check file size (limit to 5MB)
-        if (fileSize > 5 * 1024 * 1024) {
-          throw Exception('File too large (max 5MB): $filePath');
-        }
+        // if (fileSize > 5 * 1024 * 1024) {
+        //   throw Exception('File too large (max 5MB): $filePath');
+        // }
 
         final fileName = basename(file.path);
-        print('Uploading image: $fileName (${fileSize} bytes)');
+        print('Uploading image: $fileName ($fileSize bytes)');
 
         var request = http.MultipartRequest(
           'POST',
@@ -289,8 +286,8 @@ class DatabaseService {
     }
   }
 
-  // Clean up resources
-  void dispose() {
-    _client.close();
-  }
+  // // Clean up resources
+  // void dispose() {
+  //   _client.close();
+  // }
 }
