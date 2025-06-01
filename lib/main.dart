@@ -4,30 +4,37 @@ import 'login.dart';
 import 'register.dart';
 import 'package:my_app/pages/tenant/home_page.dart';
 import 'package:my_app/models/user_model.dart';
-// Make sure the path is correct
 
-// void main() {
-//   runApp(const MyApp());
-// }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
 
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
+  // Check login status
+  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       debugShowCheckedModeBanner: false,
-//       home: OwnerPage(), // ← Directly loads your OwnerPage
-//     );
-//   }
-// }
+  // Create user if logged in
+  User? user;
+  if (isLoggedIn) {
+    user = User(
+      id: prefs.getString('userId') ?? '',
+      fullName: prefs.getString('fullName') ?? '',
+      email: prefs.getString('email') ?? '',
+      phoneNumber: prefs.getString('phoneNum') ?? '',
+      userType: prefs.getString('userType') ?? '',
+    );
+  }
 
-void main() {
-  runApp(const MyApp());
+  runApp(MyApp(
+    isLoggedIn: isLoggedIn,
+    user: user,
+  ));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  final User? user;
+
+  const MyApp({super.key, required this.isLoggedIn, this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -48,9 +55,10 @@ class MyApp extends StatelessWidget {
               const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         ),
       ),
-      initialRoute: '/',
+      home: isLoggedIn
+          ? HomePage(user: user!)
+          : const SplashScreen(), // You can remove SplashScreen if unnecessary
       routes: {
-        '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
       },
@@ -58,56 +66,15 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
-  }
-
-  Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
-    // Delay for a splash screen effect
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (isLoggedIn) {
-      // Get saved user info
-      final userId = prefs.getString('userId') ?? '';
-      final fullName = prefs.getString('fullName') ?? '';
-      final email = prefs.getString('email') ?? '';
-      final phoneNum = prefs.getString('phoneNum') ?? '';
-      final userType = prefs.getString('userType') ?? '';
-
-      // Create user object
-      final user = User(
-        id: userId,
-        fullName: fullName,
-        email: email,
-        phoneNumber: phoneNum,
-        userType: userType,
-      );
-
-      // Navigate to home page
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomePage(user: user)),
-      );
-    } else {
-      // Navigate to login page
-      Navigator.of(context).pushReplacementNamed('/login');
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.of(context).pushReplacementNamed('/login');
+    });
+
     return const Scaffold(
       backgroundColor: Color(0xFF190152),
       body: Center(

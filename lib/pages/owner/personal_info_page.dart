@@ -413,21 +413,21 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     );
   }
 
-  Widget _buildRadioTile(String title, String value) {
-    return RadioListTile<String>(
-      title: Text(title),
-      value: value,
-      groupValue: _userType,
-      activeColor: const Color(0xFF190152),
-      onChanged: (String? newValue) {
-        if (newValue != null) {
-          setState(() {
-            _userType = newValue;
-          });
-        }
-      },
-    );
-  }
+  // Widget _buildRadioTile(String title, String value) {
+  //   return RadioListTile<String>(
+  //     title: Text(title),
+  //     value: value,
+  //     groupValue: _userType,
+  //     activeColor: const Color(0xFF190152),
+  //     onChanged: (String? newValue) {
+  //       if (newValue != null) {
+  //         setState(() {
+  //           _userType = newValue;
+  //         });
+  //       }
+  //     },
+  //   );
+  // }
 
   IconData _userTypeIcon() {
     switch (_userType) {

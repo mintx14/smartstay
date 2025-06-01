@@ -30,10 +30,8 @@ class _AddListingPageState extends State<AddListingPage> {
 
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
-    if (images != null) {
-      setState(() =>
-          _selectedImages.addAll(images.map((image) => File(image.path))));
-    }
+    setState(
+        () => _selectedImages.addAll(images.map((image) => File(image.path))));
   }
 
   Future<void> _submitForm() async {
