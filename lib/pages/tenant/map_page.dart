@@ -4,7 +4,7 @@ import 'package:my_app/models/user_model.dart';
 class MapPage extends StatefulWidget {
   final User user;
 
-  const MapPage({Key? key, required this.user}) : super(key: key);
+  const MapPage({super.key, required this.user});
 
   @override
   _MapPageState createState() => _MapPageState();
@@ -65,7 +65,7 @@ class _MapPageState extends State<MapPage> {
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: TextField(
+                  child: const TextField(
                     decoration: InputDecoration(
                       hintText: 'Search this area',
                       prefixIcon: Icon(Icons.search),
@@ -75,7 +75,7 @@ class _MapPageState extends State<MapPage> {
                   ),
                 ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               // Toggle between map and list view
               Container(
                 decoration: BoxDecoration(
@@ -88,14 +88,15 @@ class _MapPageState extends State<MapPage> {
                   fillColor: Colors.blue,
                   selectedColor: Colors.white,
                   color: Colors.grey[600],
-                  constraints: BoxConstraints(minWidth: 40, minHeight: 40),
+                  constraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 40),
                   isSelected: [_isMapView, !_isMapView],
                   onPressed: (index) {
                     setState(() {
                       _isMapView = index == 0;
                     });
                   },
-                  children: [
+                  children: const [
                     Icon(Icons.map),
                     Icon(Icons.list),
                   ],
@@ -140,14 +141,14 @@ class _MapPageState extends State<MapPage> {
                 _showPropertyDetails(property);
               },
               child: Container(
-                padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                 decoration: BoxDecoration(
                   color: Colors.blue,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   property['price'],
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -156,7 +157,7 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           );
-        }).toList(),
+        }),
 
         // Filter button
         Positioned(
@@ -168,7 +169,7 @@ class _MapPageState extends State<MapPage> {
               _showFilterOptions();
             },
             backgroundColor: Colors.white,
-            child: Icon(Icons.filter_list, color: Colors.blue),
+            child: const Icon(Icons.filter_list, color: Colors.blue),
           ),
         ),
       ],
@@ -184,13 +185,13 @@ class _MapPageState extends State<MapPage> {
         return ListTile(
           leading: CircleAvatar(
             backgroundColor: Colors.blue[100],
-            child: Icon(Icons.home, color: Colors.blue),
+            child: const Icon(Icons.home, color: Colors.blue),
           ),
           title: Text(property['name']),
           subtitle: Text(property['distance']),
           trailing: Text(
             property['price'],
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.blue,
             ),
@@ -206,61 +207,61 @@ class _MapPageState extends State<MapPage> {
   void _showPropertyDetails(Map<String, dynamic> property) {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
         return Container(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 property['name'],
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  SizedBox(width: 4),
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
                   Text(property['distance']),
                 ],
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.attach_money, size: 16, color: Colors.grey),
-                  SizedBox(width: 4),
+                  const Icon(Icons.attach_money, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
                   Text(property['price']),
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   TextButton.icon(
                     onPressed: () {},
-                    icon: Icon(Icons.favorite_border),
-                    label: Text('Save'),
+                    icon: const Icon(Icons.favorite_border),
+                    label: const Text('Save'),
                   ),
                   TextButton.icon(
                     onPressed: () {},
-                    icon: Icon(Icons.directions),
-                    label: Text('Directions'),
+                    icon: const Icon(Icons.directions),
+                    label: const Text('Directions'),
                   ),
                   TextButton.icon(
                     onPressed: () {},
-                    icon: Icon(Icons.share),
-                    label: Text('Share'),
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share'),
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -268,13 +269,13 @@ class _MapPageState extends State<MapPage> {
                     Navigator.pop(context);
                     // In a real app, navigate to property details page
                   },
-                  child: Text('View Details'),
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
+                  child: const Text('View Details'),
                 ),
               ),
             ],
@@ -287,34 +288,34 @@ class _MapPageState extends State<MapPage> {
   void _showFilterOptions() {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
         return Container(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              const Text(
                 'Filter Properties',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 16),
-              Text('Price Range'),
+              const SizedBox(height: 16),
+              const Text('Price Range'),
               RangeSlider(
-                values: RangeValues(350, 550),
+                values: const RangeValues(350, 550),
                 min: 300,
                 max: 700,
                 divisions: 8,
-                labels: RangeLabels('\$350', '\$550'),
+                labels: const RangeLabels('\$350', '\$550'),
                 onChanged: (RangeValues values) {},
               ),
-              Text('Distance from Campus'),
+              const Text('Distance from Campus'),
               Slider(
                 value: 1.5,
                 min: 0.1,
@@ -323,7 +324,7 @@ class _MapPageState extends State<MapPage> {
                 label: '1.5 miles',
                 onChanged: (double value) {},
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -332,22 +333,22 @@ class _MapPageState extends State<MapPage> {
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      child: Text('Reset'),
                       style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
+                      child: const Text('Reset'),
                     ),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      child: Text('Apply Filters'),
                       style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
+                      child: const Text('Apply Filters'),
                     ),
                   ),
                 ],

@@ -194,7 +194,7 @@ class ReservationsPage extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                           ),
-                          child: Text('Decline'),
+                          child: const Text('Decline'),
                         ),
                         const SizedBox(width: 12.0),
                         ElevatedButton(
@@ -205,7 +205,7 @@ class ReservationsPage extends StatelessWidget {
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
                           ),
-                          child: Text('Accept'),
+                          child: const Text('Accept'),
                         ),
                       ],
                     ),
@@ -220,7 +220,7 @@ class ReservationsPage extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.blue,
                           ),
-                          child: Text('Message Student'),
+                          child: const Text('Message Student'),
                         ),
                       ],
                     ),

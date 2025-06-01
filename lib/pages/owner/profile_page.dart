@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/widgets/profile_menu_item.dart';
+import 'package:my_app/pages/owner/personal_info_page.dart';
+import 'package:my_app/pages/owner/payment_methods_page.dart';
+import 'package:my_app/pages/owner/rental_history_page.dart';
+import 'package:my_app/pages/owner/help_support_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final User user;
@@ -204,19 +209,10 @@ class ProfilePage extends StatelessWidget {
 
   // Navigate to Edit Profile page
   void _navigateToEditProfile(BuildContext context) {
-    // You would replace this with your actual navigation logic
+    // Navigate to personal info which doubles as edit profile
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Edit Profile'),
-            backgroundColor: const Color(0xFF190152),
-            foregroundColor: Colors.white,
-          ),
-          body: const Center(
-            child: Text('Edit Profile Page Content'),
-          ),
-        ),
+        builder: (context) => PersonalInfoPage(user: user),
       ),
     );
   }
@@ -225,16 +221,7 @@ class ProfilePage extends StatelessWidget {
   void _navigateToPersonalInfo(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Personal Information'),
-            backgroundColor: const Color(0xFF190152),
-            foregroundColor: Colors.white,
-          ),
-          body: const Center(
-            child: Text('Personal Information Page Content'),
-          ),
-        ),
+        builder: (context) => PersonalInfoPage(user: user),
       ),
     );
   }
@@ -243,16 +230,7 @@ class ProfilePage extends StatelessWidget {
   void _navigateToPaymentMethods(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Payment Methods'),
-            backgroundColor: const Color(0xFF190152),
-            foregroundColor: Colors.white,
-          ),
-          body: const Center(
-            child: Text('Payment Methods Page Content'),
-          ),
-        ),
+        builder: (context) => const PaymentMethodsPage(),
       ),
     );
   }
@@ -261,16 +239,7 @@ class ProfilePage extends StatelessWidget {
   void _navigateToRentalHistory(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Rental History'),
-            backgroundColor: const Color(0xFF190152),
-            foregroundColor: Colors.white,
-          ),
-          body: const Center(
-            child: Text('Rental History Page Content'),
-          ),
-        ),
+        builder: (context) => const RentalHistoryPage(),
       ),
     );
   }
@@ -279,16 +248,7 @@ class ProfilePage extends StatelessWidget {
   void _navigateToHelpSupport(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Help & Support'),
-            backgroundColor: const Color(0xFF190152),
-            foregroundColor: Colors.white,
-          ),
-          body: const Center(
-            child: Text('Help & Support Page Content'),
-          ),
-        ),
+        builder: (context) => const HelpSupportPage(),
       ),
     );
   }

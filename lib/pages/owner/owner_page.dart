@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dashboard_page.dart';
 import 'listings_page.dart';
 import 'reservations_page.dart';
 import 'messages_page.dart';
 import 'profile_page.dart';
+import 'add_listing_page.dart';
 
 class OwnerPage extends StatefulWidget {
   final User user;
@@ -28,9 +28,9 @@ class _OwnerPageState extends State<OwnerPage> {
     // Initialize the screens list
     _screens = [
       _buildDashboardScreen(), // Your main dashboard screen
-      ListingsPage(),
-      ReservationsPage(),
-      MessagesPage(),
+      const ListingsPage(),
+      const ReservationsPage(),
+      const MessagesPage(),
       ProfilePage(user: widget.user), // Pass user data to profile page
     ];
   }
@@ -110,9 +110,9 @@ class _OwnerPageState extends State<OwnerPage> {
                         _currentIndex = 1; // Switch to Listings tab
                       });
                       // You could also navigate to a specific add listing page
-                      // Navigator.of(context).push(MaterialPageRoute(
-                      //   builder: (context) => AddListingPage(),
-                      // ));
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => const AddListingPage(),
+                      ));
                     },
                   ),
                   const SizedBox(width: 12),
