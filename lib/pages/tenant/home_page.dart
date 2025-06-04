@@ -4,8 +4,6 @@ import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 // Import your screen classes
 import 'favorites_page.dart';
 import 'map_page.dart';
@@ -35,6 +33,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String? _errorMessage;
   final List<String> _debugLog = [];
 
+  // Favorites management
+  Set<String> _favoriteIds = {};
+
   // Search and filter variables
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -42,6 +43,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Animation controllers
   late AnimationController _animationController;
   late AnimationController _searchAnimationController;
+  late AnimationController _heartAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
@@ -49,6 +51,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _initializeAnimations();
+    _loadFavoriteIds();
     _loadInitialData();
   }
 
@@ -60,6 +63,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     _searchAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _heartAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
@@ -85,7 +93,73 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _searchController.dispose();
     _animationController.dispose();
     _searchAnimationController.dispose();
+    _heartAnimationController.dispose();
     super.dispose();
+  }
+
+  // Load favorite IDs from SharedPreferences
+  Future<void> _loadFavoriteIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favoritesList = prefs.getStringList('favorite_listings') ?? [];
+      setState(() {
+        _favoriteIds = favoritesList.toSet();
+      });
+    } catch (e) {
+      print('Error loading favorites: $e');
+    }
+  }
+
+  // Save favorite IDs to SharedPreferences
+  Future<void> _saveFavoriteIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('favorite_listings', _favoriteIds.toList());
+    } catch (e) {
+      print('Error saving favorites: $e');
+    }
+  }
+
+  // Toggle favorite status
+  Future<void> _toggleFavorite(Listing listing) async {
+    final listingId = listing.id.toString();
+
+    setState(() {
+      if (_favoriteIds.contains(listingId)) {
+        _favoriteIds.remove(listingId);
+      } else {
+        _favoriteIds.add(listingId);
+      }
+    });
+
+    // Save to persistent storage
+    await _saveFavoriteIds();
+
+    // Animate heart
+    _heartAnimationController.forward().then((_) {
+      _heartAnimationController.reverse();
+    });
+
+    // Show feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _favoriteIds.contains(listingId)
+                ? 'Added to favorites'
+                : 'Removed from favorites',
+          ),
+          backgroundColor: _favoriteIds.contains(listingId)
+              ? const Color(0xFF48BB78)
+              : const Color(0xFFED8936),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -278,6 +352,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildPropertyCard(Listing listing, int index) {
+    final isFavorite = _favoriteIds.contains(listing.id.toString());
+
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 800 + (index * 100)),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -286,7 +362,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, 50 * (1 - value)),
           child: Opacity(
-            opacity: value.clamp(0.0, 1.0), // Clamp opacity to valid range
+            opacity: value.clamp(0.0, 1.0),
             child: child,
           ),
         );
@@ -335,26 +411,67 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image Section
+                // Image Section with Favorite Button
                 SizedBox(
                   height: 200,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    child: InlineImageSlider(
-                      key: ValueKey(
-                          '${listing.title}_${listing.imageUrls.hashCode}_${listing.imageUrls.length}_${listing.id}'),
-                      imageUrls: listing.imageUrls.isNotEmpty
-                          ? listing.imageUrls
-                          : [
-                              'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
-                              'https://images.unsplash.com/photo-1560449752-8d7085b7b162?w=800',
-                              'https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?w=800',
-                            ],
-                      title: listing.title,
-                    ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        child: InlineImageSlider(
+                          key: ValueKey(
+                              '${listing.title}_${listing.imageUrls.hashCode}_${listing.imageUrls.length}_${listing.id}'),
+                          imageUrls: listing.imageUrls.isNotEmpty
+                              ? listing.imageUrls
+                              : [
+                                  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+                                  'https://images.unsplash.com/photo-1560449752-8d7085b7b162?w=800',
+                                  'https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?w=800',
+                                ],
+                          title: listing.title,
+                        ),
+                      ),
+                      // Favorite Button
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 1.0, end: 1.3).animate(
+                            CurvedAnimation(
+                              parent: _heartAnimationController,
+                              curve: Curves.elasticOut,
+                            ),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              onPressed: () => _toggleFavorite(listing),
+                              icon: Icon(
+                                isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color:
+                                    isFavorite ? Colors.red : Colors.grey[600],
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -719,7 +836,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       case 0:
         return _buildExploreScreen();
       case 1:
-        return FavoritesPage(user: widget.user);
+        return FavoritesPage(
+          user: widget.user,
+          favoriteIds: _favoriteIds,
+          onFavoriteToggle: _toggleFavorite,
+          onFavoritesChanged: () {
+            // Callback to refresh when favorites change in FavoritesPage
+            setState(() {
+              // This will refresh the HomePage to reflect changes
+            });
+          },
+        );
       case 2:
         return MapPage(user: widget.user);
       case 3:

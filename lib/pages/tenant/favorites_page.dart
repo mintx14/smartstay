@@ -7,8 +7,17 @@ import 'property_details_page.dart';
 
 class FavoritesPage extends StatefulWidget {
   final User user;
+  final Set<String> favoriteIds;
+  final Function(Listing) onFavoriteToggle;
+  final VoidCallback onFavoritesChanged;
 
-  const FavoritesPage({super.key, required this.user});
+  const FavoritesPage({
+    super.key,
+    required this.user,
+    required this.favoriteIds,
+    required this.onFavoriteToggle,
+    required this.onFavoritesChanged,
+  });
 
   @override
   State<FavoritesPage> createState() => _FavoritesPageState();
@@ -19,7 +28,6 @@ class _FavoritesPageState extends State<FavoritesPage>
   final PropertyService _propertyService = PropertyService();
   bool _isLoading = true;
   List<Listing> _favoriteListings = [];
-  Set<String> _favoriteIds = {}; // Store favorite listing IDs
   String? _errorMessage;
 
   late AnimationController _animationController;
@@ -51,6 +59,15 @@ class _FavoritesPageState extends State<FavoritesPage>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(FavoritesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload favorites if favoriteIds changed
+    if (oldWidget.favoriteIds != widget.favoriteIds) {
+      _loadFavoriteListings();
+    }
+  }
+
   Future<void> _loadFavoriteListings() async {
     try {
       setState(() {
@@ -64,12 +81,10 @@ class _FavoritesPageState extends State<FavoritesPage>
           .map((json) => Listing.fromJson(json))
           .toList();
 
-      // Filter to show only favorites (you'll need to implement favorite storage)
-      // For now, I'll simulate some favorites based on listing IDs
-      await _loadUserFavorites();
-
+      // Filter to show only favorites
       final favoriteListings = allListings
-          .where((listing) => _favoriteIds.contains(listing.id.toString()))
+          .where(
+              (listing) => widget.favoriteIds.contains(listing.id.toString()))
           .toList();
 
       setState(() {
@@ -86,68 +101,24 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
   }
 
-  Future<void> _loadUserFavorites() async {
-    // TODO: Implement loading user favorites from database/storage
-    // For demo purposes, I'll add some sample favorite IDs
-    // In real implementation, you'd load this from SharedPreferences, database, or API
-
-    // Simulate loading favorites
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Sample favorite IDs - replace with actual implementation
-    setState(() {
-      _favoriteIds = {'1', '3', '5'}; // Example favorite listing IDs as strings
-    });
-  }
-
   Future<void> _toggleFavorite(Listing listing) async {
-    final listingId = listing.id.toString();
-
-    setState(() {
-      if (_favoriteIds.contains(listingId)) {
-        _favoriteIds.remove(listingId);
-        _favoriteListings
-            .removeWhere((item) => item.id.toString() == listingId);
-      } else {
-        _favoriteIds.add(listingId);
-        if (!_favoriteListings.any((item) => item.id.toString() == listingId)) {
-          _favoriteListings.add(listing);
-        }
-      }
-    });
+    // Use the callback from HomePage to handle favorite toggle
+    widget.onFavoriteToggle(listing);
 
     // Animate heart
     _heartAnimationController.forward().then((_) {
       _heartAnimationController.reverse();
     });
 
-    // TODO: Save to persistent storage
-    await _saveFavoriteToStorage(listingId);
+    // Remove from local list immediately for better UX
+    if (!widget.favoriteIds.contains(listing.id.toString())) {
+      setState(() {
+        _favoriteListings.removeWhere((item) => item.id == listing.id);
+      });
+    }
 
-    // Show feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _favoriteIds.contains(listingId)
-              ? 'Added to favorites'
-              : 'Removed from favorites',
-        ),
-        backgroundColor: _favoriteIds.contains(listingId)
-            ? const Color(0xFF48BB78)
-            : const Color(0xFFED8936),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveFavoriteToStorage(String listingId) async {
-    // TODO: Implement saving to SharedPreferences, database, or API
-    // For now, just simulate a delay
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Notify parent that favorites changed
+    widget.onFavoritesChanged();
   }
 
   Widget _buildFavoritePropertyCard(Listing listing, int index) {
@@ -257,13 +228,14 @@ class _FavoritesPageState extends State<FavoritesPage>
                             child: IconButton(
                               onPressed: () => _toggleFavorite(listing),
                               icon: Icon(
-                                _favoriteIds.contains(listing.id.toString())
+                                widget.favoriteIds
+                                        .contains(listing.id.toString())
                                     ? Icons.favorite
                                     : Icons.favorite_border,
-                                color:
-                                    _favoriteIds.contains(listing.id.toString())
-                                        ? Colors.red
-                                        : Colors.grey[600],
+                                color: widget.favoriteIds
+                                        .contains(listing.id.toString())
+                                    ? Colors.red
+                                    : Colors.grey[600],
                                 size: 24,
                               ),
                             ),
@@ -274,7 +246,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                   ),
                 ),
 
-                // Content Section (same as HomePage)
+                // Content Section
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -480,14 +452,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                 fontSize: 16,
               ),
             ),
-            const SizedBox(height: 16),
-            // Text(
-            //   _errorMessage ?? 'Something went wrong',
-            //   textAlign: TextAlign.center,
-            //   style: TextStyle(
-            //     color: Colors.grey[600],
-            //   ),
-            // ),
+            const SizedBox(height: 32),
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
@@ -499,32 +464,32 @@ class _FavoritesPageState extends State<FavoritesPage>
                   ),
                 ],
               ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // Navigate back to explore tab
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Go to Explore tab to browse properties'),
-                      backgroundColor: Color(0xFF667EEA),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.explore),
-                label: const Text('Browse Properties'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF667EEA),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  elevation: 0,
-                ),
-              ),
+              // child: ElevatedButton.icon(
+              //   onPressed: () {
+              //     // Show message to go to explore tab
+              //     ScaffoldMessenger.of(context).showSnackBar(
+              //       const SnackBar(
+              //         content: Text('Go to Explore tab to browse properties'),
+              //         backgroundColor: Color(0xFF667EEA),
+              //         behavior: SnackBarBehavior.floating,
+              //       ),
+              //     );
+              //   },
+              //   icon: const Icon(Icons.explore),
+              //   label: const Text('Browse Properties'),
+              //   style: ElevatedButton.styleFrom(
+              //     backgroundColor: const Color(0xFF667EEA),
+              //     foregroundColor: Colors.white,
+              //     padding: const EdgeInsets.symmetric(
+              //       horizontal: 32,
+              //       vertical: 16,
+              //     ),
+              //     shape: RoundedRectangleBorder(
+              //       borderRadius: BorderRadius.circular(20),
+              //     ),
+              //     elevation: 0,
+              //   ),
+              // ),
             ),
           ],
         ),
@@ -561,13 +526,13 @@ class _FavoritesPageState extends State<FavoritesPage>
               ),
             ),
             const SizedBox(height: 12),
-            // Text(
-            //   _errorMessage ?? 'Something went wrong',
-            //   textAlign: TextAlign.center, // <-- Correct place
-            //   style: TextStyle(
-            //     color: Colors.grey[600],
-            //   ),
-            // ),
+            Text(
+              _errorMessage ?? 'Something went wrong',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadFavoriteListings,
