@@ -100,10 +100,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       int userId;
       if (widget.user.id is int) {
         userId = widget.user.id as int;
-      } else if (widget.user.id is String) {
-        userId = int.parse(widget.user.id as String);
       } else {
-        userId = int.parse(widget.user.id.toString());
+        userId = int.parse(widget.user.id);
       }
 
       print('🔄 Loading dashboard data for user ID: $userId');

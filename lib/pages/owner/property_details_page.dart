@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:intl/intl.dart';
+import 'package:my_app/widgets/fullscreen_image_viewer.dart'; // Updated import path
+import 'package:video_player/video_player.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
 
-  const PropertyDetailsPage({
-    super.key,
-    required this.listing,
-  });
+  const PropertyDetailsPage({super.key, required this.listing});
 
   @override
   State<PropertyDetailsPage> createState() => _PropertyDetailsPageState();
@@ -54,9 +53,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   Widget _buildImageSlider() {
-    if (widget.listing.imageUrls.isEmpty) {
+    if (widget.listing.imageUrls.isEmpty ?? true) {
       return Container(
         height: 300,
+        margin: const EdgeInsets.only(top: 20), // Added top space
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -81,8 +81,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     ),
                   ],
                 ),
-                child: Icon(Icons.image_outlined,
-                    size: 40, color: Colors.grey[400]),
+                child: Icon(
+                  Icons.image_outlined,
+                  size: 40,
+                  color: Colors.grey[400],
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -99,11 +102,80 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       );
     }
 
-    return SizedBox(
+    return Container(
       height: 300,
+      margin: const EdgeInsets.only(top: 50), // Added top space
       child: PropertyDetailsImageSlider(
         imageUrls: widget.listing.imageUrls,
         title: widget.listing.title,
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // Handle React action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('React feature coming soon'),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                );
+              },
+              label: const Text('Reaactive'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: Colors.white,
+                foregroundColor: Theme.of(context).primaryColor,
+                elevation: 2,
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  width: 1,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // Handle Edit action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Edit feature coming soon'),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Edit'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -174,8 +246,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 color: Theme.of(context).primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child:
-                  Icon(icon, size: 20, color: Theme.of(context).primaryColor),
+              child: Icon(
+                icon,
+                size: 20,
+                color: Theme.of(context).primaryColor,
+              ),
             ),
             const SizedBox(width: 16),
           ],
@@ -214,7 +289,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
         gradient: LinearGradient(
           colors: [
             Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8)
+            Theme.of(context).primaryColor.withOpacity(0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -260,11 +335,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.trending_up,
-              color: Colors.white,
-              size: 24,
-            ),
+            child: const Icon(Icons.trending_up, color: Colors.white, size: 24),
           ),
         ],
       ),
@@ -278,7 +349,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 320, // Increased to accommodate top space
             pinned: true,
             elevation: 0,
             backgroundColor: Colors.white,
@@ -292,7 +363,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: 100,
+                    height: 120, // Increased to cover the top space area
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -351,9 +422,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(_isFavorited
-                            ? 'Added to favorites'
-                            : 'Removed from favorites'),
+                        content: Text(
+                          _isFavorited
+                              ? 'Added to favorites'
+                              : 'Removed from favorites',
+                        ),
                         backgroundColor: Theme.of(context).primaryColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -369,6 +442,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Action Buttons (React and Edit)
+                _buildActionButtons(),
+
                 // Title and Location
                 FadeTransition(
                   opacity: _fadeAnimation,
@@ -438,116 +514,105 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 // Property Overview
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection(
-                    'Property Overview',
-                    [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildOverviewCard(
-                              Icons.bed,
-                              '${widget.listing.bedrooms}',
-                              'Bedrooms',
-                              Colors.blue,
-                            ),
+                  child: _buildInfoSection('Property Overview', [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildOverviewCard(
+                            Icons.bed,
+                            '${widget.listing.bedrooms}',
+                            'Bedrooms',
+                            Colors.blue,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildOverviewCard(
-                              Icons.bathroom,
-                              '${widget.listing.bathrooms}',
-                              'Bathrooms',
-                              Colors.green,
-                            ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildOverviewCard(
+                            Icons.bathroom,
+                            '${widget.listing.bathrooms}',
+                            'Bathrooms',
+                            Colors.green,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildOverviewCard(
-                              Icons.square_foot,
-                              '${widget.listing.areaSqft}',
-                              'sqft',
-                              Colors.orange,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Description
-                if (widget.listing.description.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildInfoSection(
-                      'Description',
-                      [
-                        Text(
-                          widget.listing.description,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 1.6,
-                            color: Colors.black87,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildOverviewCard(
+                            Icons.square_foot,
+                            '${widget.listing.areaSqft}',
+                            'sqft',
+                            Colors.orange,
                           ),
                         ),
                       ],
                     ),
+                  ]),
+                ),
+
+                // Description
+                if (widget.listing.description.isNotEmpty ?? false)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildInfoSection('Description', [
+                      Text(
+                        widget.listing.description ?? '',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          height: 1.6,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ]),
                   ),
 
                 // Property Details
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection(
-                    'Property Details',
-                    [
-                      _buildDetailRow(
-                        'Bedrooms',
-                        '${widget.listing.bedrooms}',
-                        icon: Icons.bed,
-                      ),
-                      _buildDetailRow(
-                        'Bathrooms',
-                        '${widget.listing.bathrooms}',
-                        icon: Icons.bathroom,
-                      ),
-                      _buildDetailRow(
-                        'Area',
-                        '${widget.listing.areaSqft} sqft',
-                        icon: Icons.square_foot,
-                      ),
-                      _buildDetailRow(
-                        'Available From',
-                        DateFormat('d MMMM y')
-                            .format(widget.listing.availableFrom),
-                        icon: Icons.calendar_today,
-                      ),
-                      _buildDetailRow(
-                        'Minimum Tenure',
-                        '${widget.listing.minimumTenure} month',
-                        icon: Icons.timelapse,
-                      ),
-                    ],
-                  ),
+                  child: _buildInfoSection('Property Details', [
+                    _buildDetailRow(
+                      'Bedrooms',
+                      '${widget.listing.bedrooms}',
+                      icon: Icons.bed,
+                    ),
+                    _buildDetailRow(
+                      'Bathrooms',
+                      '${widget.listing.bathrooms}',
+                      icon: Icons.bathroom,
+                    ),
+                    _buildDetailRow(
+                      'Area',
+                      '${widget.listing.areaSqft} sqft',
+                      icon: Icons.square_foot,
+                    ),
+                    _buildDetailRow(
+                      'Available From',
+                      DateFormat(
+                        'd MMMM y',
+                      ).format(widget.listing.availableFrom),
+                      icon: Icons.calendar_today,
+                    ),
+                    _buildDetailRow(
+                      'Minimum Tenure',
+                      '${widget.listing.minimumTenure} month',
+                      icon: Icons.timelapse,
+                    ),
+                  ]),
                 ),
 
                 // Location
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection(
-                    'Location',
-                    [
-                      _buildDetailRow(
-                        'Address',
-                        widget.listing.address,
-                        icon: Icons.location_on,
-                      ),
-                      _buildDetailRow(
-                        'Postcode',
-                        widget.listing.postcode,
-                        icon: Icons.mail,
-                      ),
-                    ],
-                  ),
+                  child: _buildInfoSection('Location', [
+                    _buildDetailRow(
+                      'Address',
+                      widget.listing.address,
+                      icon: Icons.location_on,
+                    ),
+                    _buildDetailRow(
+                      'Postcode',
+                      widget.listing.postcode,
+                      icon: Icons.mail,
+                    ),
+                  ]),
                 ),
 
                 const SizedBox(height: 120), // Space for floating button
@@ -556,41 +621,15 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
           ),
         ],
       ),
-      // floatingActionButton: Container(
-      //   width: double.infinity,
-      //   margin: const EdgeInsets.symmetric(horizontal: 20),
-      //   height: 56,
-      //   child: FloatingActionButton.extended(
-      //     onPressed: () {
-      //       _showContactDialog();
-      //     },
-      //     backgroundColor: Theme.of(context).primaryColor,
-      //     elevation: 8,
-      //     shape: RoundedRectangleBorder(
-      //       borderRadius: BorderRadius.circular(16),
-      //     ),
-      //     label: Row(
-      //       mainAxisAlignment: MainAxisAlignment.center,
-      //       children: [
-      //         const Icon(Icons.phone, size: 20),
-      //         const SizedBox(width: 8),
-      //         const Text(
-      //           'Contact Owner',
-      //           style: TextStyle(
-      //             fontSize: 16,
-      //             fontWeight: FontWeight.bold,
-      //           ),
-      //         ),
-      //       ],
-      //     ),
-      //   ),
-      // ),
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
   Widget _buildOverviewCard(
-      IconData icon, String value, String label, Color color) {
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -714,7 +753,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 }
 
-// Enhanced Property Details Image Slider Widget
+// Enhanced Property Details Image Slider Widget with Video Support
 class PropertyDetailsImageSlider extends StatefulWidget {
   final List<String> imageUrls;
   final String title;
@@ -730,29 +769,104 @@ class PropertyDetailsImageSlider extends StatefulWidget {
       _PropertyDetailsImageSliderState();
 }
 
+// Media type detection for slider
+enum SliderMediaType { image, video }
+
+class SliderMediaItem {
+  final String url;
+  final SliderMediaType type;
+
+  SliderMediaItem({required this.url, required this.type});
+
+  factory SliderMediaItem.fromUrl(String url) {
+    final lowerUrl = url.toLowerCase();
+    if (lowerUrl.endsWith('.mp4') ||
+        lowerUrl.endsWith('.mov') ||
+        lowerUrl.endsWith('.avi') ||
+        lowerUrl.endsWith('.mkv') ||
+        lowerUrl.endsWith('.webm')) {
+      return SliderMediaItem(url: url, type: SliderMediaType.video);
+    }
+    return SliderMediaItem(url: url, type: SliderMediaType.image);
+  }
+}
+
 class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     with SingleTickerProviderStateMixin {
   late PageController _pageController;
   int _currentIndex = 0;
   late int _totalSlides;
   late AnimationController _indicatorController;
+  late List<SliderMediaItem> _mediaItems;
+  Map<int, VideoPlayerController> _videoControllers = {};
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _totalSlides =
-        widget.imageUrls.isNotEmpty ? widget.imageUrls.length + 1 : 0;
+
+    // Convert URLs to MediaItems
+    _mediaItems =
+        widget.imageUrls.map((url) => SliderMediaItem.fromUrl(url)).toList();
+
+    _totalSlides = _mediaItems.isNotEmpty ? _mediaItems.length + 1 : 0;
     _indicatorController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+
+    // Initialize first video if needed
+    _initializeVideoForIndex(1); // Index 1 because 0 is grid view
+  }
+
+  void _initializeVideoForIndex(int pageIndex) {
+    if (pageIndex > 0 && pageIndex <= _mediaItems.length) {
+      final mediaIndex = pageIndex - 1;
+      final mediaItem = _mediaItems[mediaIndex];
+
+      if (mediaItem.type == SliderMediaType.video &&
+          !_videoControllers.containsKey(mediaIndex)) {
+        final controller =
+            VideoPlayerController.networkUrl(Uri.parse(mediaItem.url));
+        _videoControllers[mediaIndex] = controller;
+        controller.initialize().then((_) {
+          if (mounted) setState(() {});
+        });
+      }
+    }
+  }
+
+  void _pauseAllVideos() {
+    for (final controller in _videoControllers.values) {
+      if (controller.value.isInitialized && controller.value.isPlaying) {
+        controller.pause();
+      }
+    }
+  }
+
+  void _toggleVideoPlayback(int mediaIndex) {
+    final controller = _videoControllers[mediaIndex];
+    if (controller != null && controller.value.isInitialized) {
+      if (controller.value.isPlaying) {
+        controller.pause();
+      } else {
+        _pauseAllVideos(); // Pause other videos
+        controller.play();
+      }
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _indicatorController.dispose();
+
+    // Dispose all video controllers
+    for (final controller in _videoControllers.values) {
+      controller.dispose();
+    }
+
     super.dispose();
   }
 
@@ -793,6 +907,152 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
         },
       ),
     );
+  }
+
+  Widget _buildVideoPlayer(SliderMediaItem mediaItem, int mediaIndex,
+      {bool isGridItem = false}) {
+    final controller = _videoControllers[mediaIndex];
+
+    if (controller == null || !controller.value.isInitialized) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.grey[800]!, Colors.grey[700]!],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: isGridItem ? 2 : 3,
+              ),
+              if (!isGridItem) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Loading video...',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ]
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: controller.value.size.width,
+              height: controller.value.size.height,
+              child: VideoPlayer(controller),
+            ),
+          ),
+        ),
+
+        // Video controls overlay
+        if (!isGridItem)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => _toggleVideoPlayback(mediaIndex),
+              child: Container(
+                color: Colors.transparent,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: controller.value.isPlaying ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Icon(
+                        controller.value.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // Video indicator
+        Positioned(
+          top: 12,
+          right: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.videocam,
+                  color: Colors.white,
+                  size: isGridItem ? 12 : 16,
+                ),
+                if (!isGridItem) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDuration(controller.value.duration),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ]
+              ],
+            ),
+          ),
+        ),
+
+        // Progress bar for non-grid items
+        if (!isGridItem && controller.value.isPlaying)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: VideoProgressIndicator(
+                controller,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.white,
+                  bufferedColor: Colors.white30,
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 
   Widget _buildPlaceholder(bool isGridItem, {bool isError = false}) {
@@ -836,9 +1096,9 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
   }
 
   Widget _buildGridView() {
-    List<String?> displayImages = List.filled(4, null);
-    for (int i = 0; i < 4 && i < widget.imageUrls.length; i++) {
-      displayImages[i] = widget.imageUrls[i];
+    List<SliderMediaItem?> displayItems = List.filled(4, null);
+    for (int i = 0; i < 4 && i < _mediaItems.length; i++) {
+      displayItems[i] = _mediaItems[i];
     }
 
     return Stack(
@@ -848,13 +1108,19 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             Expanded(
               flex: 2,
               child: GestureDetector(
-                onTap: () => _pageController.animateToPage(1,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.ease),
+                onTap: () {
+                  openFullScreenMediaViewer(
+                    context,
+                    widget.imageUrls,
+                    0,
+                    widget.title,
+                  );
+                },
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius:
-                        const BorderRadius.only(topLeft: Radius.circular(0)),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(0),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -864,10 +1130,16 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius:
-                        const BorderRadius.only(topLeft: Radius.circular(0)),
-                    child: _buildNetworkImage(displayImages[0] ?? '',
-                        isGridItem: true),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(0),
+                    ),
+                    child: displayItems[0] != null
+                        ? (displayItems[0]!.type == SliderMediaType.video
+                            ? _buildVideoPlayer(displayItems[0]!, 0,
+                                isGridItem: true)
+                            : _buildNetworkImage(displayItems[0]!.url,
+                                isGridItem: true))
+                        : _buildPlaceholder(true),
                   ),
                 ),
               ),
@@ -879,16 +1151,27 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _pageController.animateToPage(2,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.ease),
+                      onTap: () {
+                        openFullScreenMediaViewer(
+                          context,
+                          widget.imageUrls,
+                          1,
+                          widget.title,
+                        );
+                      },
                       child: SizedBox(
                         width: double.infinity,
                         child: ClipRRect(
                           borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(0)),
-                          child: _buildNetworkImage(displayImages[1] ?? '',
-                              isGridItem: true),
+                            topRight: Radius.circular(0),
+                          ),
+                          child: displayItems[1] != null
+                              ? (displayItems[1]!.type == SliderMediaType.video
+                                  ? _buildVideoPlayer(displayItems[1]!, 1,
+                                      isGridItem: true)
+                                  : _buildNetworkImage(displayItems[1]!.url,
+                                      isGridItem: true))
+                              : _buildPlaceholder(true),
                         ),
                       ),
                     ),
@@ -896,14 +1179,24 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   const SizedBox(height: 2),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _pageController.animateToPage(3,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.ease),
+                      onTap: () {
+                        openFullScreenMediaViewer(
+                          context,
+                          widget.imageUrls,
+                          2,
+                          widget.title,
+                        );
+                      },
                       child: SizedBox(
                         width: double.infinity,
                         child: ClipRRect(
-                          child: _buildNetworkImage(displayImages[2] ?? '',
-                              isGridItem: true),
+                          child: displayItems[2] != null
+                              ? (displayItems[2]!.type == SliderMediaType.video
+                                  ? _buildVideoPlayer(displayItems[2]!, 2,
+                                      isGridItem: true)
+                                  : _buildNetworkImage(displayItems[2]!.url,
+                                      isGridItem: true))
+                              : _buildPlaceholder(true),
                         ),
                       ),
                     ),
@@ -911,19 +1204,30 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   const SizedBox(height: 2),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _pageController.animateToPage(4,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.ease),
+                      onTap: () {
+                        openFullScreenMediaViewer(
+                          context,
+                          widget.imageUrls,
+                          3,
+                          widget.title,
+                        );
+                      },
                       child: Stack(
                         children: [
                           SizedBox(
                             width: double.infinity,
                             child: ClipRRect(
-                              child: _buildNetworkImage(displayImages[3] ?? '',
-                                  isGridItem: true),
+                              child: displayItems[3] != null
+                                  ? (displayItems[3]!.type ==
+                                          SliderMediaType.video
+                                      ? _buildVideoPlayer(displayItems[3]!, 3,
+                                          isGridItem: true)
+                                      : _buildNetworkImage(displayItems[3]!.url,
+                                          isGridItem: true))
+                                  : _buildPlaceholder(true),
                             ),
                           ),
-                          if (widget.imageUrls.length > 4)
+                          if (_mediaItems.length > 4)
                             Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
@@ -938,11 +1242,14 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.photo_library,
-                                        color: Colors.white, size: 16),
+                                    const Icon(
+                                      Icons.photo_library,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '+${widget.imageUrls.length - 4}',
+                                      '+${_mediaItems.length - 4}',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 12,
@@ -970,15 +1277,20 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.7),
               borderRadius: BorderRadius.circular(20),
-              // backdropFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.photo_library, color: Colors.white, size: 16),
+                Icon(
+                  _mediaItems.any((item) => item.type == SliderMediaType.video)
+                      ? Icons.photo_library
+                      : Icons.photo_library,
+                  color: Colors.white,
+                  size: 16,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  '${widget.imageUrls.length} Photos',
+                  '${_mediaItems.length}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -993,23 +1305,28 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     );
   }
 
-  String _getSlideIndicatorText() {
-    if (_currentIndex == 0) {
-      return 'Gallery View';
-    } else {
-      return '$_currentIndex of ${widget.imageUrls.length}';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (widget.imageUrls.isEmpty) {
+    if (_mediaItems.isEmpty) {
       return _buildPlaceholder(false);
     }
 
-    if (widget.imageUrls.length == 1) {
-      return ClipRRect(
-        child: _buildNetworkImage(widget.imageUrls[0]),
+    if (_mediaItems.length == 1) {
+      final mediaItem = _mediaItems[0];
+      return GestureDetector(
+        onTap: () {
+          openFullScreenMediaViewer(
+            context,
+            widget.imageUrls,
+            0,
+            widget.title,
+          );
+        },
+        child: ClipRRect(
+          child: mediaItem.type == SliderMediaType.video
+              ? _buildVideoPlayer(mediaItem, 0)
+              : _buildNetworkImage(mediaItem.url),
+        ),
       );
     }
 
@@ -1025,6 +1342,12 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                 _currentIndex = index;
               });
               _indicatorController.forward(from: 0);
+
+              // Pause all videos when changing pages
+              _pauseAllVideos();
+
+              // Initialize video for new page if needed
+              _initializeVideoForIndex(index);
             },
             itemCount: _totalSlides,
             allowImplicitScrolling: true,
@@ -1034,8 +1357,21 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
               if (index == 0) {
                 return _buildGridView();
               } else {
-                final imageIndex = index - 1;
-                return _buildNetworkImage(widget.imageUrls[imageIndex]);
+                final mediaIndex = index - 1;
+                final mediaItem = _mediaItems[mediaIndex];
+                return GestureDetector(
+                  onTap: () {
+                    openFullScreenMediaViewer(
+                      context,
+                      widget.imageUrls,
+                      mediaIndex,
+                      widget.title,
+                    );
+                  },
+                  child: mediaItem.type == SliderMediaType.video
+                      ? _buildVideoPlayer(mediaItem, mediaIndex)
+                      : _buildNetworkImage(mediaItem.url),
+                );
               }
             },
           ),
@@ -1075,45 +1411,8 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
           ),
         ),
 
-        // Enhanced slide indicator
-        Positioned(
-          top: 12,
-          left: 12,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _currentIndex == 0 ? Icons.grid_view : Icons.photo_camera,
-                  color: Colors.white,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _getSlideIndicatorText(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
         // Navigation hint with animation
-        if (_currentIndex == 0 && widget.imageUrls.length > 1)
+        if (_currentIndex == 0 && _mediaItems.length > 1)
           Positioned(
             bottom: 50,
             right: 16,
@@ -1124,8 +1423,10 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   opacity: _indicatorController.value,
                   duration: const Duration(milliseconds: 300),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(20),
@@ -1133,25 +1434,6 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                         color: Colors.white.withOpacity(0.2),
                         width: 1,
                       ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Swipe for more photos',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(
-                          Icons.swipe,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                      ],
                     ),
                   ),
                 );
