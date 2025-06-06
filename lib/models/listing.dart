@@ -101,7 +101,6 @@ class Listing {
   // Getters
   bool get isActive => status.toLowerCase() == 'active';
   bool get isInactive => status.toLowerCase() == 'inactive';
-  bool get isArchived => status.toLowerCase() == 'archived';
 
   Listing copyWith({
     String? id,

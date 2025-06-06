@@ -372,49 +372,49 @@ class DatabaseService {
   }
 
   // Update listing status
-  Future<bool> updateListingStatus(int listingId, String status) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/update_listing_status.php?id=$listingId'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'status': status}),
-      );
+  // Future<bool> updateListingStatus(int listingId, String status) async {
+  //   try {
+  //     final response = await http.put(
+  //       Uri.parse('$baseUrl/update_listing_status.php?id=$listingId'),
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: json.encode({'status': status}),
+  //     );
 
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Error updating listing status: $e');
-      return false;
-    }
-  }
+  //     return response.statusCode == 200;
+  //   } catch (e) {
+  //     print('Error updating listing status: $e');
+  //     return false;
+  //   }
+  // }
 
-  // Archive a listing (soft delete)
-  Future<bool> archiveListing(int listingId) async {
-    return await updateListingStatus(listingId, 'archived');
-  }
+  // // Archive a listing (soft delete)
+  // Future<bool> archiveListing(int listingId) async {
+  //   return await updateListingStatus(listingId, 'archived');
+  // }
 
-  // Activate a listing
-  Future<bool> activateListing(int listingId) async {
-    return await updateListingStatus(listingId, 'active');
-  }
+  // // Activate a listing
+  // Future<bool> activateListing(int listingId) async {
+  //   return await updateListingStatus(listingId, 'active');
+  // }
 
-  // Deactivate a listing
-  Future<bool> deactivateListing(int listingId) async {
-    return await updateListingStatus(listingId, 'inactive');
-  }
+  // // Deactivate a listing
+  // Future<bool> deactivateListing(int listingId) async {
+  //   return await updateListingStatus(listingId, 'inactive');
+  // }
 
   // Delete listing permanently
-  Future<bool> deleteListing(int listingId) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/delete_listing.php?id=$listingId'),
-      );
+  // Future<bool> deleteListing(int listingId) async {
+  //   try {
+  //     final response = await http.delete(
+  //       Uri.parse('$baseUrl/delete_listing.php?id=$listingId'),
+  //     );
 
-      return response.statusCode == 200;
-    } catch (e) {
-      print('Error deleting listing: $e');
-      return false;
-    }
-  }
+  //     return response.statusCode == 200;
+  //   } catch (e) {
+  //     print('Error deleting listing: $e');
+  //     return false;
+  //   }
+  // }
 
   // Get listings count by status
   Future<Map<String, int>> getListingsCount(int userId) async {
@@ -436,6 +436,123 @@ class DatabaseService {
     } catch (e) {
       print('Error loading listings count: $e');
       return {'active': 0, 'inactive': 0, 'total': 0};
+    }
+  }
+
+// Add this method to your DatabaseService class in database_service.dart
+
+  Future<bool> updateListing(
+      Listing listing, List<String> deletedMediaUrls) async {
+    try {
+      final userId = await currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Prepare the data for the API
+      final Map<String, dynamic> data = {
+        'listing_id': listing.id,
+        'user_id': userId,
+        'title': listing.title,
+        'address': listing.address,
+        'postcode': listing.postcode,
+        'price': listing.price,
+        'bedrooms': listing.bedrooms,
+        'bathrooms': listing.bathrooms,
+        'area_sqft': listing.areaSqft,
+        'description': listing.description,
+        'available_from': listing.availableFrom.toIso8601String().split('T')[0],
+        'minimum_tenure': listing.minimumTenure,
+        'deleted_media': deletedMediaUrls,
+        'new_media':
+            [], // This will be populated if you upload new media separately
+      };
+
+      // Make API call to update listing
+      final response = await http.post(
+        Uri.parse(
+            'http://10.0.2.2/smartstay/update_listing.php'), // Update with your actual URL
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(data),
+      );
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        return result['success'] == true;
+      } else {
+        throw Exception('Failed to update listing: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error updating listing: $e');
+      return false;
+    }
+  }
+
+// You might also need this method to get a single listing for editing
+  Future<Listing?> getSingleListing(String listingId) async {
+    try {
+      final userId = await currentUserId;
+
+      final response = await http.get(
+        Uri.parse(
+            'http://10.0.2.2/smartstay/get_single_listing.php?listing_id=$listingId&user_id=$userId'),
+      );
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        if (result['success'] == true && result['listing'] != null) {
+          return Listing.fromJson(result['listing']);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error getting single listing: $e');
+      return null;
+    }
+  }
+
+// Update the updateListingStatus method if it's not already there
+  Future<bool> updateListingStatus(int listingId, String status) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2/smartstay/update_listing_status.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'listing_id': listingId,
+          'status': status,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        return result['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('Error updating listing status: $e');
+      return false;
+    }
+  }
+
+// Delete listing method
+  Future<bool> deleteListing(int listingId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2/smartstay/delete_listing.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'listing_id': listingId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        return result['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('Error deleting listing: $e');
+      return false;
     }
   }
 }

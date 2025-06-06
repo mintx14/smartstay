@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:intl/intl.dart';
-import 'package:my_app/widgets/fullscreen_image_viewer.dart'; // Updated import path
+// import 'package:my_app/widgets/fullscreen_image_viewer.dart'; // Updated import path
 import 'package:video_player/video_player.dart';
+import 'package:my_app/pages/owner/edit_listing_page.dart';
+import 'package:my_app/services/database_service.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
@@ -20,10 +22,15 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   bool _isFavorited = false;
+  bool _isUpdatingStatus = false;
+  late Listing _currentListing;
+
+  final DatabaseService _databaseService = DatabaseService();
 
   @override
   void initState() {
     super.initState();
+    _currentListing = widget.listing;
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -52,8 +59,250 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     super.dispose();
   }
 
+  // EDIT FUNCTION
+  Future<void> _editListing(Listing listing) async {
+    try {
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => EditListingPage(
+              listing: listing), // You'll need to create this page
+        ),
+      );
+
+      if (result == true && mounted) {
+        // Refresh the current listing data
+        _showSuccessMessage('Property updated successfully');
+        // You might want to refresh the listing data here
+        // await _refreshListingData();
+      }
+    } catch (e) {
+      _showErrorMessage('Failed to edit property: $e');
+    }
+  }
+
+  // UPDATE LISTING STATUS
+  Future<void> _updateListingStatus(Listing listing, String newStatus) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final listingId = listing.id;
+      if (listingId.isEmpty) {
+        throw Exception('Invalid listing ID');
+      }
+
+      // ✅ ACTUALLY CALL THE DATABASE SERVICE
+      final success = await _databaseService.updateListingStatus(
+        int.parse(listingId),
+        newStatus,
+      );
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (success && mounted) {
+        // Update local state
+        setState(() {
+          _currentListing = listing.copyWith(status: newStatus);
+        });
+
+        // Show success message
+        final message = newStatus == 'active'
+            ? 'Property activated successfully'
+            : 'Property deactivated successfully';
+
+        _showSuccessMessage(message);
+
+        // Optional: Return result to previous page to refresh listings
+        Navigator.pop(context, true);
+      } else {
+        if (mounted) {
+          _showErrorMessage('Failed to update property status');
+        }
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        _showErrorMessage('Error updating property: $e');
+      }
+    }
+  }
+
+  // DEACTIVATE CONFIRMATION
+  void _showDeactivateConfirmation(Listing listing) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.pause_circle_outline, color: Colors.orange[600]),
+            const SizedBox(width: 8),
+            const Text('Deactivate Property'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to deactivate "${listing.title}"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This will hide the property from search results. You can reactivate it later.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateListingStatus(listing, 'inactive');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[600],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // REACTIVATE CONFIRMATION
+  void _showReactivateConfirmation(Listing listing) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.play_circle_outline, color: Colors.green[600]),
+            const SizedBox(width: 8),
+            const Text('Reactivate Property'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to reactivate "${listing.title}"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.green, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This will make the property visible in search results again.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateListingStatus(listing, 'active');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[600],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reactivate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // HELPER FUNCTIONS
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red[600],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   Widget _buildImageSlider() {
-    if (widget.listing.imageUrls.isEmpty ?? true) {
+    if (_currentListing.imageUrls.isEmpty ?? true) {
       return Container(
         height: 300,
         margin: const EdgeInsets.only(top: 20), // Added top space
@@ -106,41 +355,53 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       height: 300,
       margin: const EdgeInsets.only(top: 50), // Added top space
       child: PropertyDetailsImageSlider(
-        imageUrls: widget.listing.imageUrls,
-        title: widget.listing.title,
+        imageUrls: _currentListing.imageUrls,
+        title: _currentListing.title,
       ),
     );
   }
 
   Widget _buildActionButtons() {
+    final isActive = _currentListing.status?.toLowerCase() == 'active';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {
-                // Handle React action
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('React feature coming soon'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+              onPressed: _isUpdatingStatus
+                  ? null
+                  : () {
+                      if (isActive) {
+                        _showDeactivateConfirmation(_currentListing);
+                      } else {
+                        _showReactivateConfirmation(_currentListing);
+                      }
+                    },
+              icon: _isUpdatingStatus
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(
+                      isActive
+                          ? Icons.pause_circle_outline
+                          : Icons.play_circle_outline,
                     ),
-                  ),
-                );
-              },
-              label: const Text('Reaactive'),
+              label: Text(_isUpdatingStatus
+                  ? 'Updating...'
+                  : (isActive ? 'Deactivate' : 'Reactivate')),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: Colors.white,
-                foregroundColor: Theme.of(context).primaryColor,
+                backgroundColor:
+                    isActive ? Colors.orange[600] : Colors.green[600],
+                foregroundColor: Colors.white,
                 elevation: 2,
-                side: BorderSide(
-                  color: Theme.of(context).primaryColor.withOpacity(0.3),
-                  width: 1,
-                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -151,16 +412,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () {
-                // Handle Edit action
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Edit feature coming soon'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
+                _editListing(_currentListing);
               },
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Edit'),
@@ -173,6 +425,50 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge() {
+    final isActive = _currentListing.status?.toLowerCase() == 'active';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isActive ? Colors.green[100] : Colors.orange[100],
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isActive ? Colors.green[300]! : Colors.orange[300]!,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.green[600] : Colors.orange[600],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isActive ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                    color: isActive ? Colors.green[700] : Colors.orange[700],
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -320,7 +616,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               ),
               const SizedBox(height: 4),
               Text(
-                'RM ${widget.listing.price.toStringAsFixed(2)}',
+                'RM ${_currentListing.price.toStringAsFixed(2)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 28,
@@ -442,7 +738,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Action Buttons (React and Edit)
+                // Status Badge
+                _buildStatusBadge(),
+
+                // Action Buttons (Reactive/Deactivate and Edit)
                 _buildActionButtons(),
 
                 // Title and Location
@@ -467,7 +766,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.listing.title,
+                          _currentListing.title,
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -493,7 +792,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                '${widget.listing.address}, ${widget.listing.postcode}',
+                                '${_currentListing.address}, ${_currentListing.postcode}',
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey[700],
@@ -520,7 +819,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                         Expanded(
                           child: _buildOverviewCard(
                             Icons.bed,
-                            '${widget.listing.bedrooms}',
+                            '${_currentListing.bedrooms}',
                             'Bedrooms',
                             Colors.blue,
                           ),
@@ -529,7 +828,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                         Expanded(
                           child: _buildOverviewCard(
                             Icons.bathroom,
-                            '${widget.listing.bathrooms}',
+                            '${_currentListing.bathrooms}',
                             'Bathrooms',
                             Colors.green,
                           ),
@@ -538,7 +837,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                         Expanded(
                           child: _buildOverviewCard(
                             Icons.square_foot,
-                            '${widget.listing.areaSqft}',
+                            '${_currentListing.areaSqft}',
                             'sqft',
                             Colors.orange,
                           ),
@@ -549,12 +848,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 ),
 
                 // Description
-                if (widget.listing.description.isNotEmpty ?? false)
+                if (_currentListing.description.isNotEmpty ?? false)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildInfoSection('Description', [
                       Text(
-                        widget.listing.description ?? '',
+                        _currentListing.description ?? '',
                         style: const TextStyle(
                           fontSize: 16,
                           height: 1.6,
@@ -570,29 +869,29 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   child: _buildInfoSection('Property Details', [
                     _buildDetailRow(
                       'Bedrooms',
-                      '${widget.listing.bedrooms}',
+                      '${_currentListing.bedrooms}',
                       icon: Icons.bed,
                     ),
                     _buildDetailRow(
                       'Bathrooms',
-                      '${widget.listing.bathrooms}',
+                      '${_currentListing.bathrooms}',
                       icon: Icons.bathroom,
                     ),
                     _buildDetailRow(
                       'Area',
-                      '${widget.listing.areaSqft} sqft',
+                      '${_currentListing.areaSqft} sqft',
                       icon: Icons.square_foot,
                     ),
                     _buildDetailRow(
                       'Available From',
                       DateFormat(
                         'd MMMM y',
-                      ).format(widget.listing.availableFrom),
+                      ).format(_currentListing.availableFrom),
                       icon: Icons.calendar_today,
                     ),
                     _buildDetailRow(
                       'Minimum Tenure',
-                      '${widget.listing.minimumTenure} month',
+                      '${_currentListing.minimumTenure} month',
                       icon: Icons.timelapse,
                     ),
                   ]),
@@ -604,12 +903,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   child: _buildInfoSection('Location', [
                     _buildDetailRow(
                       'Address',
-                      widget.listing.address,
+                      _currentListing.address,
                       icon: Icons.location_on,
                     ),
                     _buildDetailRow(
                       'Postcode',
-                      widget.listing.postcode,
+                      _currentListing.postcode,
                       icon: Icons.mail,
                     ),
                   ]),
@@ -699,7 +998,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Interested in "${widget.listing.title}"?'),
+              Text('Interested in "${_currentListing.title}"?'),
               const SizedBox(height: 16),
               const Text('Choose how you\'d like to contact the owner:'),
             ],
@@ -752,6 +1051,25 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     );
   }
 }
+
+// Placeholder for EditListingPage - you'll need to create this
+// class EditListingPage extends StatelessWidget {
+//   final Listing listing;
+
+//   const EditListingPage({super.key, required this.listing});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Edit Property'),
+//       ),
+//       body: const Center(
+//         child: Text('Edit Listing Page - To be implemented'),
+//       ),
+//     );
+//   }
+// }
 
 // Enhanced Property Details Image Slider Widget with Video Support
 class PropertyDetailsImageSlider extends StatefulWidget {
@@ -1443,4 +1761,29 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
       ],
     );
   }
+}
+
+// Placeholder function for opening fullscreen viewer
+void openFullScreenMediaViewer(BuildContext context, List<String> imageUrls,
+    int initialIndex, String title) {
+  // Implement your fullscreen image viewer here
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (context) => Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+        ),
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            'Fullscreen viewer for image $initialIndex\n(To be implemented)',
+            style: const TextStyle(color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    ),
+  );
 }

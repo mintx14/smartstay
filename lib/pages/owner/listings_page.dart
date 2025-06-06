@@ -4,6 +4,8 @@ import 'package:my_app/pages/owner/add_listing_page.dart';
 import 'package:my_app/pages/owner/property_details_page.dart';
 import 'package:my_app/services/database_service.dart';
 import 'package:intl/intl.dart';
+import 'package:my_app/pages/owner/edit_listing_page.dart';
+// Remove duplicate import: import 'package:my_app/pages/owner/edit_listing_page.dart';
 
 class ListingsPage extends StatefulWidget {
   const ListingsPage({super.key});
@@ -37,22 +39,20 @@ class _ListingsPageState extends State<ListingsPage>
   @override
   void initState() {
     super.initState();
-    _initializeUser(); // Add this
+    _initializeUser();
   }
 
-  // Add this method to get current user ID
+  // Get current user ID
   Future<void> _initializeUser() async {
     _currentUserId = await _databaseService.currentUserId;
-    print('🔑 Current User ID: $_currentUserId'); // Debug log
+    print('🔑 Current User ID: $_currentUserId');
 
     if (_currentUserId != null) {
       _loadListings();
       _loadListingsCount();
     } else {
       print('❌ No user ID found - user not logged in');
-      // Handle case where user is not logged in
       if (mounted) {
-        // You might want to redirect to login page
         Navigator.of(context).pushReplacementNamed('/login');
       }
     }
@@ -105,7 +105,7 @@ class _ListingsPageState extends State<ListingsPage>
       final result = await _databaseService.getListings(
         page: _currentPage,
         status: _selectedFilter,
-        userId: int.parse(_currentUserId!), // Use the current user ID
+        userId: int.parse(_currentUserId!),
       );
 
       print('📱 API Response: $result');
@@ -158,7 +158,7 @@ class _ListingsPageState extends State<ListingsPage>
   void _onFilterChanged(String filter) {
     setState(() {
       _selectedFilter = filter;
-      _currentPage = 1; // Reset page when filter changes
+      _currentPage = 1;
     });
     _loadListings(refresh: true);
   }
@@ -317,7 +317,7 @@ class _ListingsPageState extends State<ListingsPage>
               ),
             ),
 
-            // Content section - THIS WAS MISSING!
+            // Content section
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -443,13 +443,29 @@ class _ListingsPageState extends State<ListingsPage>
   void _showMoreOptions(Listing listing) {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // View Details
             ListTile(
-              leading: const Icon(Icons.visibility),
+              leading:
+                  Icon(Icons.visibility, color: Theme.of(context).primaryColor),
               title: const Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
@@ -460,36 +476,50 @@ class _ListingsPageState extends State<ListingsPage>
                 );
               },
             ),
+
+            // Edit
             ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit'),
+              leading: Icon(Icons.edit, color: Colors.blue[600]),
+              title: const Text('Edit Property'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to edit page
+                _editListing(listing);
               },
             ),
+
+            // Activation/Deactivation toggle
             if (listing.isActive) ...[
               ListTile(
-                leading: const Icon(Icons.pause),
-                title: const Text('Deactivate'),
+                leading:
+                    Icon(Icons.pause_circle_outline, color: Colors.orange[600]),
+                title: const Text('Deactivate Property'),
+                subtitle: const Text('Hide from search results'),
                 onTap: () {
                   Navigator.pop(context);
-                  _updateListingStatus(listing, 'inactive');
+                  _showDeactivateConfirmation(listing);
                 },
               ),
             ] else if (listing.isInactive) ...[
               ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: const Text('Activate'),
+                leading:
+                    Icon(Icons.play_circle_outline, color: Colors.green[600]),
+                title: const Text('Activate Property'),
+                subtitle: const Text('Show in search results'),
                 onTap: () {
                   Navigator.pop(context);
                   _updateListingStatus(listing, 'active');
                 },
               ),
             ],
+
+            const Divider(),
+
+            // Delete
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Delete Property',
+                  style: TextStyle(color: Colors.red)),
+              subtitle: const Text('Permanently remove this property'),
               onTap: () {
                 Navigator.pop(context);
                 _showDeleteConfirmation(listing);
@@ -501,25 +531,146 @@ class _ListingsPageState extends State<ListingsPage>
     );
   }
 
-  void _showDeleteConfirmation(Listing listing) {
+  // EDIT FUNCTION - Updated to navigate to PropertyDetailsPage for editing
+  Future<void> _editListing(Listing listing) async {
+    try {
+      // Navigate to PropertyDetailsPage and let it handle editing
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          // builder: (context) => PropertyDetailsPage(listing: listing),
+          builder: (context) => EditListingPage(listing: listing),
+        ),
+      );
+
+      // If the property was updated, refresh the listings
+      if (result == true && mounted) {
+        _showSuccessMessage('Property updated successfully');
+        await _loadListings(refresh: true);
+        await _loadListingsCount();
+      }
+    } catch (e) {
+      _showErrorMessage('Failed to edit property: $e');
+    }
+  }
+
+  // DEACTIVATE CONFIRMATION
+  void _showDeactivateConfirmation(Listing listing) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Property'),
-        content: const Text(
-          'Are you sure you want to permanently delete this property? This action cannot be undone.',
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.pause_circle_outline, color: Colors.orange[600]),
+            const SizedBox(width: 8),
+            const Text('Deactivate Property'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to deactivate "${listing.title}"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This will hide the property from search results. You can reactivate it later.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateListingStatus(listing, 'inactive');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[600],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // DELETE CONFIRMATION
+  void _showDeleteConfirmation(Listing listing) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_outlined, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Delete Property'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                'Are you sure you want to permanently delete "${listing.title}"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This action cannot be undone. All property data, images, and videos will be permanently removed.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
           TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               _deleteListing(listing);
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -527,81 +678,131 @@ class _ListingsPageState extends State<ListingsPage>
     );
   }
 
+  // UPDATE LISTING STATUS (ACTIVATE/DEACTIVATE)
   Future<void> _updateListingStatus(Listing listing, String newStatus) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
-      // Add null check for listing.id
       final listingId = listing.id;
+      if (listingId.isEmpty) {
+        throw Exception('Invalid listing ID');
+      }
 
       final success = await _databaseService.updateListingStatus(
         int.parse(listingId),
         newStatus,
       );
 
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Property ${newStatus == 'active' ? 'activated' : newStatus} successfully',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _loadListings(refresh: true);
-        _loadListingsCount();
+        final message = newStatus == 'active'
+            ? 'Property activated successfully'
+            : 'Property deactivated successfully';
+
+        _showSuccessMessage(message);
+        await _loadListings(refresh: true);
+        await _loadListingsCount();
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to update property status'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showErrorMessage('Failed to update property status');
         }
       }
     } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        _showErrorMessage('Error updating property: $e');
       }
     }
   }
 
+  // DELETE LISTING
   Future<void> _deleteListing(Listing listing) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
-      // Add null check for listing.id
       final listingId = listing.id;
+      if (listingId.isEmpty) {
+        throw Exception('Invalid listing ID');
+      }
 
       final success = await _databaseService.deleteListing(
         int.parse(listingId),
       );
 
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Property deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _loadListings(refresh: true);
-        _loadListingsCount();
+        _showSuccessMessage('Property deleted successfully');
+        await _loadListings(refresh: true);
+        await _loadListingsCount();
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to delete property'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _showErrorMessage('Failed to delete property');
         }
       }
     } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        _showErrorMessage('Error deleting property: $e');
       }
     }
+  }
+
+  // Helper methods for showing messages
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
