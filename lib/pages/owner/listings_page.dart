@@ -70,7 +70,7 @@ class _ListingsPageState extends State<ListingsPage>
       );
       if (mounted) {
         setState(() {
-          _listingsCount = count ?? {};
+          _listingsCount = count;
         });
       }
     } catch (e) {

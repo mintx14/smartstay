@@ -47,7 +47,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late List<MediaItem> _mediaItems;
-  Map<int, VideoPlayerController> _videoControllers = {};
+  final Map<int, VideoPlayerController> _videoControllers = {};
   bool _showControls = true;
 
   @override
@@ -585,7 +585,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Page indicators
-                      Container(
+                      SizedBox(
                         height: 40,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,

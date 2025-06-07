@@ -12,7 +12,6 @@ class DatabaseService {
   String get baseUrl => _baseUrl;
 
   static const Duration _timeout = Duration(seconds: 30);
-  static const int _maxRetries = 3;
 
   Future<String?> get currentUserId async {
     try {
@@ -231,7 +230,7 @@ class DatabaseService {
       }
 
       if (queryParams.isNotEmpty) {
-        url += '?' + queryParams.join('&');
+        url += '?${queryParams.join('&')}';
       }
 
       print('🌐 Making request to: $url');
@@ -292,83 +291,6 @@ class DatabaseService {
         throw Exception('Error loading listings: $e');
       }
     }
-  }
-
-  Future<String> _sendRequest(http.Request request) async {
-    final client = http.Client();
-    try {
-      for (int attempt = 0; attempt < _maxRetries; attempt++) {
-        try {
-          final streamedResponse = await client.send(request).timeout(_timeout);
-          final responseBody = await streamedResponse.stream.bytesToString();
-
-          if (streamedResponse.statusCode == 200) {
-            return responseBody;
-          } else {
-            print('Server returned status ${streamedResponse.statusCode}');
-          }
-        } catch (e) {
-          print('Attempt $attempt failed: $e');
-          if (attempt == _maxRetries - 1) rethrow;
-        }
-      }
-      throw Exception('Failed after $_maxRetries attempts');
-    } finally {
-      client.close();
-    }
-  }
-
-  Map<String, dynamic> _processListings(List<dynamic> listings) {
-    for (var listing in listings) {
-      if (listing is Map<String, dynamic>) {
-        // Process image URLs
-        if (listing.containsKey('image_urls') &&
-            listing['image_urls'] is List) {
-          final imageUrls = listing['image_urls'] as List;
-          final validImageUrls = <String>[];
-
-          for (var url in imageUrls) {
-            if (url is String && url.isNotEmpty) {
-              try {
-                final uri = Uri.parse(url);
-                if (uri.hasScheme &&
-                    (uri.scheme == 'http' || uri.scheme == 'https')) {
-                  validImageUrls.add(url);
-                }
-              } catch (_) {}
-            }
-          }
-          listing['image_urls'] = validImageUrls;
-        }
-
-        // Process video URLs
-        if (listing.containsKey('video_urls') &&
-            listing['video_urls'] is List) {
-          final videoUrls = listing['video_urls'] as List;
-          final validVideoUrls = <String>[];
-
-          for (var url in videoUrls) {
-            if (url is String && url.isNotEmpty) {
-              try {
-                final uri = Uri.parse(url);
-                if (uri.hasScheme &&
-                    (uri.scheme == 'http' || uri.scheme == 'https')) {
-                  validVideoUrls.add(url);
-                }
-              } catch (_) {}
-            }
-          }
-          listing['video_urls'] = validVideoUrls;
-        }
-      }
-    }
-
-    return {
-      'listings': listings,
-      'page': listings.isNotEmpty ? listings[0]['page'] ?? 1 : 1,
-      'pages': listings.isNotEmpty ? listings[0]['pages'] ?? 1 : 1,
-      'total': listings.isNotEmpty ? listings[0]['total'] ?? 0 : 0,
-    };
   }
 
   // Update listing status

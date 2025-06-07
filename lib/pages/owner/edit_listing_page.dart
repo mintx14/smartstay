@@ -30,7 +30,7 @@ class _EditListingPageState extends State<EditListingPage> {
 
   // Existing media from database
   List<String> _existingMediaUrls = [];
-  List<String> _deletedMediaUrls = [];
+  final List<String> _deletedMediaUrls = [];
 
   // New media to upload
   final List<File> _newImages = [];

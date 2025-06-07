@@ -161,7 +161,14 @@ class _FavoritesPageState extends State<FavoritesPage>
               Navigator.of(context).push(
                 PageRouteBuilder(
                   pageBuilder: (context, animation, secondaryAnimation) =>
-                      PropertyDetailsPage(listing: listing),
+                      PropertyDetailsPage(
+                    listing: listing,
+                    isFavorite:
+                        widget.favoriteIds.contains(listing.id.toString()),
+                    onFavoriteToggle: (updatedListing) {
+                      _toggleFavorite(updatedListing);
+                    },
+                  ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
                     return SlideTransition(
@@ -464,32 +471,6 @@ class _FavoritesPageState extends State<FavoritesPage>
                   ),
                 ],
               ),
-              // child: ElevatedButton.icon(
-              //   onPressed: () {
-              //     // Show message to go to explore tab
-              //     ScaffoldMessenger.of(context).showSnackBar(
-              //       const SnackBar(
-              //         content: Text('Go to Explore tab to browse properties'),
-              //         backgroundColor: Color(0xFF667EEA),
-              //         behavior: SnackBarBehavior.floating,
-              //       ),
-              //     );
-              //   },
-              //   icon: const Icon(Icons.explore),
-              //   label: const Text('Browse Properties'),
-              //   style: ElevatedButton.styleFrom(
-              //     backgroundColor: const Color(0xFF667EEA),
-              //     foregroundColor: Colors.white,
-              //     padding: const EdgeInsets.symmetric(
-              //       horizontal: 32,
-              //       vertical: 16,
-              //     ),
-              //     shape: RoundedRectangleBorder(
-              //       borderRadius: BorderRadius.circular(20),
-              //     ),
-              //     elevation: 0,
-              //   ),
-              // ),
             ),
           ],
         ),

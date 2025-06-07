@@ -21,8 +21,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  bool _isFavorited = false;
-  bool _isUpdatingStatus = false;
+  final bool _isUpdatingStatus = false;
   late Listing _currentListing;
 
   final DatabaseService _databaseService = DatabaseService();
@@ -302,7 +301,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   Widget _buildImageSlider() {
-    if (_currentListing.imageUrls.isEmpty ?? true) {
+    if (_currentListing.imageUrls.isEmpty) {
       return Container(
         height: 300,
         margin: const EdgeInsets.only(top: 20), // Added top space
@@ -362,7 +361,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   Widget _buildActionButtons() {
-    final isActive = _currentListing.status?.toLowerCase() == 'active';
+    final isActive = _currentListing.status.toLowerCase() == 'active';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -433,7 +432,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   Widget _buildStatusBadge() {
-    final isActive = _currentListing.status?.toLowerCase() == 'active';
+    final isActive = _currentListing.status.toLowerCase() == 'active';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -676,63 +675,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 ],
               ),
             ),
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: IconButton(
-                  icon: const Icon(Icons.share),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                    foregroundColor: Colors.black87,
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Share feature coming soon'),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                child: IconButton(
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      _isFavorited ? Icons.favorite : Icons.favorite_border,
-                      key: ValueKey(_isFavorited),
-                      color: _isFavorited ? Colors.red : Colors.black87,
-                    ),
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isFavorited = !_isFavorited;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          _isFavorited
-                              ? 'Added to favorites'
-                              : 'Removed from favorites',
-                        ),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
           ),
           SliverToBoxAdapter(
             child: Column(
@@ -848,12 +790,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 ),
 
                 // Description
-                if (_currentListing.description.isNotEmpty ?? false)
+                if (_currentListing.description.isNotEmpty)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildInfoSection('Description', [
                       Text(
-                        _currentListing.description ?? '',
+                        _currentListing.description,
                         style: const TextStyle(
                           fontSize: 16,
                           height: 1.6,
@@ -968,88 +910,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       ),
     );
   }
-
-  void _showContactDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.contact_phone,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text('Contact Owner'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Interested in "${_currentListing.title}"?'),
-              const SizedBox(height: 16),
-              const Text('Choose how you\'d like to contact the owner:'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Opening phone app...'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.phone),
-              label: const Text('Call'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Opening messaging app...'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.message),
-              label: const Text('Message'),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 // Placeholder for EditListingPage - you'll need to create this
@@ -1116,7 +976,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
   late int _totalSlides;
   late AnimationController _indicatorController;
   late List<SliderMediaItem> _mediaItems;
-  Map<int, VideoPlayerController> _videoControllers = {};
+  final Map<int, VideoPlayerController> _videoControllers = {};
 
   @override
   void initState() {

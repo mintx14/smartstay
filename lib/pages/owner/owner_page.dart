@@ -22,9 +22,7 @@ class OwnerPage extends StatefulWidget {
 
 class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   int _currentIndex = 0;
-  late List<Widget> _screens;
   late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
 
   // Dashboard data
   DashboardStats? _dashboardStats;
@@ -41,9 +39,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
 
     // Initialize screens first
     _initializeScreens();
@@ -51,15 +46,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     _loadDashboardData().then((_) {
       // Rebuild screens after data loads
       if (mounted) {
-        setState(() {
-          _screens = [
-            _buildDashboard(),
-            const ListingsPage(),
-            const ReservationsPage(),
-            const MessagesPage(),
-            ProfilePage(user: widget.user),
-          ];
-        });
+        setState(() {});
       }
     });
 
@@ -67,15 +54,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   }
 
 // Add this helper method:
-  void _initializeScreens() {
-    _screens = [
-      _buildDashboard(),
-      const ListingsPage(),
-      const ReservationsPage(),
-      const MessagesPage(),
-      ProfilePage(user: widget.user),
-    ];
-  }
+  void _initializeScreens() {}
 
   @override
   void dispose() {
@@ -977,47 +956,5 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       await prefs.clear();
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
-  }
-
-  // Add this method to your _OwnerPageState class to validate dashboard state:
-
-  void _validateDashboardState() {
-    print('🔍 Dashboard State Validation:');
-    print('  - Loading: $_isLoading');
-    print('  - Error: $_errorMessage');
-    print('  - Stats null: ${_dashboardStats == null}');
-    if (_dashboardStats != null) {
-      print('  - Properties: ${_dashboardStats!.totalProperties}');
-      print('  - Income: ${_dashboardStats!.monthlyIncome}');
-      print('  - Occupancy Rate: ${_dashboardStats!.occupancyRate}');
-    }
-    print('  - Activities count: ${_recentActivities.length}');
-    print('  - Notifications count: ${_notifications.length}');
-  }
-
-// Also add this method to force a complete refresh:
-  Future<void> _forceRefreshDashboard() async {
-    print('🔄 Force refreshing dashboard...');
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _dashboardStats = null;
-      _recentActivities.clear();
-      _notifications.clear();
-    });
-
-    await Future.delayed(const Duration(milliseconds: 500)); // Small delay
-    await _loadDashboardData();
-    _validateDashboardState();
-  }
-
-  void _debugDashboardState() {
-    print('🔍 DASHBOARD DEBUG STATE:');
-    print('  - _isLoading: $_isLoading');
-    print('  - _errorMessage: $_errorMessage');
-    print('  - _dashboardStats null: ${_dashboardStats == null}');
-    print('  - _recentActivities length: ${_recentActivities.length}');
-    print('  - _notifications length: ${_notifications.length}');
-    print('  - Widget mounted: $mounted');
   }
 }

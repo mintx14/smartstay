@@ -25,11 +25,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final PropertyService _propertyService = PropertyService();
   bool _isLoading = true;
   List<Listing> _allListings = [];
-  final List<Listing> _featuredListings = [];
   final int _currentPage = 1;
-  int _totalPages = 1;
-  bool _hasMorePages = false;
-  final bool _isLoadingMore = false;
   String? _errorMessage;
   final List<String> _debugLog = [];
 
@@ -44,8 +40,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late AnimationController _searchAnimationController;
   late AnimationController _heartAnimationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
@@ -70,22 +64,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
   }
 
   @override
@@ -204,8 +182,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       setState(() {
         _allListings = parsedListings;
-        _totalPages = result['pages'] ?? 1;
-        _hasMorePages = result['has_more'] ?? false;
         _isLoading = false;
         _errorMessage = null;
       });
@@ -234,14 +210,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (_debugLog.length > 10) {
       _debugLog.removeAt(0);
     }
-  }
-
-  void _performSearch() {
-    setState(() {
-      _searchQuery = _searchController.text.trim();
-    });
-    _animationController.reset();
-    _loadAllListings();
   }
 
   Future<void> _logout() async {
@@ -278,78 +246,91 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     if (confirm == true) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+
+      // Get all keys that need to be preserved
+      final favoritesToPreserve =
+          prefs.getStringList('favorite_listings') ?? [];
+
+      // Remove only user-related data, not favorites
+      await prefs.remove('user_data');
+      await prefs.remove('auth_token');
+      await prefs.remove('user_id');
+      // Add any other user-specific keys you want to remove
+
+      // Make sure favorites are still saved
+      await prefs.setStringList('favorite_listings', favoritesToPreserve);
+
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 
-  Widget _buildModernSearchBar() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          margin: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search your dream property...',
-              hintStyle: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 16,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF667EEA).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.search,
-                  color: Color(0xFF667EEA),
-                  size: 24,
-                ),
-              ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.grey),
-                      onPressed: () {
-                        _searchController.clear();
-                        _performSearch();
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
-            ),
-            style: const TextStyle(fontSize: 16),
-            onSubmitted: (_) => _performSearch(),
-            onChanged: (value) {
-              setState(() {});
-            },
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildModernSearchBar() {
+  //   return SlideTransition(
+  //     position: _slideAnimation,
+  //     child: FadeTransition(
+  //       opacity: _fadeAnimation,
+  //       child: Container(
+  //         margin: const EdgeInsets.all(20),
+  //         decoration: BoxDecoration(
+  //           borderRadius: BorderRadius.circular(25),
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: Colors.black.withOpacity(0.1),
+  //               blurRadius: 20,
+  //               offset: const Offset(0, 8),
+  //             ),
+  //           ],
+  //         ),
+  //         child: TextField(
+  //           controller: _searchController,
+  //           decoration: InputDecoration(
+  //             hintText: 'Search your dream property...',
+  //             hintStyle: TextStyle(
+  //               color: Colors.grey[500],
+  //               fontSize: 16,
+  //             ),
+  //             prefixIcon: Container(
+  //               margin: const EdgeInsets.all(12),
+  //               decoration: BoxDecoration(
+  //                 color: const Color(0xFF667EEA).withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(12),
+  //               ),
+  //               child: const Icon(
+  //                 Icons.search,
+  //                 color: Color(0xFF667EEA),
+  //                 size: 24,
+  //               ),
+  //             ),
+  //             suffixIcon: _searchController.text.isNotEmpty
+  //                 ? IconButton(
+  //                     icon: const Icon(Icons.clear, color: Colors.grey),
+  //                     onPressed: () {
+  //                       _searchController.clear();
+  //                       _performSearch();
+  //                     },
+  //                   )
+  //                 : null,
+  //             filled: true,
+  //             fillColor: Colors.white,
+  //             border: OutlineInputBorder(
+  //               borderRadius: BorderRadius.circular(25),
+  //               borderSide: BorderSide.none,
+  //             ),
+  //             contentPadding: const EdgeInsets.symmetric(
+  //               horizontal: 20,
+  //               vertical: 16,
+  //             ),
+  //           ),
+  //           style: const TextStyle(fontSize: 16),
+  //           onSubmitted: (_) => _performSearch(),
+  //           onChanged: (value) {
+  //             setState(() {});
+  //           },
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildPropertyCard(Listing listing, int index) {
     final isFavorite = _favoriteIds.contains(listing.id.toString());
@@ -393,7 +374,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Navigator.of(context).push(
                 PageRouteBuilder(
                   pageBuilder: (context, animation, secondaryAnimation) =>
-                      PropertyDetailsPage(listing: listing),
+                      PropertyDetailsPage(
+                    listing: listing,
+                    isFavorite: _favoriteIds.contains(listing.id.toString()),
+                    onFavoriteToggle: _toggleFavorite,
+                  ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
                     return SlideTransition(
@@ -680,7 +665,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Column(
           children: [
             // Enhanced Search Bar
-            _buildModernSearchBar(),
+            //_buildModernSearchBar(),
 
             // Error Display
             if (_errorMessage != null) _buildErrorDisplay(),

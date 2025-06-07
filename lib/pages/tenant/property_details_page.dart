@@ -4,10 +4,14 @@ import 'package:intl/intl.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
+  final bool isFavorite;
+  final Function(Listing) onFavoriteToggle;
 
   const PropertyDetailsPage({
     super.key,
     required this.listing,
+    required this.isFavorite,
+    required this.onFavoriteToggle,
   });
 
   @override
@@ -18,19 +22,30 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
+  late AnimationController _heartAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  bool _isFavorited = false;
+
+  // Add this to track local favorite state
+  late bool _isFavorite;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize the local favorite state
+    _isFavorite = widget.isFavorite;
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _heartAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
@@ -46,10 +61,22 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     _slideController.forward();
   }
 
+  // Add this method to update the widget when props change
+  @override
+  void didUpdateWidget(PropertyDetailsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isFavorite != widget.isFavorite) {
+      setState(() {
+        _isFavorite = widget.isFavorite;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _heartAnimationController.dispose();
     super.dispose();
   }
 
@@ -333,34 +360,40 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               ),
               Container(
                 margin: const EdgeInsets.only(right: 16),
-                child: IconButton(
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      _isFavorited ? Icons.favorite : Icons.favorite_border,
-                      key: ValueKey(_isFavorited),
-                      color: _isFavorited ? Colors.red : Colors.black87,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 1.0, end: 1.3).animate(
+                    CurvedAnimation(
+                      parent: _heartAnimationController,
+                      curve: Curves.elasticOut,
                     ),
                   ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isFavorited = !_isFavorited;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_isFavorited
-                            ? 'Added to favorites'
-                            : 'Removed from favorites'),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                  child: IconButton(
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite_border,
+                        key: ValueKey(_isFavorite),
+                        color: _isFavorite ? Colors.red : Colors.black87,
                       ),
-                    );
-                  },
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.9),
+                    ),
+                    onPressed: () {
+                      // Update local state immediately for instant feedback
+                      setState(() {
+                        _isFavorite = !_isFavorite;
+                      });
+
+                      // Call the parent's toggle function
+                      widget.onFavoriteToggle(widget.listing);
+
+                      // Animate the heart
+                      _heartAnimationController.forward().then((_) {
+                        _heartAnimationController.reverse();
+                      });
+                    },
+                  ),
                 ),
               ),
             ],
@@ -556,36 +589,37 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
           ),
         ],
       ),
-      // floatingActionButton: Container(
-      //   width: double.infinity,
-      //   margin: const EdgeInsets.symmetric(horizontal: 20),
-      //   height: 56,
-      //   child: FloatingActionButton.extended(
-      //     onPressed: () {
-      //       _showContactDialog();
-      //     },
-      //     backgroundColor: Theme.of(context).primaryColor,
-      //     elevation: 8,
-      //     shape: RoundedRectangleBorder(
-      //       borderRadius: BorderRadius.circular(16),
-      //     ),
-      //     label: Row(
-      //       mainAxisAlignment: MainAxisAlignment.center,
-      //       children: [
-      //         const Icon(Icons.phone, size: 20),
-      //         const SizedBox(width: 8),
-      //         const Text(
-      //           'Contact Owner',
-      //           style: TextStyle(
-      //             fontSize: 16,
-      //             fontWeight: FontWeight.bold,
-      //           ),
-      //         ),
-      //       ],
-      //     ),
-      //   ),
-      // ),
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        height: 56,
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            _showContactDialog();
+          },
+          backgroundColor: Theme.of(context).primaryColor,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          label: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.phone, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Contact Owner',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -594,8 +628,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
+        // ignore: deprecated_member_use
         color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
+        // ignore: deprecated_member_use
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
@@ -603,6 +639,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
+              // ignore: deprecated_member_use
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -644,6 +681,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
+                  // ignore: deprecated_member_use
                   color: Theme.of(context).primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -666,26 +704,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Opening phone app...'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.phone),
-              label: const Text('Call'),
-            ),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -707,6 +725,17 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 ),
               ),
             ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            // TextButton.icon(
+            //   onPressed: () {
+            //     Navigator.of(context).pop();
+            //   },
+            //   icon: const Icon(Icons.phone),
+            //   label: const Text('Call'),
+            // ),
           ],
         );
       },
@@ -993,14 +1022,6 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     );
   }
 
-  String _getSlideIndicatorText() {
-    if (_currentIndex == 0) {
-      return 'Gallery View';
-    } else {
-      return '$_currentIndex of ${widget.imageUrls.length}';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.imageUrls.isEmpty) {
@@ -1071,43 +1092,6 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                       : null,
                 ),
               ),
-            ),
-          ),
-        ),
-
-        // Enhanced slide indicator
-        Positioned(
-          top: 12,
-          left: 12,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _currentIndex == 0 ? Icons.grid_view : Icons.photo_camera,
-                  color: Colors.white,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _getSlideIndicatorText(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
             ),
           ),
         ),
