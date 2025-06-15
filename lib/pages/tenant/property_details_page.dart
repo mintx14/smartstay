@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:my_app/widgets/chat_screen.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
@@ -668,78 +671,134 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     );
   }
 
-  void _showContactDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  // ignore: deprecated_member_use
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+  // Updated _showContactDialog method in PropertyDetailsPage
+
+  // Updated _showContactDialog method with proper type conversion
+  void _showContactDialog() async {
+    try {
+      // Convert listing.id to int if it's a String
+      int listingId;
+      listingId = int.parse(widget.listing.id);
+
+      final response = await http.get(
+        Uri.parse(
+            'http://10.0.2.2/smartstay/get_listing_owner.php?listing_id=$listingId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['success'] == true && data['owner'] != null) {
+          final owner = data['owner'];
+
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(
-                  Icons.contact_phone,
-                  color: Theme.of(context).primaryColor,
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.contact_phone,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Contact Owner'),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              const Text('Contact Owner'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Interested in "${widget.listing.title}"?'),
-              const SizedBox(height: 16),
-              const Text('Choose how you\'d like to contact the owner:'),
-            ],
-          ),
-          actions: [
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Opening messaging app...'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Owner: ${owner['full_name']}'),
+                    const SizedBox(height: 8),
+                    Text('Property: ${widget.listing.title}'),
+                    const SizedBox(height: 16),
+                    const Text('Choose how you\'d like to contact the owner:'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  if (owner['phone'] != null && owner['phone'].isNotEmpty)
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Calling ${owner['phone']}...'),
+                            backgroundColor: Theme.of(context).primaryColor,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.phone),
+                      label: const Text('Call'),
+                    ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Navigate to chat screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                            currentUserId: getCurrentUserId(),
+                            otherUser: User(
+                              id: int.parse(owner['owner_id'].toString()),
+                              fullName: owner['full_name'],
+                              email: owner['email'],
+                              userType: 'Owner',
+                            ),
+                            listingId: listingId,
+                            listingTitle: widget.listing.title,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.message),
+                    label: const Text('Message'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                );
-              },
-              icon: const Icon(Icons.message),
-              label: const Text('Message'),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            // TextButton.icon(
-            //   onPressed: () {
-            //     Navigator.of(context).pop();
-            //   },
-            //   icon: const Icon(Icons.phone),
-            //   label: const Text('Call'),
-            // ),
-          ],
-        );
-      },
-    );
+                ],
+              );
+            },
+          );
+        } else {
+          throw Exception('Owner not found');
+        }
+      } else {
+        throw Exception('Failed to load owner information');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Helper function to get current user ID (implement based on your auth system)
+  int getCurrentUserId() {
+    // This should return the logged-in tenant's user ID
+    // For example, from shared preferences or state management
+    return 2; // Placeholder - replace with actual implementation
   }
 }
 

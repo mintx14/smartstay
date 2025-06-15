@@ -4,10 +4,11 @@ import 'package:my_app/models/dashboard_models.dart';
 import 'package:my_app/services/dashboard_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
-
+// import 'dart:convert';
+// import 'package:http/http.dart' as http;
 import 'listings_page.dart';
 import 'reservations_page.dart';
-import 'messages_page.dart';
+import 'messages_page.dart' as owner_messaging; // Add prefix to avoid conflicts
 import 'profile_page.dart';
 import 'add_listing_page.dart';
 
@@ -63,7 +64,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   }
 
   // Load all dashboard data from API
-  // Replace your _loadDashboardData method with this version that forces rebuild:
   Future<void> _loadDashboardData() async {
     print('🔄 Starting _loadDashboardData...');
 
@@ -85,62 +85,62 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
 
       print('🔄 Loading dashboard data for user ID: $userId');
 
-      // Fetch all data concurrently
-      final results = await Future.wait([
-        DashboardService.getDashboardStats(userId),
-        DashboardService.getRecentActivities(userId),
-        DashboardService.getNotifications(userId),
-      ]);
+      // Test individual service calls to identify which one is failing
+      DashboardStats? dashboardStats;
+      List<RecentActivity> activities = [];
+      List<NotificationItem> notifications = [];
 
-      print('📦 Future.wait results: ${results.length} items received');
+      try {
+        print('📊 Fetching dashboard stats...');
+        dashboardStats = await DashboardService.getDashboardStats(userId);
+        print('📊 Dashboard stats result: $dashboardStats');
+      } catch (e) {
+        print('❌ Error fetching dashboard stats: $e');
+        // Continue with other calls even if stats fail
+      }
 
-      // Handle the results
-      final dashboardStats = results[0] as DashboardStats?;
-      final activities = results[1] as List<RecentActivity>? ?? [];
-      final notifications = results[2] as List<NotificationItem>? ?? [];
+      try {
+        print('📝 Fetching recent activities...');
+        activities = await DashboardService.getRecentActivities(userId);
+        print('📝 Activities count: ${activities.length}');
+      } catch (e) {
+        print('❌ Error fetching activities: $e');
+        // Continue with empty list
+      }
 
-      print('📊 Dashboard stats received: $dashboardStats');
-      print('📝 Activities count: ${activities.length}');
-      print('🔔 Notifications count: ${notifications.length}');
+      try {
+        print('🔔 Fetching notifications...');
+        notifications = await DashboardService.getNotifications(userId);
+        print('🔔 Notifications count: ${notifications.length}');
+      } catch (e) {
+        print('❌ Error fetching notifications: $e');
+        // Continue with empty list
+      }
 
-      // Force rebuild with multiple setState calls
+      // Update state with whatever data we managed to fetch
       if (!mounted) return;
 
-      // First, stop loading
       setState(() {
         _isLoading = false;
-        _errorMessage = null;
-      });
-
-      // Small delay to ensure first setState completes
-      await Future.delayed(const Duration(milliseconds: 50));
-
-      // Then update data
-      if (!mounted) return;
-      setState(() {
         _dashboardStats = dashboardStats;
         _recentActivities = activities;
         _notifications = notifications;
+        _errorMessage = null;
       });
 
-      print(
-          '✅ State updated - Loading: $_isLoading, Stats null: ${_dashboardStats == null}');
-
-      // Force one more rebuild to be absolutely sure
-      await Future.delayed(const Duration(milliseconds: 50));
-      if (!mounted) return;
-      setState(() {
-        // Trigger rebuild without changing anything
-      });
+      print('✅ State updated successfully');
+      print('📊 Final stats: $_dashboardStats');
+      print('📝 Final activities: ${_recentActivities.length}');
+      print('🔔 Final notifications: ${_notifications.length}');
     } catch (e, stackTrace) {
-      print('❌ Error loading dashboard data: $e');
+      print('❌ Error in _loadDashboardData: $e');
       print('📍 Stack trace: $stackTrace');
 
       if (!mounted) return;
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Error loading data: $e';
+        _errorMessage = 'Failed to load dashboard data: ${e.toString()}';
       });
     }
   }
@@ -150,7 +150,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     await _loadDashboardData();
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     print(
@@ -162,10 +161,10 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _buildDashboard(), // Always rebuild dashboard
+          _buildDashboard(),
           const ListingsPage(),
           const ReservationsPage(),
-          const MessagesPage(),
+          _buildMessagesPage(), // ✅ Now uses the helper method
           ProfilePage(user: widget.user),
         ],
       ),
@@ -264,6 +263,29 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  Widget _buildMessagesPage() {
+    try {
+      // Convert user ID to int if it's a string
+      int userId;
+      if (widget.user.id is int) {
+        userId = widget.user.id as int;
+      } else {
+        userId = int.parse(widget.user.id);
+      }
+
+      return owner_messaging.MessagesPage(currentUserId: userId);
+    } catch (e) {
+      // Handle case where user ID is not a valid integer
+      print('Error parsing user ID: ${widget.user.id}');
+      return const Center(
+        child: Text(
+          'Error: Invalid user ID format',
+          style: TextStyle(color: Colors.red),
+        ),
+      );
+    }
   }
 
   String _getAppBarTitle() {
@@ -430,11 +452,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   // Replace your _buildDashboardContent method with this improved version:
 
   // Replace your _buildDashboardContent method with this complete version:
-  // Simplified _buildDashboardContent that will definitely work:
   Widget _buildDashboardContent() {
     print('🏗️ Building dashboard content - Stats: $_dashboardStats');
 
-    // Even if stats is null, show something
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -454,66 +474,46 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Show stats if available, otherwise show placeholder
-              if (_dashboardStats != null) ...[
-                Row(
-                  children: [
-                    _buildStatCard(
-                      'Properties',
-                      _dashboardStats!.totalProperties.toString(),
-                      Icons.home_work,
-                      Colors.blue,
-                      () => setState(() => _currentIndex = 1),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      'Occupied',
-                      _dashboardStats!.occupancyRate,
-                      Icons.people,
-                      Colors.green,
-                      () => setState(() => _currentIndex = 2),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildStatCard(
-                      'This Month',
-                      _dashboardStats!.formattedIncome,
-                      Icons.attach_money,
-                      Colors.purple,
-                      null,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      'Messages',
-                      _dashboardStats!.unreadMessages.toString(),
-                      Icons.message,
-                      Colors.orange,
-                      () => setState(() => _currentIndex = 3),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                // Fallback content when stats is null
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
+              // Always show stats cards, with fallback values
+              Row(
+                children: [
+                  _buildStatCard(
+                    'Properties',
+                    _dashboardStats?.totalProperties.toString() ?? '0',
+                    Icons.home_work,
+                    Colors.blue,
+                    () => setState(() => _currentIndex = 1),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Dashboard stats not available',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
-                    ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    'Occupied',
+                    _dashboardStats?.occupancyRate ?? '0%',
+                    Icons.people,
+                    Colors.green,
+                    () => setState(() => _currentIndex = 2),
                   ),
-                ),
-              ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildStatCard(
+                    'This Month',
+                    _dashboardStats?.formattedIncome ?? 'RM 0',
+                    Icons.attach_money,
+                    Colors.purple,
+                    null,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    'Messages',
+                    _dashboardStats?.unreadMessages.toString() ?? '0',
+                    Icons.message,
+                    Colors.orange,
+                    () => setState(() => _currentIndex = 3),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 // Import your screen classes
 import 'favorites_page.dart';
 import 'map_page.dart';
-import 'messages_screen.dart';
+import 'messages_screen.dart' as messaging;
 import 'profile_screen.dart';
 import 'property_details_page.dart';
 
@@ -34,7 +34,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Search and filter variables
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  final String _searchQuery = '';
 
   // Animation controllers
   late AnimationController _animationController;
@@ -835,7 +835,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       case 2:
         return MapPage(user: widget.user);
       case 3:
-        return const MessagesScreen();
+        // Convert string ID to int for MessagesScreen with error handling
+        try {
+          return messaging.MessagesScreen(
+            currentUserId: int.parse(widget.user.id),
+          );
+        } catch (e) {
+          // Handle case where user ID is not a valid integer
+          print('Error parsing user ID: ${widget.user.id}');
+          return const Center(
+            child: Text(
+              'Error: Invalid user ID format',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        }
       case 4:
         return ProfileScreen(user: widget.user);
       default:
