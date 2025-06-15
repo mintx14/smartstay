@@ -37,6 +37,7 @@ dependencies:
   http_parser: ^4.0.2
   mime: ^1.0.4
   intl: ^0.18.1
+  video_player: ^2.8.2
   
 
 

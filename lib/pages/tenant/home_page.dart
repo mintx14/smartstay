@@ -4,12 +4,10 @@ import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 // Import your screen classes
 import 'favorites_page.dart';
 import 'map_page.dart';
-import 'messages_screen.dart';
+import 'messages_screen.dart' as messaging;
 import 'profile_screen.dart';
 import 'property_details_page.dart';
 
@@ -27,28 +25,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final PropertyService _propertyService = PropertyService();
   bool _isLoading = true;
   List<Listing> _allListings = [];
-  final List<Listing> _featuredListings = [];
   final int _currentPage = 1;
-  int _totalPages = 1;
-  bool _hasMorePages = false;
-  final bool _isLoadingMore = false;
   String? _errorMessage;
   final List<String> _debugLog = [];
 
+  // Favorites management
+  Set<String> _favoriteIds = {};
+
   // Search and filter variables
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  final String _searchQuery = '';
 
   // Animation controllers
   late AnimationController _animationController;
   late AnimationController _searchAnimationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late AnimationController _heartAnimationController;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _loadFavoriteIds();
     _loadInitialData();
   }
 
@@ -63,21 +60,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _heartAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
   }
 
   @override
@@ -85,7 +71,73 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _searchController.dispose();
     _animationController.dispose();
     _searchAnimationController.dispose();
+    _heartAnimationController.dispose();
     super.dispose();
+  }
+
+  // Load favorite IDs from SharedPreferences
+  Future<void> _loadFavoriteIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favoritesList = prefs.getStringList('favorite_listings') ?? [];
+      setState(() {
+        _favoriteIds = favoritesList.toSet();
+      });
+    } catch (e) {
+      print('Error loading favorites: $e');
+    }
+  }
+
+  // Save favorite IDs to SharedPreferences
+  Future<void> _saveFavoriteIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('favorite_listings', _favoriteIds.toList());
+    } catch (e) {
+      print('Error saving favorites: $e');
+    }
+  }
+
+  // Toggle favorite status
+  Future<void> _toggleFavorite(Listing listing) async {
+    final listingId = listing.id.toString();
+
+    setState(() {
+      if (_favoriteIds.contains(listingId)) {
+        _favoriteIds.remove(listingId);
+      } else {
+        _favoriteIds.add(listingId);
+      }
+    });
+
+    // Save to persistent storage
+    await _saveFavoriteIds();
+
+    // Animate heart
+    _heartAnimationController.forward().then((_) {
+      _heartAnimationController.reverse();
+    });
+
+    // Show feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _favoriteIds.contains(listingId)
+                ? 'Added to favorites'
+                : 'Removed from favorites',
+          ),
+          backgroundColor: _favoriteIds.contains(listingId)
+              ? const Color(0xFF48BB78)
+              : const Color(0xFFED8936),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -130,8 +182,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       setState(() {
         _allListings = parsedListings;
-        _totalPages = result['pages'] ?? 1;
-        _hasMorePages = result['has_more'] ?? false;
         _isLoading = false;
         _errorMessage = null;
       });
@@ -160,14 +210,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (_debugLog.length > 10) {
       _debugLog.removeAt(0);
     }
-  }
-
-  void _performSearch() {
-    setState(() {
-      _searchQuery = _searchController.text.trim();
-    });
-    _animationController.reset();
-    _loadAllListings();
   }
 
   Future<void> _logout() async {
@@ -204,80 +246,95 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     if (confirm == true) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+
+      // Get all keys that need to be preserved
+      final favoritesToPreserve =
+          prefs.getStringList('favorite_listings') ?? [];
+
+      // Remove only user-related data, not favorites
+      await prefs.remove('user_data');
+      await prefs.remove('auth_token');
+      await prefs.remove('user_id');
+      // Add any other user-specific keys you want to remove
+
+      // Make sure favorites are still saved
+      await prefs.setStringList('favorite_listings', favoritesToPreserve);
+
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 
-  Widget _buildModernSearchBar() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          margin: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search your dream property...',
-              hintStyle: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 16,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF667EEA).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.search,
-                  color: Color(0xFF667EEA),
-                  size: 24,
-                ),
-              ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.grey),
-                      onPressed: () {
-                        _searchController.clear();
-                        _performSearch();
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
-            ),
-            style: const TextStyle(fontSize: 16),
-            onSubmitted: (_) => _performSearch(),
-            onChanged: (value) {
-              setState(() {});
-            },
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildModernSearchBar() {
+  //   return SlideTransition(
+  //     position: _slideAnimation,
+  //     child: FadeTransition(
+  //       opacity: _fadeAnimation,
+  //       child: Container(
+  //         margin: const EdgeInsets.all(20),
+  //         decoration: BoxDecoration(
+  //           borderRadius: BorderRadius.circular(25),
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: Colors.black.withOpacity(0.1),
+  //               blurRadius: 20,
+  //               offset: const Offset(0, 8),
+  //             ),
+  //           ],
+  //         ),
+  //         child: TextField(
+  //           controller: _searchController,
+  //           decoration: InputDecoration(
+  //             hintText: 'Search your dream property...',
+  //             hintStyle: TextStyle(
+  //               color: Colors.grey[500],
+  //               fontSize: 16,
+  //             ),
+  //             prefixIcon: Container(
+  //               margin: const EdgeInsets.all(12),
+  //               decoration: BoxDecoration(
+  //                 color: const Color(0xFF667EEA).withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(12),
+  //               ),
+  //               child: const Icon(
+  //                 Icons.search,
+  //                 color: Color(0xFF667EEA),
+  //                 size: 24,
+  //               ),
+  //             ),
+  //             suffixIcon: _searchController.text.isNotEmpty
+  //                 ? IconButton(
+  //                     icon: const Icon(Icons.clear, color: Colors.grey),
+  //                     onPressed: () {
+  //                       _searchController.clear();
+  //                       _performSearch();
+  //                     },
+  //                   )
+  //                 : null,
+  //             filled: true,
+  //             fillColor: Colors.white,
+  //             border: OutlineInputBorder(
+  //               borderRadius: BorderRadius.circular(25),
+  //               borderSide: BorderSide.none,
+  //             ),
+  //             contentPadding: const EdgeInsets.symmetric(
+  //               horizontal: 20,
+  //               vertical: 16,
+  //             ),
+  //           ),
+  //           style: const TextStyle(fontSize: 16),
+  //           onSubmitted: (_) => _performSearch(),
+  //           onChanged: (value) {
+  //             setState(() {});
+  //           },
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildPropertyCard(Listing listing, int index) {
+    final isFavorite = _favoriteIds.contains(listing.id.toString());
+
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 800 + (index * 100)),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -286,7 +343,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, 50 * (1 - value)),
           child: Opacity(
-            opacity: value.clamp(0.0, 1.0), // Clamp opacity to valid range
+            opacity: value.clamp(0.0, 1.0),
             child: child,
           ),
         );
@@ -317,7 +374,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Navigator.of(context).push(
                 PageRouteBuilder(
                   pageBuilder: (context, animation, secondaryAnimation) =>
-                      PropertyDetailsPage(listing: listing),
+                      PropertyDetailsPage(
+                    listing: listing,
+                    isFavorite: _favoriteIds.contains(listing.id.toString()),
+                    onFavoriteToggle: _toggleFavorite,
+                  ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
                     return SlideTransition(
@@ -335,26 +396,67 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image Section
+                // Image Section with Favorite Button
                 SizedBox(
                   height: 200,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    child: InlineImageSlider(
-                      key: ValueKey(
-                          '${listing.title}_${listing.imageUrls.hashCode}_${listing.imageUrls.length}_${listing.id}'),
-                      imageUrls: listing.imageUrls.isNotEmpty
-                          ? listing.imageUrls
-                          : [
-                              'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
-                              'https://images.unsplash.com/photo-1560449752-8d7085b7b162?w=800',
-                              'https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?w=800',
-                            ],
-                      title: listing.title,
-                    ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        child: InlineImageSlider(
+                          key: ValueKey(
+                              '${listing.title}_${listing.imageUrls.hashCode}_${listing.imageUrls.length}_${listing.id}'),
+                          imageUrls: listing.imageUrls.isNotEmpty
+                              ? listing.imageUrls
+                              : [
+                                  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+                                  'https://images.unsplash.com/photo-1560449752-8d7085b7b162?w=800',
+                                  'https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?w=800',
+                                ],
+                          title: listing.title,
+                        ),
+                      ),
+                      // Favorite Button
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 1.0, end: 1.3).animate(
+                            CurvedAnimation(
+                              parent: _heartAnimationController,
+                              curve: Curves.elasticOut,
+                            ),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              onPressed: () => _toggleFavorite(listing),
+                              icon: Icon(
+                                isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color:
+                                    isFavorite ? Colors.red : Colors.grey[600],
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -563,7 +665,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Column(
           children: [
             // Enhanced Search Bar
-            _buildModernSearchBar(),
+            //_buildModernSearchBar(),
 
             // Error Display
             if (_errorMessage != null) _buildErrorDisplay(),
@@ -719,11 +821,35 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       case 0:
         return _buildExploreScreen();
       case 1:
-        return FavoritesPage(user: widget.user);
+        return FavoritesPage(
+          user: widget.user,
+          favoriteIds: _favoriteIds,
+          onFavoriteToggle: _toggleFavorite,
+          onFavoritesChanged: () {
+            // Callback to refresh when favorites change in FavoritesPage
+            setState(() {
+              // This will refresh the HomePage to reflect changes
+            });
+          },
+        );
       case 2:
         return MapPage(user: widget.user);
       case 3:
-        return const MessagesScreen();
+        // Convert string ID to int for MessagesScreen with error handling
+        try {
+          return messaging.MessagesScreen(
+            currentUserId: int.parse(widget.user.id),
+          );
+        } catch (e) {
+          // Handle case where user ID is not a valid integer
+          print('Error parsing user ID: ${widget.user.id}');
+          return const Center(
+            child: Text(
+              'Error: Invalid user ID format',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        }
       case 4:
         return ProfileScreen(user: widget.user);
       default:

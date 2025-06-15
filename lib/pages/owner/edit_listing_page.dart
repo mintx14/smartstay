@@ -6,37 +6,101 @@ import 'package:video_player/video_player.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/database_service.dart';
 
-class AddListingPage extends StatefulWidget {
-  const AddListingPage({super.key});
+class EditListingPage extends StatefulWidget {
+  final Listing listing;
+
+  const EditListingPage({super.key, required this.listing});
 
   @override
-  State<AddListingPage> createState() => _AddListingPageState();
+  State<EditListingPage> createState() => _EditListingPageState();
 }
 
-class _AddListingPageState extends State<AddListingPage> {
+class _EditListingPageState extends State<EditListingPage> {
   final _formKey = GlobalKey<FormState>();
-  final _propertyNameController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _postcodeController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _bedroomsController = TextEditingController();
-  final _bathroomsController = TextEditingController();
-  final _areaSqftController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  DateTime _availableFrom = DateTime.now();
-  String _minimumTenure = '12 months';
-  final List<File> _selectedImages = [];
-  final List<File> _selectedVideos = [];
+  late TextEditingController _propertyNameController;
+  late TextEditingController _addressController;
+  late TextEditingController _postcodeController;
+  late TextEditingController _priceController;
+  late TextEditingController _bedroomsController;
+  late TextEditingController _bathroomsController;
+  late TextEditingController _areaSqftController;
+  late TextEditingController _descriptionController;
+  late DateTime _availableFrom;
+  late String _minimumTenure;
+
+  // Existing media from database
+  List<String> _existingMediaUrls = [];
+  final List<String> _deletedMediaUrls = [];
+
+  // New media to upload
+  final List<File> _newImages = [];
+  final List<File> _newVideos = [];
   final Map<String, VideoPlayerController> _videoControllers = {};
+
   final DatabaseService _databaseService = DatabaseService();
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    _propertyNameController = TextEditingController(text: widget.listing.title);
+    _addressController = TextEditingController(text: widget.listing.address);
+    _postcodeController = TextEditingController(text: widget.listing.postcode);
+    _priceController =
+        TextEditingController(text: widget.listing.price.toStringAsFixed(0));
+    _bedroomsController =
+        TextEditingController(text: widget.listing.bedrooms.toString());
+    _bathroomsController =
+        TextEditingController(text: widget.listing.bathrooms.toString());
+    _areaSqftController =
+        TextEditingController(text: widget.listing.areaSqft.toString());
+    _descriptionController =
+        TextEditingController(text: widget.listing.description);
+    _availableFrom = widget.listing.availableFrom;
+
+    // Transform the minimum tenure to match dropdown format
+    _minimumTenure =
+        _transformTenureToDropdownFormat(widget.listing.minimumTenure);
+
+    // Copy existing media URLs
+    _existingMediaUrls = List<String>.from(widget.listing.imageUrls);
+  }
+
+// Helper method to transform tenure values
+  String _transformTenureToDropdownFormat(String tenure) {
+    // Handle different possible formats from database
+    switch (tenure.toLowerCase().trim()) {
+      case '3':
+      case '3 month':
+      case '3 months':
+        return '3 months';
+      case '6':
+      case '6 month':
+      case '6 months':
+        return '6 months';
+      case '12':
+      case '12 month':
+      case '12 months':
+        return '12 months';
+      case '24':
+      case '24 month':
+      case '24 months':
+        return '24 months';
+      default:
+        return '12 months'; // Default fallback
+    }
+  }
 
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
       setState(() {
-        _selectedImages.addAll(images.map((image) => File(image.path)));
+        _newImages.addAll(images.map((image) => File(image.path)));
       });
     }
   }
@@ -45,12 +109,11 @@ class _AddListingPageState extends State<AddListingPage> {
     final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
     if (video != null) {
       final videoFile = File(video.path);
-      // Initialize video controller
       final controller = VideoPlayerController.file(videoFile);
       await controller.initialize();
 
       setState(() {
-        _selectedVideos.add(videoFile);
+        _newVideos.add(videoFile);
         _videoControllers[video.path] = controller;
       });
     }
@@ -60,7 +123,7 @@ class _AddListingPageState extends State<AddListingPage> {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
       setState(() {
-        _selectedImages.add(File(photo.path));
+        _newImages.add(File(photo.path));
       });
     }
   }
@@ -73,7 +136,7 @@ class _AddListingPageState extends State<AddListingPage> {
       await controller.initialize();
 
       setState(() {
-        _selectedVideos.add(videoFile);
+        _newVideos.add(videoFile);
         _videoControllers[video.path] = controller;
       });
     }
@@ -178,15 +241,38 @@ class _AddListingPageState extends State<AddListingPage> {
     );
   }
 
+  void _removeExistingMedia(String url) {
+    setState(() {
+      _existingMediaUrls.remove(url);
+      _deletedMediaUrls.add(url);
+    });
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      _newImages.removeAt(index);
+    });
+  }
+
+  void _removeNewVideo(int index) {
+    setState(() {
+      final videoPath = _newVideos[index].path;
+      _videoControllers[videoPath]?.dispose();
+      _videoControllers.remove(videoPath);
+      _newVideos.removeAt(index);
+    });
+  }
+
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Check if at least 4 media files are selected
-      final totalMedia = _selectedImages.length + _selectedVideos.length;
+      // Check if at least 4 media files remain
+      final totalMedia =
+          _existingMediaUrls.length + _newImages.length + _newVideos.length;
       if (totalMedia < 4) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Please upload at least 4 images or videos of the property.'),
+                'Please keep at least 4 images or videos of the property.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -200,54 +286,59 @@ class _AddListingPageState extends State<AddListingPage> {
       try {
         String? userId = await _databaseService.currentUserId;
         if (userId == null) {
-          throw Exception("You must be logged in to add a listing");
+          throw Exception("You must be logged in to edit a listing");
         }
 
-        // Upload images and videos
-        List<String> allMediaUrls = [];
+        // Upload new images and videos
+        List<String> newMediaUrls = [];
 
-        if (_selectedImages.isNotEmpty) {
+        if (_newImages.isNotEmpty) {
           List<String> imagePaths =
-              _selectedImages.map((file) => file.path).toList();
+              _newImages.map((file) => file.path).toList();
           List<String> imageUrls =
               await _databaseService.uploadImages(imagePaths, userId);
-          allMediaUrls.addAll(imageUrls);
+          newMediaUrls.addAll(imageUrls);
         }
 
-        if (_selectedVideos.isNotEmpty) {
+        if (_newVideos.isNotEmpty) {
           List<String> videoPaths =
-              _selectedVideos.map((file) => file.path).toList();
+              _newVideos.map((file) => file.path).toList();
           List<String> videoUrls =
               await _databaseService.uploadVideos(videoPaths, userId);
-          allMediaUrls.addAll(videoUrls);
+          newMediaUrls.addAll(videoUrls);
         }
 
-        // Create and save the listing with all media URLs in imageUrls field
-        final listing = Listing(
-          id: '',
+        // Combine existing and new media URLs
+        List<String> allMediaUrls = [..._existingMediaUrls, ...newMediaUrls];
+
+        // Update the listing
+        final updatedListing = Listing(
+          id: widget.listing.id,
           title: _propertyNameController.text,
           address: _addressController.text,
           postcode: _postcodeController.text,
           description: _descriptionController.text,
-          imageUrls: allMediaUrls, // All media URLs go here
+          imageUrls: allMediaUrls,
           price: double.parse(_priceController.text),
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),
           availableFrom: _availableFrom,
-          minimumTenure: _minimumTenure,
-          status: 'Active',
-          createdAt: DateTime.now(),
+          // Transform tenure back to database format if needed
+          minimumTenure:
+              _minimumTenure, // or _transformTenureForDatabase(_minimumTenure)
+          status: widget.listing.status,
+          createdAt: widget.listing.createdAt,
           updatedAt: DateTime.now(),
         );
 
-        await _databaseService.addListing(listing);
+        await _databaseService.updateListing(updatedListing, _deletedMediaUrls);
 
         if (mounted) {
           Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Property listing added successfully'),
+              content: Text('Property listing updated successfully'),
               backgroundColor: Colors.green,
             ),
           );
@@ -256,7 +347,7 @@ class _AddListingPageState extends State<AddListingPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error adding listing: $e'),
+              content: Text('Error updating listing: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -276,7 +367,7 @@ class _AddListingPageState extends State<AddListingPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Add Property Listing'),
+        title: const Text('Edit Property Listing'),
         elevation: 0,
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
@@ -416,6 +507,32 @@ class _AddListingPageState extends State<AddListingPage> {
                       title: 'Property Media',
                       icon: Icons.photo_library,
                       children: [
+                        // Existing Media
+                        if (_existingMediaUrls.isNotEmpty) ...[
+                          const Text(
+                            'Existing Media',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 120,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _existingMediaUrls.length,
+                              itemBuilder: (context, index) {
+                                return _buildExistingMediaThumbnail(
+                                  url: _existingMediaUrls[index],
+                                  onRemove: () => _removeExistingMedia(
+                                      _existingMediaUrls[index]),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Add New Media Button
                         Container(
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey[300]!),
@@ -436,7 +553,7 @@ class _AddListingPageState extends State<AddListingPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Tap to add photos or videos',
+                                    'Add more photos or videos',
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.grey[700],
@@ -444,7 +561,7 @@ class _AddListingPageState extends State<AddListingPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Minimum 4 files required',
+                                    'Total media must be at least 4',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[500],
@@ -455,10 +572,11 @@ class _AddListingPageState extends State<AddListingPage> {
                             ),
                           ),
                         ),
-                        if (_selectedImages.isNotEmpty ||
-                            _selectedVideos.isNotEmpty) ...[
+
+                        // New Media Preview
+                        if (_newImages.isNotEmpty || _newVideos.isNotEmpty) ...[
                           const SizedBox(height: 16),
-                          _buildMediaPreview(),
+                          _buildNewMediaPreview(),
                         ],
                       ],
                     ),
@@ -477,7 +595,7 @@ class _AddListingPageState extends State<AddListingPage> {
                         elevation: 2,
                       ),
                       child: const Text(
-                        'Save Property Listing',
+                        'Update Property Listing',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -713,13 +831,95 @@ class _AddListingPageState extends State<AddListingPage> {
     );
   }
 
-  Widget _buildMediaPreview() {
+  Widget _buildExistingMediaThumbnail({
+    required String url,
+    required VoidCallback onRemove,
+  }) {
+    final isVideo = url.toLowerCase().endsWith('.mp4') ||
+        url.toLowerCase().endsWith('.mov') ||
+        url.toLowerCase().endsWith('.avi');
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 120,
+              height: 120,
+              color: Colors.grey[200],
+              child: isVideo
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: Icon(
+                              Icons.videocam,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          color: Colors.black.withOpacity(0.3),
+                          child: const Center(
+                            child: Icon(
+                              Icons.play_circle_filled,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: Icon(Icons.broken_image, color: Colors.grey),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+          Positioned(
+            top: 5,
+            right: 5,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(4),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewMediaPreview() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_selectedImages.isNotEmpty) ...[
+        if (_newImages.isNotEmpty) ...[
           Text(
-            'Photos (${_selectedImages.length})',
+            'New Photos (${_newImages.length})',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -727,25 +927,21 @@ class _AddListingPageState extends State<AddListingPage> {
             height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: _selectedImages.length,
+              itemCount: _newImages.length,
               itemBuilder: (context, index) {
                 return _buildMediaThumbnail(
-                  file: _selectedImages[index],
+                  file: _newImages[index],
                   isVideo: false,
-                  onRemove: () {
-                    setState(() {
-                      _selectedImages.removeAt(index);
-                    });
-                  },
+                  onRemove: () => _removeNewImage(index),
                 );
               },
             ),
           ),
         ],
-        if (_selectedVideos.isNotEmpty) ...[
+        if (_newVideos.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
-            'Videos (${_selectedVideos.length})',
+            'New Videos (${_newVideos.length})',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -753,19 +949,12 @@ class _AddListingPageState extends State<AddListingPage> {
             height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: _selectedVideos.length,
+              itemCount: _newVideos.length,
               itemBuilder: (context, index) {
                 return _buildMediaThumbnail(
-                  file: _selectedVideos[index],
+                  file: _newVideos[index],
                   isVideo: true,
-                  onRemove: () {
-                    setState(() {
-                      final videoPath = _selectedVideos[index].path;
-                      _videoControllers[videoPath]?.dispose();
-                      _videoControllers.remove(videoPath);
-                      _selectedVideos.removeAt(index);
-                    });
-                  },
+                  onRemove: () => _removeNewVideo(index),
                 );
               },
             ),
