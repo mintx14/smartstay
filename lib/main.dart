@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
 import 'register.dart';
 import 'package:my_app/pages/tenant/home_page.dart';
+import 'package:my_app/pages/owner/owner_page.dart'; // Add this import for owner page
 import 'package:my_app/models/user_model.dart';
 
 void main() async {
@@ -55,14 +56,31 @@ class MyApp extends StatelessWidget {
               const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         ),
       ),
-      home: isLoggedIn
-          ? HomePage(user: user!)
-          : const SplashScreen(), // You can remove SplashScreen if unnecessary
+      home: _getInitialScreen(),
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
+        '/tenant-home': (context) => HomePage(user: user!),
+        '/owner-home': (context) => OwnerPage(user: user!), // Add owner route
       },
     );
+  }
+
+  Widget _getInitialScreen() {
+    if (isLoggedIn && user != null) {
+      // Auto-login based on user type
+      if (user!.userType == 'Owner') {
+        return OwnerPage(user: user!);
+      } else if (user!.userType == 'Tenant') {
+        return HomePage(user: user!);
+      } else {
+        // If userType is not recognized, go to login
+        return const SplashScreen();
+      }
+    } else {
+      // Not logged in, show splash screen
+      return const SplashScreen();
+    }
   }
 }
 

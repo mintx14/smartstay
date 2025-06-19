@@ -3,18 +3,23 @@ import 'package:my_app/models/listing.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:my_app/widgets/chat_screen.dart';
+import 'package:my_app/widgets/chat_screen.dart' as chat;
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
+import 'booking_request_page.dart';
+import 'package:my_app/models/user_model.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
   final bool isFavorite;
   final Function(Listing) onFavoriteToggle;
+  final User user; // ADD THIS LINE
 
   const PropertyDetailsPage({
     super.key,
     required this.listing,
     required this.isFavorite,
     required this.onFavoriteToggle,
+    required this.user, // ADD THIS LINE
   });
 
   @override
@@ -340,27 +345,27 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               ),
             ),
             actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: IconButton(
-                  icon: const Icon(Icons.share),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                    foregroundColor: Colors.black87,
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Share feature coming soon'),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              // Container(
+              //   margin: const EdgeInsets.only(right: 8),
+              //   child: IconButton(
+              //     icon: const Icon(Icons.share),
+              //     style: IconButton.styleFrom(
+              //       backgroundColor: Colors.white.withOpacity(0.9),
+              //       foregroundColor: Colors.black87,
+              //     ),
+              //     onPressed: () {
+              //       ScaffoldMessenger.of(context).showSnackBar(
+              //         SnackBar(
+              //           content: const Text('Share feature coming soon'),
+              //           backgroundColor: Theme.of(context).primaryColor,
+              //           shape: RoundedRectangleBorder(
+              //             borderRadius: BorderRadius.circular(10),
+              //           ),
+              //         ),
+              //       );
+              //     },
+              //   ),
+              // ),
               Container(
                 margin: const EdgeInsets.only(right: 16),
                 child: ScaleTransition(
@@ -595,31 +600,82 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       floatingActionButton: Container(
         width: double.infinity,
         margin: const EdgeInsets.symmetric(horizontal: 20),
-        height: 56,
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            _showContactDialog();
-          },
-          backgroundColor: Theme.of(context).primaryColor,
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          label: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.phone, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Contact Owner',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+        height: 120,
+        child: Column(
+          children: [
+            // Book Now Button
+            // Book Now Button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: FloatingActionButton.extended(
+                heroTag: "bookNow",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BookingRequestPage(
+                        listing: widget.listing,
+                        currentUser: widget.user, // Just pass the user directly
+                      ),
+                    ),
+                  );
+                },
+                backgroundColor: const Color(0xFF48BB78),
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                label: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_today, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Book Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            // Contact Owner Button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: FloatingActionButton.extended(
+                heroTag: "contactOwner",
+                onPressed: () {
+                  _showContactDialog();
+                },
+                backgroundColor: Theme.of(context).primaryColor,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                label: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.phone, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Contact Owner',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -680,9 +736,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       int listingId;
       listingId = int.parse(widget.listing.id);
 
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse(
-            'http://10.0.2.2/smartstay/get_listing_owner.php?listing_id=$listingId'),
+        Uri.parse(ApiConfig.getListingOwnerUrlWithId(listingId)),
       );
 
       if (response.statusCode == 200) {
@@ -752,9 +808,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ChatScreen(
+                          builder: (context) => chat.ChatScreen(
                             currentUserId: getCurrentUserId(),
-                            otherUser: User(
+                            otherUser: chat.User(
+                              // Use chat.User for the chat screen's User class
                               id: int.parse(owner['owner_id'].toString()),
                               fullName: owner['full_name'],
                               email: owner['email'],
@@ -795,10 +852,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   // Helper function to get current user ID (implement based on your auth system)
+  // Helper function to get current user ID
   int getCurrentUserId() {
-    // This should return the logged-in tenant's user ID
-    // For example, from shared preferences or state management
-    return 2; // Placeholder - replace with actual implementation
+    // Now you can use widget.user
+    return int.parse(widget.user.id);
   }
 }
 
@@ -816,6 +873,231 @@ class PropertyDetailsImageSlider extends StatefulWidget {
   @override
   State<PropertyDetailsImageSlider> createState() =>
       _PropertyDetailsImageSliderState();
+}
+// 1. Add this new FullScreenImageViewer widget at the end of your file (after PropertyDetailsImageSlider)
+
+class FullScreenImageViewer extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+  final String title;
+
+  const FullScreenImageViewer({
+    super.key,
+    required this.imageUrls,
+    required this.initialIndex,
+    required this.title,
+  });
+
+  @override
+  State<FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Full screen image viewer
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemCount: widget.imageUrls.length,
+            itemBuilder: (context, index) {
+              return Center(
+                child: Hero(
+                  tag: widget.imageUrls[index],
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    boundaryMargin: const EdgeInsets.all(20),
+                    minScale: 0.5,
+                    maxScale: 3.0,
+                    child: Image.network(
+                      widget.imageUrls[index],
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.white,
+                                size: 64,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Failed to load image',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Top bar with close button and title
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: MediaQuery.of(context).padding.top + 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom bar with indicators and image counter
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 100,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Image counter
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_currentIndex + 1} of ${widget.imageUrls.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Page indicators
+                    if (widget.imageUrls.length > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          widget.imageUrls.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: _currentIndex == index ? 24 : 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              color: _currentIndex == index
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
@@ -842,6 +1124,27 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     _pageController.dispose();
     _indicatorController.dispose();
     super.dispose();
+  }
+
+  void _openFullScreenImage(int index) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            FullScreenImageViewer(
+          imageUrls: widget.imageUrls,
+          initialIndex: index,
+          title: widget.title,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
   }
 
   Widget _buildNetworkImage(String imageUrl, {bool isGridItem = false}) {
@@ -936,9 +1239,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             Expanded(
               flex: 2,
               child: GestureDetector(
-                onTap: () => _pageController.animateToPage(1,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.ease),
+                onTap: () => _openFullScreenImage(0),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius:
@@ -967,9 +1268,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _pageController.animateToPage(2,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.ease),
+                      onTap: () => _openFullScreenImage(1),
                       child: SizedBox(
                         width: double.infinity,
                         child: ClipRRect(
@@ -984,9 +1283,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   const SizedBox(height: 2),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _pageController.animateToPage(3,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.ease),
+                      onTap: () => _openFullScreenImage(2),
                       child: SizedBox(
                         width: double.infinity,
                         child: ClipRRect(
@@ -999,9 +1296,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   const SizedBox(height: 2),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _pageController.animateToPage(4,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.ease),
+                      onTap: () => _openFullScreenImage(3),
                       child: Stack(
                         children: [
                           SizedBox(
@@ -1110,12 +1405,16 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             allowImplicitScrolling: true,
             pageSnapping: true,
             physics: const PageScrollPhysics(),
+            // In the PageView.builder itemBuilder, wrap the image with GestureDetector:
             itemBuilder: (context, index) {
               if (index == 0) {
                 return _buildGridView();
               } else {
                 final imageIndex = index - 1;
-                return _buildNetworkImage(widget.imageUrls[imageIndex]);
+                return GestureDetector(
+                  onTap: () => _openFullScreenImage(imageIndex),
+                  child: _buildNetworkImage(widget.imageUrls[imageIndex]),
+                );
               }
             },
           ),

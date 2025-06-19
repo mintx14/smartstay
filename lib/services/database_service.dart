@@ -5,11 +5,15 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/models/listing.dart';
+// ADD THIS IMPORT
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class DatabaseService {
-  static const String _baseUrl =
-      'http://10.0.2.2/smartstay'; // Android emulator
-  String get baseUrl => _baseUrl;
+  // REMOVE THESE LINES - No longer needed
+  // static const String _baseUrl = 'http://192.168.0.11/smartstay';
+
+  // UPDATED: Use API config instead
+  String get baseUrl => ApiConfig.baseUrl;
 
   static const Duration _timeout = Duration(seconds: 30);
 
@@ -25,8 +29,9 @@ class DatabaseService {
 
   Future<bool> testConnection() async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http
-          .get(Uri.parse('$baseUrl/test_connection.php'))
+          .get(Uri.parse(ApiConfig.testConnectionUrl))
           .timeout(_timeout);
       print('Connection test response: ${response.statusCode}');
       return response.statusCode == 200;
@@ -63,7 +68,8 @@ class DatabaseService {
         final fileName = basename(file.path);
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('$baseUrl/upload_image.php'),
+          // UPDATED: Use API config instead of hardcoded URL
+          Uri.parse(ApiConfig.uploadImageUrl),
         );
         request.headers.addAll({'Accept': 'application/json'});
         request.fields['user_id'] = userId;
@@ -124,7 +130,8 @@ class DatabaseService {
         final fileName = basename(file.path);
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('$baseUrl/upload_video.php'),
+          // UPDATED: Use API config instead of hardcoded URL
+          Uri.parse(ApiConfig.uploadVideoUrl),
         );
         request.headers.addAll({'Accept': 'application/json'});
         request.fields['user_id'] = userId;
@@ -136,7 +143,6 @@ class DatabaseService {
           ),
         );
 
-        // Set timeout for video uploads (longer than images)
         var streamedResponse = await request.send().timeout(
           const Duration(minutes: 5),
           onTimeout: () {
@@ -148,7 +154,6 @@ class DatabaseService {
         final parsedResponse = json.decode(responseBody);
 
         if (parsedResponse['success'] == true) {
-          // Changed to use 'image_url' since we're using the same table structure
           final videoUrl = parsedResponse['image_url'];
           if (videoUrl != null && videoUrl.isNotEmpty) {
             videoUrls.add(videoUrl);
@@ -187,13 +192,13 @@ class DatabaseService {
         'area_sqft': listing.areaSqft,
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,
-        'image_urls':
-            listing.imageUrls, // This now contains both images and videos
+        'image_urls': listing.imageUrls,
       };
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/add_listing.php'),
+            // UPDATED: Use API config instead of hardcoded URL
+            Uri.parse(ApiConfig.addListingUrl),
             headers: _getHeaders(),
             body: json.encode(requestBody),
           )
@@ -216,7 +221,8 @@ class DatabaseService {
     int? userId,
   }) async {
     try {
-      String url = '$baseUrl/get_listings.php';
+      // UPDATED: Use API config instead of hardcoded URL
+      String url = ApiConfig.getListingsUrl;
       List<String> queryParams = [];
 
       queryParams.add('page=$page');
@@ -293,56 +299,11 @@ class DatabaseService {
     }
   }
 
-  // Update listing status
-  // Future<bool> updateListingStatus(int listingId, String status) async {
-  //   try {
-  //     final response = await http.put(
-  //       Uri.parse('$baseUrl/update_listing_status.php?id=$listingId'),
-  //       headers: {'Content-Type': 'application/json'},
-  //       body: json.encode({'status': status}),
-  //     );
-
-  //     return response.statusCode == 200;
-  //   } catch (e) {
-  //     print('Error updating listing status: $e');
-  //     return false;
-  //   }
-  // }
-
-  // // Archive a listing (soft delete)
-  // Future<bool> archiveListing(int listingId) async {
-  //   return await updateListingStatus(listingId, 'archived');
-  // }
-
-  // // Activate a listing
-  // Future<bool> activateListing(int listingId) async {
-  //   return await updateListingStatus(listingId, 'active');
-  // }
-
-  // // Deactivate a listing
-  // Future<bool> deactivateListing(int listingId) async {
-  //   return await updateListingStatus(listingId, 'inactive');
-  // }
-
-  // Delete listing permanently
-  // Future<bool> deleteListing(int listingId) async {
-  //   try {
-  //     final response = await http.delete(
-  //       Uri.parse('$baseUrl/delete_listing.php?id=$listingId'),
-  //     );
-
-  //     return response.statusCode == 200;
-  //   } catch (e) {
-  //     print('Error deleting listing: $e');
-  //     return false;
-  //   }
-  // }
-
-  // Get listings count by status
   Future<Map<String, int>> getListingsCount(int userId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse('$baseUrl/get_listings_count.php?user_id=$userId'),
+        Uri.parse(ApiConfig.getListingsCountUrlWithUserId(userId)),
       );
 
       if (response.statusCode == 200) {
@@ -361,8 +322,6 @@ class DatabaseService {
     }
   }
 
-// Add this method to your DatabaseService class in database_service.dart
-
   Future<bool> updateListing(
       Listing listing, List<String> deletedMediaUrls) async {
     try {
@@ -371,7 +330,6 @@ class DatabaseService {
         throw Exception('User not authenticated');
       }
 
-      // Prepare the data for the API
       final Map<String, dynamic> data = {
         'listing_id': listing.id,
         'user_id': userId,
@@ -386,14 +344,12 @@ class DatabaseService {
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,
         'deleted_media': deletedMediaUrls,
-        'new_media':
-            [], // This will be populated if you upload new media separately
+        'new_media': [],
       };
 
-      // Make API call to update listing
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse(
-            'http://10.0.2.2/smartstay/update_listing.php'), // Update with your actual URL
+        Uri.parse(ApiConfig.updateListingUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
       );
@@ -410,14 +366,13 @@ class DatabaseService {
     }
   }
 
-// You might also need this method to get a single listing for editing
   Future<Listing?> getSingleListing(String listingId) async {
     try {
       final userId = await currentUserId;
 
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse(
-            'http://10.0.2.2/smartstay/get_single_listing.php?listing_id=$listingId&user_id=$userId'),
+        Uri.parse(ApiConfig.getSingleListingUrlWithParams(listingId, userId!)),
       );
 
       if (response.statusCode == 200) {
@@ -433,11 +388,11 @@ class DatabaseService {
     }
   }
 
-// Update the updateListingStatus method if it's not already there
   Future<bool> updateListingStatus(int listingId, String status) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/smartstay/update_listing_status.php'),
+        Uri.parse(ApiConfig.updateListingStatusUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'listing_id': listingId,
@@ -456,11 +411,11 @@ class DatabaseService {
     }
   }
 
-// Delete listing method
   Future<bool> deleteListing(int listingId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/smartstay/delete_listing.php'),
+        Uri.parse(ApiConfig.deleteListingUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'listing_id': listingId,

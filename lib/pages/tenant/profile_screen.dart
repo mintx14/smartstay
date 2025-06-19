@@ -230,7 +230,7 @@ class ProfileScreen extends StatelessWidget {
   void _navigateToPaymentMethods(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const PaymentMethodsPage(),
+        builder: (context) => PaymentMethodsPage(user: user),
       ),
     );
   }

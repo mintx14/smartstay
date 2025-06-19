@@ -1,15 +1,18 @@
-// services/favorites_service.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+// ADD THIS IMPORT
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class FavoritesService {
-  final String baseUrl = 'http://10.0.2.2/smartstay';
+  // REMOVE THIS LINE - No longer needed
+  // final String baseUrl = 'http://192.168.0.11/smartstay';
 
   // Get user's favorites
   Future<List<String>> getUserFavorites(String userId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse('$baseUrl/favorites/$userId'),
+        Uri.parse(ApiConfig.getFavoritesUrlWithUserId(userId)),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -27,8 +30,9 @@ class FavoritesService {
   // Add favorite
   Future<bool> addFavorite(String userId, String listingId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('$baseUrl/favorites'),
+        Uri.parse(ApiConfig.favoritesBaseUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'userId': userId,
@@ -46,8 +50,10 @@ class FavoritesService {
   // Remove favorite
   Future<bool> removeFavorite(String userId, String listingId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.delete(
-        Uri.parse('$baseUrl/favorites/$userId/$listingId'),
+        Uri.parse(
+            ApiConfig.getFavoritesUrlWithUserAndListing(userId, listingId)),
         headers: {'Content-Type': 'application/json'},
       );
 

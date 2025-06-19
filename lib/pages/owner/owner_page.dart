@@ -32,7 +32,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Also update your initState to rebuild screens after data loads:
   @override
   void initState() {
     super.initState();
@@ -40,6 +39,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
+
+    // Debug user data first
+    _debugUserData();
 
     // Initialize screens first
     _initializeScreens();
@@ -54,7 +56,46 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     _animationController.forward();
   }
 
-// Add this helper method:
+  // Add debug method to check user data
+  void _debugUserData() {
+    print('🔍 DEBUG: User data check');
+    print('   User ID: "${widget.user.id}"');
+    print('   User ID type: ${widget.user.id.runtimeType}');
+    print('   User ID length: ${widget.user.id.toString().length}');
+    print('   User name: "${widget.user.fullName}"');
+    print('   User email: "${widget.user.email}"');
+    print('   User type: "${widget.user.userType}"');
+  }
+
+  // Helper method to safely parse user ID
+  int? _getSafeUserId() {
+    try {
+      // Check if user.id is null or empty
+      if (widget.user.id.toString().trim().isEmpty) {
+        print('❌ User ID is null or empty');
+        return null;
+      }
+
+      String userIdStr = widget.user.id.toString().trim();
+      print('🔄 Attempting to parse user ID: "$userIdStr"');
+
+      // If it's already an int, return it
+      if (widget.user.id is int) {
+        print('✅ User ID is already an int: ${widget.user.id}');
+        return widget.user.id as int;
+      }
+
+      // Try to parse as int
+      int userId = int.parse(userIdStr);
+      print('✅ Successfully parsed user ID: $userId');
+      return userId;
+    } catch (e) {
+      print('❌ Error parsing user ID "${widget.user.id}": $e');
+      return null;
+    }
+  }
+
+  // Add this helper method:
   void _initializeScreens() {}
 
   @override
@@ -64,6 +105,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   }
 
   // Load all dashboard data from API
+// Replace your _loadDashboardData method in OwnerPage with this:
   Future<void> _loadDashboardData() async {
     print('🔄 Starting _loadDashboardData...');
 
@@ -75,63 +117,76 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     });
 
     try {
-      // Safely convert user.id to int
-      int userId;
-      if (widget.user.id is int) {
-        userId = widget.user.id as int;
-      } else {
-        userId = int.parse(widget.user.id);
+      // Check if user ID is valid using the new service method
+      if (!DashboardService.isValidUserId(widget.user.id)) {
+        throw Exception('Invalid user session. Please log in again.');
       }
 
-      print('🔄 Loading dashboard data for user ID: $userId');
+      print('🔄 Loading dashboard data for user ID: ${widget.user.id}');
 
-      // Test individual service calls to identify which one is failing
-      DashboardStats? dashboardStats;
-      List<RecentActivity> activities = [];
-      List<NotificationItem> notifications = [];
+      // Option 1: Use the new getAllDashboardData method (recommended)
+      final allData =
+          await DashboardService.getAllDashboardData(widget.user.id);
 
-      try {
-        print('📊 Fetching dashboard stats...');
-        dashboardStats = await DashboardService.getDashboardStats(userId);
-        print('📊 Dashboard stats result: $dashboardStats');
-      } catch (e) {
-        print('❌ Error fetching dashboard stats: $e');
-        // Continue with other calls even if stats fail
-      }
-
-      try {
-        print('📝 Fetching recent activities...');
-        activities = await DashboardService.getRecentActivities(userId);
-        print('📝 Activities count: ${activities.length}');
-      } catch (e) {
-        print('❌ Error fetching activities: $e');
-        // Continue with empty list
-      }
-
-      try {
-        print('🔔 Fetching notifications...');
-        notifications = await DashboardService.getNotifications(userId);
-        print('🔔 Notifications count: ${notifications.length}');
-      } catch (e) {
-        print('❌ Error fetching notifications: $e');
-        // Continue with empty list
-      }
-
-      // Update state with whatever data we managed to fetch
       if (!mounted) return;
 
       setState(() {
         _isLoading = false;
-        _dashboardStats = dashboardStats;
-        _recentActivities = activities;
-        _notifications = notifications;
+        _dashboardStats = allData['stats'] as DashboardStats?;
+        _recentActivities = allData['activities'] as List<RecentActivity>;
+        _notifications = allData['notifications'] as List<NotificationItem>;
         _errorMessage = null;
       });
 
-      print('✅ State updated successfully');
-      print('📊 Final stats: $_dashboardStats');
-      print('📝 Final activities: ${_recentActivities.length}');
-      print('🔔 Final notifications: ${_notifications.length}');
+      print('✅ All dashboard data loaded successfully');
+      print('📊 Stats: ${_dashboardStats != null}');
+      print('📝 Activities: ${_recentActivities.length}');
+      print('🔔 Notifications: ${_notifications.length}');
+
+      /* 
+    // Option 2: Keep individual calls if you prefer (alternative approach)
+    DashboardStats? dashboardStats;
+    List<RecentActivity> activities = [];
+    List<NotificationItem> notifications = [];
+
+    try {
+      print('📊 Fetching dashboard stats...');
+      dashboardStats = await DashboardService.getDashboardStats(widget.user.id);
+      print('📊 Dashboard stats result: $dashboardStats');
+    } catch (e) {
+      print('❌ Error fetching dashboard stats: $e');
+      // Continue with other calls even if stats fail
+    }
+
+    try {
+      print('📝 Fetching recent activities...');
+      activities = await DashboardService.getRecentActivities(widget.user.id);
+      print('📝 Activities count: ${activities.length}');
+    } catch (e) {
+      print('❌ Error fetching activities: $e');
+      // Continue with empty list
+    }
+
+    try {
+      print('🔔 Fetching notifications...');
+      notifications = await DashboardService.getNotifications(widget.user.id);
+      print('🔔 Notifications count: ${notifications.length}');
+    } catch (e) {
+      print('❌ Error fetching notifications: $e');
+      // Continue with empty list
+    }
+
+    // Update state with whatever data we managed to fetch
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+      _dashboardStats = dashboardStats;
+      _recentActivities = activities;
+      _notifications = notifications;
+      _errorMessage = null;
+    });
+    */
     } catch (e, stackTrace) {
       print('❌ Error in _loadDashboardData: $e');
       print('📍 Stack trace: $stackTrace');
@@ -140,7 +195,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load dashboard data: ${e.toString()}';
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
@@ -163,7 +218,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         children: [
           _buildDashboard(),
           const ListingsPage(),
-          const ReservationsPage(),
+          ReservationsPage(currentUser: widget.user),
           _buildMessagesPage(), // ✅ Now uses the helper method
           ProfilePage(user: widget.user),
         ],
@@ -217,6 +272,14 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          // Debug user info button (remove in production)
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.info, color: Colors.yellow),
+              onPressed: () {
+                _showUserDebugInfo();
+              },
+            ),
           // Notification icon with real count
           IconButton(
             icon: Stack(
@@ -265,24 +328,119 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     );
   }
 
+  // Add debug dialog method
+  void _showUserDebugInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Debug: User Info'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('User ID: "${widget.user.id}"'),
+            Text('Type: ${widget.user.id.runtimeType}'),
+            Text('Length: ${widget.user.id.toString().length}'),
+            Text('Name: "${widget.user.fullName}"'),
+            Text('Email: "${widget.user.email}"'),
+            Text('Phone: "${widget.user.phoneNumber}"'),
+            Text('User Type: "${widget.user.userType}"'),
+            const SizedBox(height: 10),
+            Text('Parsed ID: ${_getSafeUserId()}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _logout(); // Force logout to re-login
+            },
+            child: const Text('Re-login'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessagesPage() {
     try {
-      // Convert user ID to int if it's a string
-      int userId;
-      if (widget.user.id is int) {
-        userId = widget.user.id as int;
-      } else {
-        userId = int.parse(widget.user.id);
+      // Use the safe method to get user ID
+      int? userId = _getSafeUserId();
+
+      if (userId == null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 60,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Invalid user session',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Please log in again',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _logout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF190152),
+                ),
+                child: const Text(
+                  'Login Again',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
       }
 
       return owner_messaging.MessagesPage(currentUserId: userId);
     } catch (e) {
-      // Handle case where user ID is not a valid integer
-      print('Error parsing user ID: ${widget.user.id}');
-      return const Center(
-        child: Text(
-          'Error: Invalid user ID format',
-          style: TextStyle(color: Colors.red),
+      print('Error in _buildMessagesPage: $e');
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 60,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error: ${e.toString()}',
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF190152),
+              ),
+              child: const Text(
+                'Login Again',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -379,6 +537,17 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                               fontSize: 14,
                             ),
                           ),
+                          // Debug info in development
+                          if (kDebugMode) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Debug: ID="${widget.user.id}" (${widget.user.id.runtimeType})',
+                              style: const TextStyle(
+                                color: Colors.yellow,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -433,15 +602,31 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _refreshDashboard,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF190152),
-              ),
-              child: const Text(
-                'Retry',
-                style: TextStyle(color: Colors.white),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: _refreshDashboard,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF190152),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: _logout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                  child: const Text(
+                    'Re-login',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -474,11 +659,11 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Always show stats cards, with fallback values
+              // Updated stats cards with new format
               Row(
                 children: [
                   _buildStatCard(
-                    'Properties',
+                    'Total Properties',
                     _dashboardStats?.totalProperties.toString() ?? '0',
                     Icons.home_work,
                     Colors.blue,
@@ -486,8 +671,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
-                    'Occupied',
-                    _dashboardStats?.occupancyRate ?? '0%',
+                    'Occupied/Total', // ✅ New label
+                    _dashboardStats?.propertyOccupancyDisplay ??
+                        '0/0', // ✅ New format "0/2"
                     Icons.people,
                     Colors.green,
                     () => setState(() => _currentIndex = 2),
@@ -519,7 +705,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         ),
 
         const SizedBox(height: 32),
-
         // Quick Actions Section
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),

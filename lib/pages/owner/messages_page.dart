@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class MessagesPage extends StatefulWidget {
   final int currentUserId; // Tenant's user ID
@@ -26,15 +27,13 @@ class _MessagesPageState extends State<MessagesPage> {
   final Color cardColor = Colors.white;
   final Color selectedChatColor = Colors.indigo.withOpacity(0.1);
 
-  // API Configuration
-  static const String baseUrl =
-      'http://10.0.2.2/smartstay'; // Change to your server URL
+  // REMOVE THIS LINE - No longer needed
+  // static const String baseUrl = 'http://192.168.0.11/smartstay';
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
-    // Auto-refresh every 5 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _loadConversations();
     });
@@ -49,9 +48,10 @@ class _MessagesPageState extends State<MessagesPage> {
 
   Future<void> _loadConversations() async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
         Uri.parse(
-            '$baseUrl/get_conversations.php?user_id=${widget.currentUserId}'),
+            ApiConfig.getConversationsUrlWithUserId(widget.currentUserId)),
       );
 
       if (response.statusCode == 200) {
@@ -84,9 +84,10 @@ class _MessagesPageState extends State<MessagesPage> {
   Future<void> _showNewMessageDialog() async {
     // Get list of owners to start conversation with
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
         Uri.parse(
-            '$baseUrl/get_users.php?current_user_id=${widget.currentUserId}&user_type=Owner'),
+            ApiConfig.getUsersUrlWithParams(widget.currentUserId, 'Owner')),
       );
 
       if (response.statusCode == 200) {
@@ -378,16 +379,16 @@ class _MessagesPageState extends State<MessagesPage> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _showNewMessageDialog,
-            icon: const Icon(Icons.add_comment),
-            label: const Text('Start New Chat'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-            ),
-          ),
+          //const SizedBox(height: 16),
+          // ElevatedButton.icon(
+          //   onPressed: _showNewMessageDialog,
+          //   icon: const Icon(Icons.add_comment),
+          //   label: const Text('Start New Chat'),
+          //   style: ElevatedButton.styleFrom(
+          //     backgroundColor: primaryColor,
+          //     foregroundColor: Colors.white,
+          //   ),
+          // ),
         ],
       ),
     );
@@ -481,7 +482,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final Color backgroundColor = Colors.grey[50]!;
   final Color cardColor = Colors.white;
 
-  static const String baseUrl = 'http://10.0.2.2/smartstay';
+  // REMOVE THIS LINE - No longer needed
+  // static const String baseUrl = 'http://192.168.0.11/smartstay';
 
   @override
   void initState() {
@@ -508,9 +510,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse(
-            '$baseUrl/get_messages.php?user_id=${widget.currentUserId}&other_user_id=${widget.otherUser.id}'),
+        Uri.parse(ApiConfig.getMessagesUrlWithParams(
+            widget.currentUserId, widget.otherUser.id)),
       );
 
       print('Response status: ${response.statusCode}');
@@ -580,8 +583,9 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
 
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('$baseUrl/send_message.php'),
+        Uri.parse(ApiConfig.sendMessageUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'sender_id': widget.currentUserId,

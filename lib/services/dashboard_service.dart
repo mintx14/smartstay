@@ -1,16 +1,50 @@
-// services/dashboard_service.dart
+// // services/dashboard_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/dashboard_models.dart';
+// ADD THIS IMPORT
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class DashboardService {
-  // Change this to your XAMPP server URL
-  static const String baseUrl = 'http://10.0.2.2/smartstay/dashboard.php';
+  // Helper method to safely convert user ID to int
+  static int? _safeParseUserId(dynamic userId) {
+    if (userId == null) {
+      print('❌ User ID is null');
+      return null;
+    }
 
-  // Get dashboard statistics
-  static Future<DashboardStats?> getDashboardStats(int ownerId) async {
     try {
-      final url = '$baseUrl?action=stats&owner_id=$ownerId';
+      if (userId is int) {
+        print('✅ User ID is already int: $userId');
+        return userId;
+      }
+
+      String userIdStr = userId.toString().trim();
+      if (userIdStr.isEmpty) {
+        print('❌ User ID string is empty');
+        return null;
+      }
+
+      int parsedId = int.parse(userIdStr);
+      print('✅ Successfully parsed user ID: $parsedId');
+      return parsedId;
+    } catch (e) {
+      print('❌ Failed to parse user ID "$userId": $e');
+      return null;
+    }
+  }
+
+  // Updated method signature to accept dynamic userId
+  static Future<DashboardStats?> getDashboardStats(dynamic userId) async {
+    try {
+      // Safely parse the user ID
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        print('❌ Invalid user ID provided to getDashboardStats: $userId');
+        throw Exception('Invalid user ID. Please log in again.');
+      }
+
+      final url = ApiConfig.getDashboardUrlWithParams('stats', ownerId);
       print('🌐 API Call URL: $url');
 
       final response = await http.get(
@@ -32,21 +66,30 @@ class DashboardService {
           return stats;
         } else {
           print('❌ API returned success=false: ${jsonData['message']}');
-          return null;
+          throw Exception(
+              'API Error: ${jsonData['message'] ?? 'Unknown error'}');
         }
       } else {
         print('❌ HTTP Error: ${response.statusCode}');
-        return null;
+        throw Exception('Server error: ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Exception in getDashboardStats: $e');
-      return null;
+      rethrow; // Re-throw to let the caller handle it
     }
   }
 
-  static Future<List<RecentActivity>> getRecentActivities(int ownerId) async {
+  static Future<List<RecentActivity>> getRecentActivities(
+      dynamic userId) async {
     try {
-      final url = '$baseUrl?action=activities&owner_id=$ownerId';
+      // Safely parse the user ID
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        print('❌ Invalid user ID provided to getRecentActivities: $userId');
+        return []; // Return empty list instead of throwing for activities
+      }
+
+      final url = ApiConfig.getDashboardUrlWithParams('activities', ownerId);
       print('🌐 Activities API Call: $url');
 
       final response = await http.get(
@@ -60,24 +103,37 @@ class DashboardService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData['success'] == true) {
-          List<dynamic> activitiesJson = jsonData['data'];
+          List<dynamic> activitiesJson = jsonData['data'] ?? [];
           final activities = activitiesJson
               .map((json) => RecentActivity.fromJson(json))
               .toList();
           print('📝 Activities created: ${activities.length} items');
           return activities;
+        } else {
+          print(
+              '❌ Activities API returned success=false: ${jsonData['message']}');
+          return [];
         }
+      } else {
+        print('❌ Activities HTTP Error: ${response.statusCode}');
+        return [];
       }
-      return [];
     } catch (e) {
       print('❌ Exception in getRecentActivities: $e');
-      return [];
+      return []; // Return empty list on error
     }
   }
 
-  static Future<List<NotificationItem>> getNotifications(int ownerId) async {
+  static Future<List<NotificationItem>> getNotifications(dynamic userId) async {
     try {
-      final url = '$baseUrl?action=notifications&owner_id=$ownerId';
+      // Safely parse the user ID
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        print('❌ Invalid user ID provided to getNotifications: $userId');
+        return []; // Return empty list instead of throwing for notifications
+      }
+
+      final url = ApiConfig.getDashboardUrlWithParams('notifications', ownerId);
       print('🌐 Notifications API Call: $url');
 
       final response = await http.get(
@@ -91,18 +147,58 @@ class DashboardService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData['success'] == true) {
-          List<dynamic> notificationsJson = jsonData['data'];
+          List<dynamic> notificationsJson = jsonData['data'] ?? [];
           final notifications = notificationsJson
               .map((json) => NotificationItem.fromJson(json))
               .toList();
           print('🔔 Notifications created: ${notifications.length} items');
           return notifications;
+        } else {
+          print(
+              '❌ Notifications API returned success=false: ${jsonData['message']}');
+          return [];
         }
+      } else {
+        print('❌ Notifications HTTP Error: ${response.statusCode}');
+        return [];
       }
-      return [];
     } catch (e) {
       print('❌ Exception in getNotifications: $e');
-      return [];
+      return []; // Return empty list on error
+    }
+  }
+
+  // Additional helper method to test if user ID is valid
+  static bool isValidUserId(dynamic userId) {
+    return _safeParseUserId(userId) != null;
+  }
+
+  // Method to get all dashboard data at once
+  static Future<Map<String, dynamic>> getAllDashboardData(
+      dynamic userId) async {
+    try {
+      // Validate user ID first
+      if (!isValidUserId(userId)) {
+        throw Exception('Invalid user ID provided');
+      }
+
+      print('🔄 Loading all dashboard data for user: $userId');
+
+      // Run all requests concurrently for better performance
+      final results = await Future.wait([
+        getDashboardStats(userId),
+        getRecentActivities(userId),
+        getNotifications(userId),
+      ]);
+
+      return {
+        'stats': results[0] as DashboardStats?,
+        'activities': results[1] as List<RecentActivity>,
+        'notifications': results[2] as List<NotificationItem>,
+      };
+    } catch (e) {
+      print('❌ Error in getAllDashboardData: $e');
+      rethrow;
     }
   }
 }

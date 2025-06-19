@@ -168,6 +168,8 @@ class _FavoritesPageState extends State<FavoritesPage>
                     onFavoriteToggle: (updatedListing) {
                       _toggleFavorite(updatedListing);
                     },
+                    user: widget
+                        .user, // ADD THIS LINE - pass the user from widget
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {

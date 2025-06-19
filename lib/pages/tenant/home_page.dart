@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 // Import your screen classes
 import 'favorites_page.dart';
-import 'map_page.dart';
 import 'messages_screen.dart' as messaging;
 import 'profile_screen.dart';
 import 'property_details_page.dart';
@@ -370,6 +369,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
+            // In the _buildPropertyCard method, update the navigation:
             onTap: () {
               Navigator.of(context).push(
                 PageRouteBuilder(
@@ -378,6 +378,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     listing: listing,
                     isFavorite: _favoriteIds.contains(listing.id.toString()),
                     onFavoriteToggle: _toggleFavorite,
+                    user: widget.user, // ADD THIS LINE
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
@@ -832,9 +833,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             });
           },
         );
+      // case 2:
+      //   return MapPage(user: widget.user);
       case 2:
-        return MapPage(user: widget.user);
-      case 3:
         // Convert string ID to int for MessagesScreen with error handling
         try {
           return messaging.MessagesScreen(
@@ -850,7 +851,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           );
         }
-      case 4:
+      case 3:
         return ProfileScreen(user: widget.user);
       default:
         return _buildExploreScreen();
@@ -961,11 +962,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 activeIcon: Icon(Icons.favorite),
                 label: 'Favorites',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.map_outlined),
-                activeIcon: Icon(Icons.map),
-                label: 'Map',
-              ),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.map_outlined),
+              //   activeIcon: Icon(Icons.map),
+              //   label: 'Map',
+              // ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_outline),
                 activeIcon: Icon(Icons.chat_bubble),

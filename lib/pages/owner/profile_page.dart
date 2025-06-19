@@ -101,6 +101,7 @@ class ProfilePage extends StatelessWidget {
                   },
                 ),
                 ProfileMenuItem(
+                  // <-- This is where you add the new Payment & Banking option
                   icon: Icons.payment_outlined,
                   title: 'Payment Methods',
                   onTap: () {
@@ -230,7 +231,7 @@ class ProfilePage extends StatelessWidget {
   void _navigateToPaymentMethods(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const PaymentMethodsPage(),
+        builder: (context) => PaymentMethodsPage(user: user),
       ),
     );
   }
