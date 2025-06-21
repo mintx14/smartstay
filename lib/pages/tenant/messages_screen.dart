@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -17,17 +18,31 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen>
     with TickerProviderStateMixin {
   List<MessagePreview> messages = [];
+  List<BookingStatus> bookings = [];
   bool isLoading = true;
   String selectedFilter = 'All';
   Timer? _refreshTimer;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
-  // final List<String> filters = ['All', 'Properties', 'Agents', 'Roommates'];
+  late TabController _tabController;
+  int _currentTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index != _currentTabIndex) {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+        // Reload bookings when switching to bookings tab
+        if (_currentTabIndex == 1) {
+          _loadBookings();
+        }
+      }
+    });
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -39,10 +54,17 @@ class _MessagesScreenState extends State<MessagesScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    _loadConversations();
+
+    _loadData();
     _animationController.forward();
+
+    // Set up refresh timer
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      _loadConversations();
+      if (_currentTabIndex == 1) {
+        _loadBookings(); // Only refresh bookings if on bookings tab
+      } else {
+        _loadConversations(); // Otherwise refresh conversations
+      }
     });
   }
 
@@ -50,7 +72,15 @@ class _MessagesScreenState extends State<MessagesScreen>
   void dispose() {
     _refreshTimer?.cancel();
     _animationController.dispose();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([
+      _loadConversations(),
+      _loadBookings(),
+    ]);
   }
 
   Future<void> _loadConversations() async {
@@ -78,6 +108,53 @@ class _MessagesScreenState extends State<MessagesScreen>
         isLoading = false;
       });
       _showError('Error loading conversations: $e');
+    }
+  }
+
+  Future<void> _loadBookings() async {
+    try {
+      print('=== Loading Tenant Bookings ===');
+      print('User ID: ${widget.currentUserId}');
+
+      // Use the same pattern as the ReservationsPage
+      final response = await http.get(
+        Uri.parse(ApiConfig.getTenantBookings(widget.currentUserId)),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['success'] == true && data['bookings'] != null) {
+          final bookingsList =
+              List<Map<String, dynamic>>.from(data['bookings'] ?? []);
+
+          setState(() {
+            bookings = bookingsList.map((booking) {
+              return BookingStatus.fromJson(booking);
+            }).toList();
+          });
+
+          print('Successfully loaded ${bookings.length} bookings');
+        } else {
+          print('No bookings found or success is false');
+          setState(() {
+            bookings = [];
+          });
+        }
+      } else {
+        throw Exception('Failed to load bookings: ${response.body}');
+      }
+    } catch (e) {
+      print('Error loading bookings: $e');
+      setState(() {
+        bookings = [];
+      });
     }
   }
 
@@ -157,7 +234,7 @@ class _MessagesScreenState extends State<MessagesScreen>
           otherUser: user,
         ),
       ),
-    ).then((_) => _loadConversations());
+    ).then((_) => _loadData());
   }
 
   void _openChat(MessagePreview message) {
@@ -174,7 +251,7 @@ class _MessagesScreenState extends State<MessagesScreen>
           ),
         ),
       ),
-    ).then((_) => _loadConversations());
+    ).then((_) => _loadData());
   }
 
   @override
@@ -183,7 +260,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       backgroundColor: const Color(0xFFF7FAFC),
       body: Column(
         children: [
-          // Custom App Bar - Matching main app style
+          // Custom App Bar with Tabs
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -194,88 +271,159 @@ class _MessagesScreenState extends State<MessagesScreen>
             ),
             child: SafeArea(
               bottom: false,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Messages',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.chat_bubble,
+                                color: Colors.white,
+                                size: 24,
+                              ),
                             ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Messages & Bookings',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (_currentTabIndex == 0)
+                              IconButton(
+                                onPressed: _showNewMessageDialog,
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.edit_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _currentTabIndex == 0
+                              ? '${filteredMessages.length} conversations'
+                              : '${bookings.length} bookings',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${filteredMessages.length} conversations',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                      ),
+                  ),
+                  // Tab Bar
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: Colors.white,
+                    indicatorWeight: 3,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white.withOpacity(0.6),
+                    labelStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                    tabs: const [
+                      Tab(text: 'Messages'),
+                      Tab(text: 'Bookings'),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
 
-          // Messages List
+          // Tab View Content
           Expanded(
-            child: isLoading
-                ? _buildLoadingState()
-                : filteredMessages.isEmpty
-                    ? _buildEmptyState()
-                    : FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: RefreshIndicator(
-                          onRefresh: _loadConversations,
-                          color: const Color(0xFF667EEA),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.only(
-                              // left: 20,
-                              // right: 20,
-                              top: 16, // Top margin added here
-                            ),
-                            itemCount: filteredMessages.length,
-                            itemBuilder: (context, index) {
-                              return _buildMessageTile(
-                                filteredMessages[index],
-                                index,
-                              );
-                            },
-                          ),
-                        ),
-                      ),
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Messages Tab
+                _buildMessagesTab(),
+                // Bookings Tab
+                _buildBookingsTab(),
+              ],
+            ),
           ),
         ],
       ),
-      // floatingActionButton: _buildFAB(),
     );
   }
 
-  Widget _buildMessageTile(MessagePreview message, int index) {
+  Widget _buildMessagesTab() {
+    if (isLoading) {
+      return _buildLoadingState();
+    }
+
+    if (filteredMessages.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: RefreshIndicator(
+        onRefresh: _loadData,
+        color: const Color(0xFF667EEA),
+        child: ListView.builder(
+          padding: const EdgeInsets.only(top: 16),
+          itemCount: filteredMessages.length,
+          itemBuilder: (context, index) {
+            return _buildMessageTile(filteredMessages[index], index);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookingsTab() {
+    if (isLoading && bookings.isEmpty) {
+      return _buildLoadingState();
+    }
+
+    if (bookings.isEmpty) {
+      return _buildEmptyBookingsState();
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: RefreshIndicator(
+        onRefresh: _loadBookings,
+        color: const Color(0xFF667EEA),
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: bookings.length,
+          itemBuilder: (context, index) {
+            return _buildBookingCard(bookings[index], index);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookingCard(BookingStatus booking, int index) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 300 + (index * 100)),
@@ -289,7 +437,353 @@ class _MessagesScreenState extends State<MessagesScreen>
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              // Show booking details dialog
+              _showBookingDetailsDialog(booking);
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Property image and title
+                  Row(
+                    children: [
+                      if (booking.propertyImageUrl != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            booking.propertyImageUrl!,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 60,
+                                height: 60,
+                                color: Colors.grey[300],
+                                child:
+                                    const Icon(Icons.home, color: Colors.grey),
+                              );
+                            },
+                          ),
+                        )
+                      else
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.home, color: Colors.grey),
+                        ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              booking.propertyTitle,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              booking.propertyAddress,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildStatusChip(booking.status),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Booking details
+                  _buildInfoRow(Icons.calendar_today,
+                      'Check-in: ${DateFormat('MMM d, yyyy').format(DateTime.parse(booking.checkInDate))}'),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(Icons.access_time,
+                      'Duration: ${booking.durationMonths} months'),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(Icons.attach_money,
+                      'RM ${booking.monthlyRent.toStringAsFixed(0)}/month'),
+
+                  if (booking.ownerName != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF667EEA).withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Color(0xFF667EEA),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Owner: ${booking.ownerName}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          if (booking.status == 'pending')
+                            Text(
+                              'Awaiting response',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[700],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add this method to show booking details:
+  void _showBookingDetailsDialog(BookingStatus booking) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.receipt_long,
+              color: Color(0xFF667EEA),
+            ),
+            const SizedBox(width: 8),
+            Text('Booking #${booking.id}'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('Property', booking.propertyTitle),
+              _buildDetailRow('Address', booking.propertyAddress),
+              _buildDetailRow(
+                  'Check-in',
+                  DateFormat('MMMM d, yyyy')
+                      .format(DateTime.parse(booking.checkInDate))),
+              _buildDetailRow('Duration', '${booking.durationMonths} months'),
+              _buildDetailRow('Monthly Rent',
+                  'RM ${booking.monthlyRent.toStringAsFixed(2)}'),
+              _buildDetailRow(
+                  'Deposit', 'RM ${booking.depositAmount.toStringAsFixed(2)}'),
+              _buildDetailRow(
+                  'Total', 'RM ${booking.totalAmount.toStringAsFixed(2)}'),
+              const SizedBox(height: 12),
+              _buildDetailRow('Status', booking.status.toUpperCase()),
+              if (booking.ownerName != null) ...[
+                const Divider(),
+                _buildDetailRow('Owner', booking.ownerName!),
+                if (booking.ownerPhone != null)
+                  _buildDetailRow('Contact', booking.ownerPhone!),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          if (booking.ownerPhone != null)
+            ElevatedButton.icon(
+              onPressed: () {
+                // Add call functionality
+              },
+              icon: const Icon(Icons.payment),
+              label: const Text('Payment'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF667EEA),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    Color textColor;
+    IconData icon;
+
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        backgroundColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        icon = Icons.check_circle;
+        break;
+      case 'pending':
+        backgroundColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade800;
+        icon = Icons.access_time;
+        break;
+      case 'cancelled':
+        backgroundColor = Colors.red.shade100;
+        textColor = Colors.red.shade800;
+        icon = Icons.cancel;
+        break;
+      case 'completed':
+        backgroundColor = Colors.blue.shade100;
+        textColor = Colors.blue.shade800;
+        icon = Icons.done_all;
+        break;
+      default:
+        backgroundColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade800;
+        icon = Icons.info;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: textColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: Colors.grey.shade600,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessageTile(MessagePreview message, int index) {
+    // Check if this conversation has an active booking
+    final hasActiveBooking = bookings.any((booking) =>
+        booking.tenantId == message.otherUserId &&
+        (booking.status.toLowerCase() == 'confirmed' ||
+            booking.status.toLowerCase() == 'pending'));
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 100)),
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -312,39 +806,65 @@ class _MessagesScreenState extends State<MessagesScreen>
                 children: [
                   Hero(
                     tag: 'avatar_${message.otherUserId}',
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF667EEA),
-                            Color(0xFF764BA2),
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF667EEA).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF667EEA),
+                                Color(0xFF764BA2),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF667EEA).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          message.name.isNotEmpty
-                              ? message.name[0].toUpperCase()
-                              : 'U',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
+                          child: Center(
+                            child: Text(
+                              message.name.isNotEmpty
+                                  ? message.name[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        if (hasActiveBooking)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.home,
+                                size: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -465,7 +985,7 @@ class _MessagesScreenState extends State<MessagesScreen>
           ),
           const SizedBox(height: 24),
           Text(
-            'Loading conversations...',
+            'Loading...',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.shade600,
@@ -536,221 +1056,46 @@ class _MessagesScreenState extends State<MessagesScreen>
     );
   }
 
-  // Widget _buildFAB() {
-  //   return AnimatedScale(
-  //     scale: filteredMessages.isNotEmpty ? 1.0 : 0.0,
-  //     duration: const Duration(milliseconds: 300),
-  //     child: FloatingActionButton(
-  //       onPressed: _showNewMessageDialog,
-  //       backgroundColor: const Color(0xFF667EEA),
-  //       elevation: 8,
-  //       child: const Icon(Icons.edit_rounded, color: Colors.white),
-  //     ),
-  //   );
-  // }
-}
-
-class _NewMessageDialog extends StatelessWidget {
-  final List<User> users;
-  final Function(User) onUserSelected;
-
-  const _NewMessageDialog({
-    required this.users,
-    required this.onUserSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 500),
+  Widget _buildEmptyBookingsState() {
+    return Center(
+      child: FadeTransition(
+        opacity: _fadeAnimation,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.person_add_rounded, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text(
-                    'Start New Conversation',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              child: Icon(
+                Icons.calendar_today_rounded,
+                size: 64,
+                color: Colors.grey.shade400,
               ),
             ),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: users.length,
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    leading: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          user.fullName.isNotEmpty
-                              ? user.fullName[0].toUpperCase()
-                              : 'U',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      user.fullName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Text(
-                      user.userType,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
-                      color: Colors.grey.shade400,
-                    ),
-                    onTap: () => onUserSelected(user),
-                  );
-                },
+            const SizedBox(height: 24),
+            Text(
+              'No bookings yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF667EEA),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
+            const SizedBox(height: 8),
+            Text(
+              'Your booking history will appear here',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-// Data models remain the same
-class MessagePreview {
-  final int conversationId;
-  final int otherUserId;
-  final String name;
-  final String lastMessage;
-  final String time;
-  final int unread;
-  final String otherUserType;
-
-  MessagePreview({
-    required this.conversationId,
-    required this.otherUserId,
-    required this.name,
-    required this.lastMessage,
-    required this.time,
-    required this.unread,
-    required this.otherUserType,
-  });
-
-  factory MessagePreview.fromJson(Map<String, dynamic> json) {
-    return MessagePreview(
-      conversationId: json['conversation_id'],
-      otherUserId: json['other_user_id'],
-      name: json['other_user_name'] ?? 'Unknown',
-      lastMessage: json['last_message'] ?? 'No messages yet',
-      time: _formatTime(json['last_message_time']),
-      unread: json['unread_count'] ?? 0,
-      otherUserType: json['other_user_type'] ?? 'Unknown',
-    );
-  }
-
-  static String _formatTime(String? timestamp) {
-    if (timestamp == null) return '';
-    try {
-      final DateTime time = DateTime.parse(timestamp);
-      final DateTime now = DateTime.now();
-      final Duration difference = now.difference(time);
-
-      if (difference.inDays > 0) {
-        return '${difference.inDays}d ago';
-      } else if (difference.inHours > 0) {
-        return '${difference.inHours}h ago';
-      } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes}m ago';
-      } else {
-        return 'Now';
-      }
-    } catch (e) {
-      return '';
-    }
-  }
-}
-
-class User {
-  final int id;
-  final String fullName;
-  final String email;
-  final String userType;
-
-  User({
-    required this.id,
-    required this.fullName,
-    required this.email,
-    required this.userType,
-  });
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      fullName: json['full_name'],
-      email: json['email'],
-      userType: json['user_type'],
     );
   }
 }
@@ -1299,6 +1644,311 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     } catch (e) {
       return '';
     }
+  }
+}
+
+// Booking Status Model
+// Update the BookingStatus model to match the API response:
+class BookingStatus {
+  final int id;
+  final int listingId;
+  final int tenantId;
+  final String tenantName;
+  final String propertyTitle;
+  final String propertyAddress;
+  final String? propertyImageUrl;
+  final String status;
+  final String checkInDate;
+  final int durationMonths;
+  final double monthlyRent;
+  final double depositAmount;
+  final double totalAmount;
+  final String createdAt;
+  final String? message;
+  final String? ownerName;
+  final String? ownerEmail;
+  final String? ownerPhone;
+
+  BookingStatus({
+    required this.id,
+    required this.listingId,
+    required this.tenantId,
+    required this.tenantName,
+    required this.propertyTitle,
+    required this.propertyAddress,
+    this.propertyImageUrl,
+    required this.status,
+    required this.checkInDate,
+    required this.durationMonths,
+    required this.monthlyRent,
+    required this.depositAmount,
+    required this.totalAmount,
+    required this.createdAt,
+    this.message,
+    this.ownerName,
+    this.ownerEmail,
+    this.ownerPhone,
+  });
+
+  factory BookingStatus.fromJson(Map<String, dynamic> json) {
+    // Handle both tenant and owner booking structures
+    final property = json['property'] ?? {};
+    final owner = json['owner'] ?? {};
+    final tenant = json['tenant'] ?? {};
+
+    // Parse IDs carefully
+    int parseId(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
+    // Parse doubles carefully
+    double parseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    return BookingStatus(
+      id: parseId(json['id']),
+      listingId: parseId(json['listing_id'] ?? property['id']),
+      tenantId: parseId(json['tenant_id'] ?? tenant['id']),
+      tenantName: tenant['full_name'] ?? json['tenant_full_name'] ?? 'Unknown',
+      propertyTitle:
+          property['title'] ?? json['property_title'] ?? 'Unknown Property',
+      propertyAddress: property['address'] ?? json['property_address'] ?? '',
+      propertyImageUrl: property['image_url'] ?? json['property_image_url'],
+      status: json['status'] ?? 'pending',
+      checkInDate: json['check_in_date'] ?? '',
+      durationMonths: parseId(json['duration_months']),
+      monthlyRent: parseDouble(json['monthly_rent']),
+      depositAmount: parseDouble(json['deposit_amount']),
+      totalAmount: parseDouble(json['total_amount']),
+      createdAt: json['created_at'] ?? '',
+      message: json['message'],
+      ownerName: owner['name'] ?? json['owner_name'],
+      ownerEmail: owner['email'] ?? json['owner_email'],
+      ownerPhone: owner['phone'] ?? json['owner_phone'],
+    );
+  }
+
+  String get checkOut {
+    try {
+      final checkIn = DateTime.parse(checkInDate);
+      final checkOutDate = checkIn.add(Duration(days: durationMonths * 30));
+      return DateFormat('MMM d, yyyy').format(checkOutDate);
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+}
+
+// Keep existing classes below...
+class _NewMessageDialog extends StatelessWidget {
+  final List<User> users;
+  final Function(User) onUserSelected;
+
+  const _NewMessageDialog({
+    required this.users,
+    required this.onUserSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 500),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.person_add_rounded, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text(
+                    'Start New Conversation',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: users.length,
+                itemBuilder: (context, index) {
+                  final user = users[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          user.fullName.isNotEmpty
+                              ? user.fullName[0].toUpperCase()
+                              : 'U',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      user.fullName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      user.userType,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: Colors.grey.shade400,
+                    ),
+                    onTap: () => onUserSelected(user),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF667EEA),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class MessagePreview {
+  final int conversationId;
+  final int otherUserId;
+  final String name;
+  final String lastMessage;
+  final String time;
+  final int unread;
+  final String otherUserType;
+
+  MessagePreview({
+    required this.conversationId,
+    required this.otherUserId,
+    required this.name,
+    required this.lastMessage,
+    required this.time,
+    required this.unread,
+    required this.otherUserType,
+  });
+
+  factory MessagePreview.fromJson(Map<String, dynamic> json) {
+    return MessagePreview(
+      conversationId: json['conversation_id'],
+      otherUserId: json['other_user_id'],
+      name: json['other_user_name'] ?? 'Unknown',
+      lastMessage: json['last_message'] ?? 'No messages yet',
+      time: _formatTime(json['last_message_time']),
+      unread: json['unread_count'] ?? 0,
+      otherUserType: json['other_user_type'] ?? 'Unknown',
+    );
+  }
+
+  static String _formatTime(String? timestamp) {
+    if (timestamp == null) return '';
+    try {
+      final DateTime time = DateTime.parse(timestamp);
+      final DateTime now = DateTime.now();
+      final Duration difference = now.difference(time);
+
+      if (difference.inDays > 0) {
+        return '${difference.inDays}d ago';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}h ago';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}m ago';
+      } else {
+        return 'Now';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+}
+
+class User {
+  final int id;
+  final String fullName;
+  final String email;
+  final String userType;
+
+  User({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.userType,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'],
+      fullName: json['full_name'],
+      email: json['email'],
+      userType: json['user_type'],
+    );
   }
 }
 

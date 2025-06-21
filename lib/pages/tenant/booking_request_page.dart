@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/models/listing.dart';
-import 'package:my_app/models/user_model.dart';
+import 'package:my_app/models/user_model.dart'; // This has User class
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:my_app/config/api_config.dart';
+import 'package:my_app/pages/tenant/messages_screen.dart'
+    as messages; // Add alias here
 
 class BookingRequestPage extends StatefulWidget {
   final Listing listing;
@@ -26,6 +28,9 @@ class _BookingRequestPageState extends State<BookingRequestPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+
+  bool _hasExistingBooking = false;
+  Map<String, dynamic>? _existingBookingDetails;
 
   // Form fields
   DateTime? _selectedCheckInDate;
@@ -89,6 +94,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
         : _minimumTenure;
 
     _calculateCosts();
+    _checkExistingBooking();
   }
 
   @override
@@ -156,6 +162,11 @@ class _BookingRequestPageState extends State<BookingRequestPage>
           backgroundColor: Colors.orange,
         ),
       );
+      return;
+    }
+
+    if (_hasExistingBooking) {
+      _showExistingBookingDialog();
       return;
     }
 
@@ -261,11 +272,31 @@ class _BookingRequestPageState extends State<BookingRequestPage>
             ],
           ),
           actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to property details
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
                 Navigator.of(context).pop(); // Go back to property details
-                // Optionally navigate to bookings/reservations page
+
+                // Navigate to messages screen with alias
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => messages.MessagesScreen(
+                      // Use the alias here
+                      currentUserId: int.parse(widget.currentUser.id),
+                    ),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF667EEA),
@@ -278,7 +309,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                 ),
               ),
               child: const Text(
-                'OK',
+                'View My Bookings',
                 style: TextStyle(color: Colors.white),
               ),
             ),
@@ -348,6 +379,38 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                     // Submit Button
                     _buildSubmitButton(),
                     const SizedBox(height: 40),
+
+                    if (_hasExistingBooking)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.orange.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'You have an existing ${_existingBookingDetails?['status']} booking for this property',
+                                style: const TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -803,54 +866,138 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       ),
       child: Column(
         children: [
-          _buildCostRow(
-              'Monthly Rent', 'RM ${_monthlyRent.toStringAsFixed(2)}'),
-          const SizedBox(height: 12),
-          _buildCostRow('Duration', '$_selectedDuration months'),
-          const SizedBox(height: 12),
-          _buildCostRow(
-            'Subtotal',
-            'RM ${(_monthlyRent * _selectedDuration).toStringAsFixed(2)}',
+          // Rental Details Section
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rental Details',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildCostRow(
+                  'Monthly Rent',
+                  'RM ${_monthlyRent.toStringAsFixed(2)}',
+                ),
+                const SizedBox(height: 8),
+                _buildCostRow('Duration', '$_selectedDuration months'),
+                const SizedBox(height: 8),
+                _buildCostRow(
+                  'Total Rental Cost',
+                  'RM ${(_monthlyRent * _selectedDuration).toStringAsFixed(2)}',
+                  subtitle: '(Paid monthly)',
+                ),
+              ],
+            ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(),
+
+          const SizedBox(height: 16),
+
+          // Payment Due Now Section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF667EEA).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF667EEA).withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.payment,
+                      size: 20,
+                      color: Color(0xFF667EEA),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Payment Due Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF667EEA),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildCostRow(
+                  'Security Deposit',
+                  'RM ${_depositAmount.toStringAsFixed(2)}',
+                  subtitle: '(2 months rent - Refundable)',
+                  isHighlighted: true,
+                ),
+              ],
+            ),
           ),
-          _buildCostRow(
-            'Security Deposit',
-            'RM ${_depositAmount.toStringAsFixed(2)}',
-            subtitle: '(2 months rent)',
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(),
-          ),
-          _buildCostRow(
-            'Total Amount',
-            'RM ${_totalAmount.toStringAsFixed(2)}',
-            isTotal: true,
-          ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 16),
+
+          // Payment Schedule Info
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Icon(Icons.info, size: 16, color: Colors.blue[700]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Security deposit will be refunded after check-out',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue[700],
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Payment Schedule',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[700],
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildPaymentInfo(
+                  '• Pay only deposit now: RM ${_depositAmount.toStringAsFixed(2)}',
+                ),
+                _buildPaymentInfo(
+                  '• Monthly rent of RM ${_monthlyRent.toStringAsFixed(2)} starts from check-in date',
+                ),
+                _buildPaymentInfo(
+                  '• Deposit will be refunded after check-out (subject to terms)',
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Total Overview
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: _buildCostRow(
+              'Total Contract Value',
+              'RM ${_totalAmount.toStringAsFixed(2)}',
+              subtitle: '(Deposit + $_selectedDuration months rent)',
+              isSubdued: true,
             ),
           ),
         ],
@@ -858,41 +1005,81 @@ class _BookingRequestPageState extends State<BookingRequestPage>
     );
   }
 
+  // Updated helper method with new parameters
   Widget _buildCostRow(String label, String value,
-      {String? subtitle, bool isTotal = false}) {
+      {String? subtitle,
+      bool isTotal = false,
+      bool isHighlighted = false,
+      bool isSubdued = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: isTotal ? 16 : 14,
-                fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-                color: isTotal ? const Color(0xFF2D3748) : Colors.grey[700],
-              ),
-            ),
-            if (subtitle != null)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                subtitle,
+                label,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
+                  fontSize: isHighlighted ? 15 : (isTotal ? 16 : 14),
+                  fontWeight: isHighlighted || isTotal
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: isSubdued
+                      ? Colors.grey[600]
+                      : (isHighlighted
+                          ? const Color(0xFF667EEA)
+                          : (isTotal
+                              ? const Color(0xFF2D3748)
+                              : Colors.grey[700])),
                 ),
               ),
-          ],
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: TextStyle(
-            fontSize: isTotal ? 18 : 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            color: isTotal ? const Color(0xFF667EEA) : Colors.black87,
+            fontSize: isHighlighted ? 20 : (isTotal ? 18 : 16),
+            fontWeight: isHighlighted
+                ? FontWeight.bold
+                : (isTotal ? FontWeight.bold : FontWeight.w500),
+            color: isSubdued
+                ? Colors.grey[600]
+                : (isHighlighted
+                    ? const Color(0xFF667EEA)
+                    : (isTotal ? const Color(0xFF667EEA) : Colors.black87)),
           ),
         ),
       ],
+    );
+  }
+
+  // Helper method for payment info text
+  Widget _buildPaymentInfo(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.blue[700],
+            height: 1.4,
+          ),
+        ),
+      ),
     );
   }
 
@@ -950,37 +1137,280 @@ class _BookingRequestPageState extends State<BookingRequestPage>
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _submitBookingRequest,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF667EEA),
-          disabledBackgroundColor: Colors.grey[300],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Payment summary above button
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF667EEA).withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF667EEA).withOpacity(0.2),
+            ),
           ),
-          elevation: 2,
-        ),
-        child: _isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : const Text(
-                'Submit Booking Request',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Amount to Pay Now:',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.grey[700],
                 ),
               ),
-      ),
+              Text(
+                'RM ${_depositAmount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF667EEA),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Submit button
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _submitBookingRequest,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF667EEA),
+              disabledBackgroundColor: Colors.grey[300],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 2,
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.lock,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Pay Deposit & Confirm Booking',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Security note
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.security,
+              size: 14,
+              color: Colors.grey[600],
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Secure payment powered by Stripe',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Add this new method
+  Future<void> _checkExistingBooking() async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConfig.checkExistingBooking(
+          widget.currentUser.id.toString(),
+          widget.listing.id.toString(),
+        )),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] && data['has_existing_booking']) {
+          setState(() {
+            _hasExistingBooking = true;
+            _existingBookingDetails = data['booking'];
+          });
+
+          // Show warning dialog
+          _showExistingBookingDialog();
+        }
+      }
+    } catch (e) {
+      print('Error checking existing booking: $e');
+    }
+  }
+
+  // Add this method to show warning dialog
+  void _showExistingBookingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final bookingDate =
+            DateTime.parse(_existingBookingDetails!['check_in_date']);
+        final status = _existingBookingDetails!['status'];
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding:
+              const EdgeInsets.fromLTRB(20, 16, 20, 0), // Reduced top padding
+          titlePadding: const EdgeInsets.fromLTRB(
+              20, 16, 20, 8), // Reduced bottom padding
+          title: const Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 24, // Reduced from 28
+              ),
+              SizedBox(width: 6), // Reduced from 8
+              Expanded(
+                child: Text(
+                  'Existing Booking Found',
+                  style: TextStyle(fontSize: 16), // Added explicit font size
+                ),
+              ),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height *
+                  0.6, // Limit height to 60% of screen
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'You already have a $status booking for this property.',
+                    style: const TextStyle(fontSize: 14), // Reduced from 16
+                  ),
+                  const SizedBox(height: 10), // Reduced from 12
+                  Container(
+                    padding: const EdgeInsets.all(10), // Reduced from 12
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Booking Details:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13, // Reduced from 14
+                          ),
+                        ),
+                        const SizedBox(height: 6), // Reduced from 8
+                        Text(
+                          'Check-in: ${DateFormat('MMM d, yyyy').format(bookingDate)}',
+                          style:
+                              const TextStyle(fontSize: 12), // Reduced from 13
+                        ),
+                        const SizedBox(height: 2), // Added small spacing
+                        Text(
+                          'Duration: ${_existingBookingDetails!['duration_months']} months',
+                          style:
+                              const TextStyle(fontSize: 12), // Reduced from 13
+                        ),
+                        const SizedBox(height: 2), // Added small spacing
+                        Text(
+                          'Status: ${status.toUpperCase()}',
+                          style: TextStyle(
+                            fontSize: 12, // Reduced from 13
+                            color: status == 'confirmed'
+                                ? Colors.green
+                                : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12), // Added spacing before buttons
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(
+                  bottom: 8), // Add bottom padding to actions
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.of(context)
+                          .pop(); // Go back to property details
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8), // Compact padding
+                    ),
+                    child: const Text(
+                      'Go Back',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ),
+                  if (status == 'pending') ...[
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        // Optionally navigate to bookings page
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8), // Compact padding
+                      ),
+                      child: const Text(
+                        'View Booking',
+                        style:
+                            TextStyle(color: Color(0xFF667EEA), fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

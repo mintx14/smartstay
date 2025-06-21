@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:my_app/config/api_config.dart';
-import 'package:my_app/widgets/chat_screen.dart' as chat;
 import 'package:my_app/models/user_model.dart';
 
 // Updated Reservations Page for Property Owners
@@ -40,53 +39,214 @@ class _ReservationsPageState extends State<ReservationsPage>
     super.dispose();
   }
 
+  // Add this debug version to your reservations_page.dart
+// Replace the _loadReservations method with this debug version
+
+  // Replace your _loadReservations method with this improved version:
+
   Future<void> _loadReservations() async {
+    print('\n🔍 === LOAD RESERVATIONS START ===');
+
     setState(() {
       _isLoading = true;
     });
+    print('✅ Loading state set to true');
 
     try {
-      // Use the correct API endpoint
+      // FIX: Safe ID conversion
+      print('👤 User Debug Info:');
+      print('   - User ID raw: ${widget.currentUser.id}');
+      print('   - User ID type: ${widget.currentUser.id.runtimeType}');
+
+      // Convert ID safely
+      int userId;
+      if (widget.currentUser.id is int) {
+        userId = widget.currentUser.id as int;
+      } else {
+        userId = int.parse(widget.currentUser.id);
+      }
+
+      print('   - User ID converted: $userId (${userId.runtimeType})');
+      print('   - User type: ${widget.currentUser.userType}');
+      print('   - User full name: ${widget.currentUser.fullName}');
+
+      // Build URL with converted ID
+      final url = ApiConfig.getOwnerBookings(userId);
+      print('🌐 API URL: $url');
+
+      // Make HTTP request
+      print('📡 Making HTTP request...');
       final response = await http.get(
-        Uri.parse(ApiConfig.getOwnerBookings(widget.currentUser.id)),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
         },
       );
 
+      print('📨 Response received:');
+      print('   - Status code: ${response.statusCode}');
+      print('   - Response body length: ${response.body.length}');
+      print('   - Raw response: ${response.body}');
+
       if (response.statusCode == 200) {
+        print('✅ HTTP 200 - Parsing JSON...');
+
         final data = json.decode(response.body);
-        final bookings =
-            List<Map<String, dynamic>>.from(data['bookings'] ?? []);
+        print('📋 Parsed JSON structure:');
+        print('   - Keys: ${data.keys}');
+        print('   - Success field: ${data['success']}');
+        print('   - Bookings field exists: ${data['bookings'] != null}');
+        if (data['bookings'] != null) {
+          print('   - Bookings type: ${data['bookings'].runtimeType}');
+          print('   - Bookings length: ${data['bookings'].length}');
+        }
+
+        if (data['success'] == true && data['bookings'] != null) {
+          print('✅ Valid response structure detected');
+
+          final bookings = List<Map<String, dynamic>>.from(data['bookings']);
+          print('📚 Bookings array processed:');
+          print('   - Total bookings: ${bookings.length}');
+
+          // Debug each booking
+          for (int i = 0; i < bookings.length; i++) {
+            final booking = bookings[i];
+            print('   📖 Booking $i:');
+            print('      - ID: ${booking['id']}');
+            print(
+                '      - Status: "${booking['status']}" (${booking['status'].runtimeType})');
+            print('      - Owner ID: ${booking['owner_id']}');
+            print('      - Expected Owner ID: $userId');
+            print(
+                '      - Match: ${booking['owner_id'].toString() == userId.toString()}');
+          }
+
+          print('\n🔄 Starting filtering process...');
+
+          // Filter pending bookings
+          print('🟡 Filtering PENDING bookings...');
+          final pending = bookings.where((b) {
+            final status = b['status'];
+            final statusStr = status?.toString().trim().toLowerCase() ?? '';
+            final isPending = statusStr == 'pending';
+            print(
+                '   - Booking ${b['id']}: status="$status" -> "$statusStr" -> isPending: $isPending');
+            return isPending;
+          }).toList();
+
+          // Filter confirmed bookings
+          print('🟢 Filtering CONFIRMED bookings...');
+          final confirmed = bookings.where((b) {
+            final status = b['status'];
+            final statusStr = status?.toString().trim().toLowerCase() ?? '';
+            final isConfirmed = statusStr == 'confirmed';
+            print(
+                '   - Booking ${b['id']}: status="$status" -> "$statusStr" -> isConfirmed: $isConfirmed');
+            return isConfirmed;
+          }).toList();
+
+          // Filter history bookings
+          print('🔴 Filtering HISTORY bookings...');
+          final history = bookings.where((b) {
+            final status = b['status'];
+            final statusStr = status?.toString().trim().toLowerCase() ?? '';
+            final isHistory = statusStr == 'rejected' ||
+                statusStr == 'completed' ||
+                statusStr == 'cancelled';
+            print(
+                '   - Booking ${b['id']}: status="$status" -> "$statusStr" -> isHistory: $isHistory');
+            return isHistory;
+          }).toList();
+
+          print('\n📊 FILTERING RESULTS:');
+          print('   🟡 Pending: ${pending.length} bookings');
+          print('   🟢 Confirmed: ${confirmed.length} bookings');
+          print('   🔴 History: ${history.length} bookings');
+
+          // Print booking IDs in each category
+          print('\n📋 Booking assignments:');
+          print('   🟡 Pending IDs: ${pending.map((b) => b['id']).toList()}');
+          print(
+              '   🟢 Confirmed IDs: ${confirmed.map((b) => b['id']).toList()}');
+          print('   🔴 History IDs: ${history.map((b) => b['id']).toList()}');
+
+          print('\n🔄 Updating state...');
+          setState(() {
+            _pendingReservations = pending;
+            _confirmedReservations = confirmed;
+            _historyReservations = history;
+            _isLoading = false;
+          });
+
+          print('✅ State updated successfully!');
+          print('   📊 Final state:');
+          print(
+              '      🟡 _pendingReservations.length: ${_pendingReservations.length}');
+          print(
+              '      🟢 _confirmedReservations.length: ${_confirmedReservations.length}');
+          print(
+              '      🔴 _historyReservations.length: ${_historyReservations.length}');
+          print('      ⏳ _isLoading: $_isLoading');
+        } else {
+          print('❌ Invalid response structure');
+          print('   - success field: ${data['success']}');
+          print('   - bookings field: ${data['bookings']}');
+          print('   - Setting empty state...');
+
+          setState(() {
+            _pendingReservations = [];
+            _confirmedReservations = [];
+            _historyReservations = [];
+            _isLoading = false;
+          });
+          print('✅ Empty state set');
+        }
+      } else {
+        print('❌ HTTP Error: ${response.statusCode}');
+        print('   Response body: ${response.body}');
 
         setState(() {
-          _pendingReservations =
-              bookings.where((b) => b['status'] == 'pending').toList();
-          _confirmedReservations =
-              bookings.where((b) => b['status'] == 'confirmed').toList();
-          _historyReservations = bookings
-              .where((b) =>
-                  b['status'] == 'rejected' ||
-                  b['status'] == 'completed' ||
-                  b['status'] == 'cancelled')
-              .toList();
+          _pendingReservations = [];
+          _confirmedReservations = [];
+          _historyReservations = [];
           _isLoading = false;
         });
-      } else {
-        throw Exception('Failed to load reservations: ${response.body}');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Server error: ${response.statusCode}'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ EXCEPTION in _loadReservations:');
+      print('   Error: $e');
+      print('   Stack trace: $stackTrace');
+
       setState(() {
+        _pendingReservations = [];
+        _confirmedReservations = [];
+        _historyReservations = [];
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading reservations: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+
+    print('🔍 === LOAD RESERVATIONS END ===\n');
   }
+
+// Also add this test method to call _loadReservations manually:
 
   Future<void> _updateBookingStatus(String bookingId, String status) async {
     try {
@@ -122,6 +282,7 @@ class _ReservationsPageState extends State<ReservationsPage>
     }
   }
 
+  // Update your build method to include TWO debug buttons:
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -157,8 +318,16 @@ class _ReservationsPageState extends State<ReservationsPage>
         ),
         body: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                    ),
+                    SizedBox(height: 16),
+                    Text('Loading reservations...'),
+                  ],
                 ),
               )
             : TabBarView(
@@ -173,9 +342,21 @@ class _ReservationsPageState extends State<ReservationsPage>
     );
   }
 
+  // Also, update your _buildReservationsList method to add debug info:
   Widget _buildReservationsList(
       List<Map<String, dynamic>> reservations, String status) {
+    print(
+        '=== Building reservations list for $status: ${reservations.length} items ===');
+
+    // Debug: Print the actual reservations being displayed
+    for (int i = 0; i < reservations.length; i++) {
+      final reservation = reservations[i];
+      print(
+          '  $status[$i]: Booking ID ${reservation['id']} - Status: "${reservation['status']}"');
+    }
+
     if (reservations.isEmpty) {
+      print('Showing empty state for $status');
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -197,10 +378,21 @@ class _ReservationsPageState extends State<ReservationsPage>
                 color: Colors.grey[600],
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Expected: ${status == 'Pending' ? '1' : status == 'History' ? '4' : '0'} bookings based on API data',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ],
         ),
       );
     }
+
+    print('Showing ${reservations.length} cards for $status');
 
     Color statusColor = status == 'Pending'
         ? Colors.orange
@@ -213,6 +405,12 @@ class _ReservationsPageState extends State<ReservationsPage>
         itemCount: reservations.length,
         itemBuilder: (context, index) {
           final reservation = reservations[index];
+          print(
+              'Building card $index for booking ${reservation['id']} in $status tab');
+
+          // Keep your existing card building code here...
+          // (I'm only showing the debug additions, rest stays the same)
+
           final tenant = reservation['tenant'] ?? {};
           final property = reservation['property'] ?? {};
           final checkInDate = DateTime.parse(reservation['check_in_date']);
@@ -249,7 +447,8 @@ class _ReservationsPageState extends State<ReservationsPage>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          status,
+                          '${reservation['status']}'
+                              .toUpperCase(), // Show actual status from data
                           style: TextStyle(
                             color: statusColor,
                             fontWeight: FontWeight.w600,
@@ -363,74 +562,7 @@ class _ReservationsPageState extends State<ReservationsPage>
                     ),
                   ),
 
-                  // Emergency Contact (if available)
-                  if (reservation['emergency_contact_name'] != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.emergency,
-                              size: 16, color: Colors.orange[700]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Emergency Contact',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange[700],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  '${reservation['emergency_contact_name']} - ${reservation['emergency_contact_phone']}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  // Message from tenant (if any)
-                  if (reservation['message'] != null &&
-                      reservation['message'].isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Message from tenant:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            reservation['message'],
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  // Keep your existing emergency contact and message sections...
 
                   const SizedBox(height: 16),
 
@@ -463,44 +595,6 @@ class _ReservationsPageState extends State<ReservationsPage>
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (status == 'Confirmed')
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            // Navigate to chat with tenant
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => chat.ChatScreen(
-                                  currentUserId:
-                                      int.parse(widget.currentUser.id),
-                                  otherUser: chat.User(
-                                    id: int.parse(tenant['id'].toString()),
-                                    fullName: tenant['full_name'] ?? 'Tenant',
-                                    email: tenant['email'] ?? '',
-                                    userType: 'Tenant',
-                                  ),
-                                  listingId:
-                                      int.parse(property['id'].toString()),
-                                  listingTitle: property['title'] ?? 'Property',
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.message, size: 18),
-                          label: const Text('Message Tenant'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF667EEA),
-                            side: const BorderSide(color: Color(0xFF667EEA)),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),

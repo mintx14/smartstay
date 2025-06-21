@@ -1,6 +1,7 @@
 class ApiConfig {
   // Change this IP address when needed
-  static const String _baseUrl = 'http://192.168.0.11';
+  static const String _baseUrl = 'http://192.168.0.27'; //URL RUMAH
+  //static const String _baseUrl = 'http://172.20.10.5'; //URL PHONE
 
   // API endpoints
   static const String _apiPath = '/smartstay';
@@ -58,12 +59,22 @@ class ApiConfig {
 
   // Booking endpoints
   static final String createBooking = '$baseUrl/bookings_api.php/create';
-  static String getTenantBookings(String tenantId) =>
+  // static String getTenantBookings(String tenantId) =>
+  //     '$baseUrl/bookings_api.php/tenant/$tenantId';
+  // static String getOwnerBookings(String ownerId) =>
+  //     '$baseUrl/bookings_api.php/owner/$ownerId';
+  // In api_config.dart, change these methods:
+  static String getTenantBookings(int tenantId) =>
       '$baseUrl/bookings_api.php/tenant/$tenantId';
-  static String getOwnerBookings(String ownerId) =>
+
+  static String getOwnerBookings(int ownerId) =>
       '$baseUrl/bookings_api.php/owner/$ownerId';
   static String updateBookingStatus(String bookingId, String action) =>
       '$baseUrl/bookings_api.php/$bookingId/$action';
+
+  // Add this in ApiConfig class
+  static String checkExistingBooking(String tenantId, String listingId) =>
+      '$baseUrl/bookings_api.php/check-existing/$tenantId/$listingId';
 
   // Helper endpoints
   static String checkAvailability(String listingId) =>
@@ -147,6 +158,14 @@ class ApiConfig {
   static final String paymentSummaryUrl = '$baseUrl/payment_summary.php';
   static final String simulatePaymentUrl =
       '$baseUrl/simulate_payment_webhook.php';
+
+  // static String getSupportTicketsUrlWithUserId(int userId) {
+  //   return '$supportTicketsUrl?user_id=$userId';
+  // }
+
+  // static String getTicketMessagesUrlWithParams(int userId, int ticketId) {
+  //   return '$ticketMessagesUrl?user_id=$userId&ticket_id=$ticketId';
+  // }
 
   // Method to easily switch between different environments
   static void setEnvironment(Environment env) {

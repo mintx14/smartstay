@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/widgets/profile_menu_item.dart';
 import 'package:my_app/pages/owner/personal_info_page.dart';
-import 'package:my_app/pages/owner/payment_methods_page.dart';
+import 'package:my_app/pages/tenant/payment_methods_page.dart';
 import 'package:my_app/pages/owner/rental_history_page.dart';
 import 'package:my_app/pages/owner/help_support_page.dart';
 
