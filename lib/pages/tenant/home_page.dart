@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
+//import 'package:my_app/services/search_service.dart';
+import 'package:my_app/services/property_search_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 // Import your screen classes
@@ -24,7 +28,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final PropertyService _propertyService = PropertyService();
   bool _isLoading = true;
   List<Listing> _allListings = [];
-  final int _currentPage = 1;
+  int _currentPage = 1;
   String? _errorMessage;
   final List<String> _debugLog = [];
 
@@ -40,12 +44,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late AnimationController _searchAnimationController;
   late AnimationController _heartAnimationController;
 
+  // Enhanced search variables
+  final PropertySearchService _searchService = PropertySearchService();
+  List<SearchLocation> _searchSuggestions = [];
+  List<PropertyListing> _searchResults = [];
+  SearchLocation? _selectedLocation;
+  bool _showSuggestions = false;
+  bool _isSearching = false;
+  bool _isLoadingProperties = false;
+  Timer? _searchDebounceTimer;
+  final FocusNode _searchFocusNode = FocusNode();
+  //int _currentPage = 1;
+  int _totalPages = 1;
+
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
     _loadFavoriteIds();
     _loadInitialData();
+
+    // Add search initialization
+    _initializeSearch();
   }
 
   void _initializeAnimations() {
@@ -65,13 +85,49 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  void _initializeSearch() {
+    _searchFocusNode.addListener(() {
+      if (_searchFocusNode.hasFocus) {
+        _loadPopularLocations();
+        setState(() {
+          _showSuggestions = true;
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _animationController.dispose();
     _searchAnimationController.dispose();
     _heartAnimationController.dispose();
+    _searchFocusNode.dispose(); // Add this
+    _searchDebounceTimer?.cancel(); // Add this
     super.dispose();
+  }
+
+  // Method to convert PropertyListing to Listing
+  Listing _convertPropertyListingToListing(PropertyListing property) {
+    return Listing(
+      id: property.id.toString(),
+      // userId: property.userId,
+      title: property.title,
+      address: property.address,
+      postcode: property.postcode,
+      description: property.description ?? '',
+      price: property.price,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      areaSqft: property.areaSqft,
+      availableFrom:
+          DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
+      minimumTenure: property.minimumTenure,
+      status: property.status,
+      createdAt: DateTime.now(), // Default value since not in PropertyListing
+      updatedAt: DateTime.now(), // Default value since not in PropertyListing
+      imageUrls: [], // You'll need to fetch these separately or add to PropertyListing model
+    );
   }
 
   // Load favorite IDs from SharedPreferences
@@ -263,74 +319,575 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  // Widget _buildModernSearchBar() {
-  //   return SlideTransition(
-  //     position: _slideAnimation,
-  //     child: FadeTransition(
-  //       opacity: _fadeAnimation,
-  //       child: Container(
-  //         margin: const EdgeInsets.all(20),
-  //         decoration: BoxDecoration(
-  //           borderRadius: BorderRadius.circular(25),
-  //           boxShadow: [
-  //             BoxShadow(
-  //               color: Colors.black.withOpacity(0.1),
-  //               blurRadius: 20,
-  //               offset: const Offset(0, 8),
-  //             ),
-  //           ],
-  //         ),
-  //         child: TextField(
-  //           controller: _searchController,
-  //           decoration: InputDecoration(
-  //             hintText: 'Search your dream property...',
-  //             hintStyle: TextStyle(
-  //               color: Colors.grey[500],
-  //               fontSize: 16,
-  //             ),
-  //             prefixIcon: Container(
-  //               margin: const EdgeInsets.all(12),
-  //               decoration: BoxDecoration(
-  //                 color: const Color(0xFF667EEA).withOpacity(0.1),
-  //                 borderRadius: BorderRadius.circular(12),
-  //               ),
-  //               child: const Icon(
-  //                 Icons.search,
-  //                 color: Color(0xFF667EEA),
-  //                 size: 24,
-  //               ),
-  //             ),
-  //             suffixIcon: _searchController.text.isNotEmpty
-  //                 ? IconButton(
-  //                     icon: const Icon(Icons.clear, color: Colors.grey),
-  //                     onPressed: () {
-  //                       _searchController.clear();
-  //                       _performSearch();
-  //                     },
-  //                   )
-  //                 : null,
-  //             filled: true,
-  //             fillColor: Colors.white,
-  //             border: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(25),
-  //               borderSide: BorderSide.none,
-  //             ),
-  //             contentPadding: const EdgeInsets.symmetric(
-  //               horizontal: 20,
-  //               vertical: 16,
-  //             ),
-  //           ),
-  //           style: const TextStyle(fontSize: 16),
-  //           onSubmitted: (_) => _performSearch(),
-  //           onChanged: (value) {
-  //             setState(() {});
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
+  Future<void> _loadPopularLocations() async {
+    try {
+      final suggestions = await _searchService.searchLocationsWithCount(
+        query: '',
+        limit: 5,
+      );
+      if (mounted) {
+        setState(() {
+          _searchSuggestions = suggestions;
+        });
+      }
+    } catch (e) {
+      print('Error loading popular locations: $e');
+    }
+  }
 
+  void _onSearchChanged(String query) {
+    _searchDebounceTimer?.cancel();
+
+    if (_selectedLocation != null && _selectedLocation!.name != query) {
+      setState(() {
+        _selectedLocation = null;
+        _searchResults = [];
+      });
+    }
+
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (query.isNotEmpty) {
+        _performLocationSearch(query);
+      } else {
+        setState(() {
+          _searchSuggestions = [];
+          _isSearching = false;
+        });
+        _loadPopularLocations();
+      }
+    });
+  }
+
+  Future<void> _performLocationSearch(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final suggestions = await _searchService.searchLocationsWithCount(
+        query: query,
+        limit: 5,
+      );
+
+      if (mounted) {
+        setState(() {
+          _searchSuggestions = suggestions;
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      print('Search error: $e');
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectLocation(SearchLocation location) async {
+    _searchController.text = location.name;
+    setState(() {
+      _showSuggestions = false;
+      _selectedLocation = location;
+      _currentPage = 1;
+    });
+    _searchFocusNode.unfocus();
+
+    // Load properties for this location
+    await _loadPropertiesForLocation(location);
+  }
+
+  // Let's fix the _loadPropertiesForLocation method with debugging
+  Future<void> _loadPropertiesForLocation(SearchLocation location,
+      {int page = 1}) async {
+    setState(() {
+      _isLoadingProperties = true;
+    });
+
+    try {
+      final response = await _searchService.searchPropertiesByLocation(
+        locationId: location.id,
+        locationName: location.name,
+        page: page,
+        limit: 10,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (page == 1) {
+            _searchResults = response.properties;
+          } else {
+            _searchResults.addAll(response.properties);
+          }
+          _currentPage = response.page;
+          _totalPages = response.totalPages;
+          _isLoadingProperties = false;
+        });
+
+        // Show result count
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Found ${response.total} properties in ${location.name}'),
+            backgroundColor: const Color(0xFF48BB78),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error loading properties: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingProperties = false;
+        });
+      }
+    }
+  }
+
+  // 4. Update _clearSearch to properly reset state
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _showSuggestions = false;
+      _searchSuggestions = [];
+      _searchResults = []; // Clear search results
+      _selectedLocation = null;
+    });
+    _searchFocusNode.unfocus();
+    // Reload all listings
+    _loadAllListings();
+  }
+
+  // Enhanced search bar widget
+  Widget _buildModernSearchBar() {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, -1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _searchAnimationController,
+        curve: Curves.easeOutBack,
+      )),
+      child: FadeTransition(
+        opacity: _searchAnimationController,
+        child: Container(
+          margin: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // Search Input
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Search locations (e.g., Taman Bukit Tambun)...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 16,
+                    ),
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF667EEA).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _isSearching
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF667EEA)),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.search,
+                              color: Color(0xFF667EEA),
+                              size: 24,
+                            ),
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.grey),
+                            onPressed: _clearSearch,
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF667EEA),
+                        width: 2,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 16),
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty && _searchSuggestions.isNotEmpty) {
+                      _selectLocation(_searchSuggestions.first);
+                    }
+                  },
+                ),
+              ),
+
+              // Selected location indicator
+              if (_selectedLocation != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667EEA).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        color: Color(0xFF667EEA),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Showing properties in ${_selectedLocation!.name}',
+                        style: const TextStyle(
+                          color: Color(0xFF667EEA),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Search Suggestions
+              if (_showSuggestions) _buildSearchSuggestions(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchSuggestions() {
+    if (_searchSuggestions.isEmpty && !_isSearching) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_searchController.text.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.trending_up, color: Colors.grey[600], size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Popular Locations',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: _searchSuggestions.length,
+            separatorBuilder: (context, index) => Divider(
+              height: 1,
+              color: Colors.grey[200],
+              indent: 16,
+              endIndent: 16,
+            ),
+            itemBuilder: (context, index) {
+              final suggestion = _searchSuggestions[index];
+              return ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667EEA).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    suggestion.name.startsWith('Taman')
+                        ? Icons.home_work
+                        : Icons.location_city,
+                    color: const Color(0xFF667EEA),
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  suggestion.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: suggestion.subtitle != null
+                    ? Text(
+                        suggestion.subtitle!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      )
+                    : null,
+                trailing: const Icon(
+                  Icons.north_west,
+                  color: Colors.grey,
+                  size: 16,
+                ),
+                onTap: () => _selectLocation(suggestion),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // Property card widget for search results
+  Widget _buildSearchResultCard(PropertyListing property, int index) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            // Navigate to property details
+            print('View property: ${property.title}');
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title and Location Match
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            property.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3748),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (property.locationMatch != null)
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF667EEA).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                property.locationMatch!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF667EEA),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        property.formattedPrice ?? 'RM ${property.price}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Address
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.grey[600], size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${property.address}, ${property.postcode}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Property Details
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildPropertyDetail(
+                      icon: Icons.bed,
+                      value: '${property.bedrooms}',
+                      label: 'Beds',
+                    ),
+                    _buildPropertyDetail(
+                      icon: Icons.bathtub,
+                      value: '${property.bathrooms}',
+                      label: 'Baths',
+                    ),
+                    _buildPropertyDetail(
+                      icon: Icons.square_foot,
+                      value: '${property.areaSqft}',
+                      label: 'sqft',
+                    ),
+                    _buildPropertyDetail(
+                      icon: Icons.calendar_today,
+                      value: property.formattedDate ?? property.availableFrom,
+                      label: 'Available',
+                    ),
+                  ],
+                ),
+
+                if (property.description != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    property.description!,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPropertyDetail({
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: const Color(0xFF667EEA), size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Update _buildPropertyCard to show location match badge
   Widget _buildPropertyCard(Listing listing, int index) {
     final isFavorite = _favoriteIds.contains(listing.id.toString());
 
@@ -369,7 +926,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            // In the _buildPropertyCard method, update the navigation:
             onTap: () {
               Navigator.of(context).push(
                 PageRouteBuilder(
@@ -378,7 +934,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     listing: listing,
                     isFavorite: _favoriteIds.contains(listing.id.toString()),
                     onFavoriteToggle: _toggleFavorite,
-                    user: widget.user, // ADD THIS LINE
+                    user: widget.user,
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
@@ -457,6 +1013,48 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
+                      // Location match badge (only show if searching by location)
+                      if (_selectedLocation != null)
+                        Positioned(
+                          top: 12,
+                          left: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF667EEA).withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _selectedLocation!.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -648,6 +1246,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // Update the explore screen to show search results
   Widget _buildExploreScreen() {
     return Container(
       decoration: BoxDecoration(
@@ -661,34 +1260,160 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       ),
       child: RefreshIndicator(
-        onRefresh: () => _loadAllListings(),
+        onRefresh: () async {
+          if (_selectedLocation != null) {
+            await _loadPropertiesForLocation(_selectedLocation!);
+          } else {
+            await _loadAllListings();
+          }
+        },
         color: const Color(0xFF667EEA),
-        child: Column(
-          children: [
-            // Enhanced Search Bar
-            //_buildModernSearchBar(),
+        child: GestureDetector(
+          onTap: () {
+            if (_showSuggestions) {
+              setState(() {
+                _showSuggestions = false;
+              });
+              _searchFocusNode.unfocus();
+            }
+          },
+          child: Column(
+            children: [
+              // Enhanced Search Bar
+              _buildModernSearchBar(),
 
-            // Error Display
-            if (_errorMessage != null) _buildErrorDisplay(),
+              // Error Display
+              if (_errorMessage != null) _buildErrorDisplay(),
 
-            // Listings
-            Expanded(
-              child: _isLoading
-                  ? _buildLoadingState()
-                  : _allListings.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 20),
-                          itemCount: _allListings.length,
-                          itemBuilder: (context, index) {
-                            return _buildPropertyCard(
-                                _allListings[index], index);
-                          },
-                        ),
-            ),
-          ],
+              // Content Area
+              Expanded(
+                child: _buildContent(),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  // Replace your _buildContent method with this:
+  // 3. Simplified _buildContent method
+  Widget _buildContent() {
+    // If loading
+    if (_isLoadingProperties || _isLoading) {
+      return _buildLoadingState();
+    }
+
+    // Determine which data to show
+    final bool showingSearchResults =
+        _selectedLocation != null && _searchResults.isNotEmpty;
+    final itemCount =
+        showingSearchResults ? _searchResults.length : _allListings.length;
+
+    // If no data
+    if (itemCount == 0) {
+      if (_selectedLocation != null) {
+        return _buildNoResultsState();
+      }
+      return _buildEmptyState();
+    }
+
+    // Build the list
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 20),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        if (showingSearchResults) {
+          // For search results, convert on the fly
+          final property = _searchResults[index];
+          final listing = _createListingFromProperty(property);
+          return _buildPropertyCard(listing, index);
+        } else {
+          // For regular listings, use as is
+          return _buildPropertyCard(_allListings[index], index);
+        }
+      },
+    );
+  }
+
+  // 2. Add this helper method to create a Listing from PropertyListing
+  Listing _createListingFromProperty(PropertyListing property) {
+    // Use default images if none provided
+    final images = property.imageUrls.isNotEmpty
+        ? property.imageUrls
+        : [
+            'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+            'https://images.unsplash.com/photo-1560449752-8d7085b7b162?w=800',
+            'https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?w=800',
+          ];
+
+    return Listing(
+      id: property.id.toString(), // Convert to String
+      title: property.title,
+      address: property.address,
+      postcode: property.postcode,
+      description: property.description ?? '',
+      price: property.price,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      areaSqft: property.areaSqft,
+      availableFrom:
+          DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
+      minimumTenure: property.minimumTenure,
+      status: property.status,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      imageUrls: images,
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No properties found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No properties available in ${_selectedLocation?.name}',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _clearSearch,
+            icon: const Icon(Icons.clear),
+            label: const Text('Clear Search'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF667EEA),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
