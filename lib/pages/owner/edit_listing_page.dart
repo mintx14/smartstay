@@ -320,6 +320,7 @@ class _EditListingPageState extends State<EditListingPage> {
           description: _descriptionController.text,
           imageUrls: allMediaUrls,
           price: double.parse(_priceController.text),
+          deposit: double.parse(_priceController.text),
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),

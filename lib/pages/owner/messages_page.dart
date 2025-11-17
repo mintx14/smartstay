@@ -139,22 +139,22 @@ class _MessagesPageState extends State<MessagesPage> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text('Messages'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_square),
-            onPressed: _showNewMessageDialog,
-            tooltip: 'New Message',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadConversations,
-            tooltip: 'Refresh',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.edit_square),
+        //     onPressed: _showNewMessageDialog,
+        //     tooltip: 'New Message',
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Icons.refresh),
+        //     onPressed: _loadConversations,
+        //     tooltip: 'Refresh',
+        //   ),
+        // ],
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
+          //_buildSearchBar(),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -170,31 +170,31 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search messages',
-          hintStyle: TextStyle(color: Colors.grey[400]),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        ),
-        onChanged: (value) {
-          setState(() {
-            // You can implement search functionality here
-          });
-        },
-      ),
-    );
-  }
+  // Widget _buildSearchBar() {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(16.0),
+  //     child: TextField(
+  //       controller: _searchController,
+  //       decoration: InputDecoration(
+  //         hintText: 'Search messages',
+  //         hintStyle: TextStyle(color: Colors.grey[400]),
+  //         prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+  //         border: OutlineInputBorder(
+  //           borderRadius: BorderRadius.circular(30.0),
+  //           borderSide: BorderSide.none,
+  //         ),
+  //         filled: true,
+  //         fillColor: Colors.grey[100],
+  //         contentPadding: const EdgeInsets.symmetric(vertical: 0),
+  //       ),
+  //       onChanged: (value) {
+  //         setState(() {
+  //           // You can implement search functionality here
+  //         });
+  //       },
+  //     ),
+  //   );
+  // }
 
   Widget _buildChatsList(BuildContext context) {
     return ListView.builder(
@@ -680,23 +680,23 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.phone),
-            onPressed: () {},
-            tooltip: 'Call',
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam),
-            onPressed: () {},
-            tooltip: 'Video Call',
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-            tooltip: 'More Options',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.phone),
+        //     onPressed: () {},
+        //     tooltip: 'Call',
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Icons.videocam),
+        //     onPressed: () {},
+        //     tooltip: 'Video Call',
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Icons.more_vert),
+        //     onPressed: () {},
+        //     tooltip: 'More Options',
+        //   ),
+        // ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -881,16 +881,16 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
-            onPressed: () {},
-            tooltip: 'Emojis',
-          ),
-          IconButton(
-            icon: Icon(Icons.attach_file, color: Colors.grey[600]),
-            onPressed: () {},
-            tooltip: 'Attachments',
-          ),
+          // IconButton(
+          //   icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
+          //   onPressed: () {},
+          //   tooltip: 'Emojis',
+          // ),
+          // IconButton(
+          //   icon: Icon(Icons.attach_file, color: Colors.grey[600]),
+          //   onPressed: () {},
+          //   tooltip: 'Attachments',
+          // ),
           const SizedBox(width: 8.0),
           Expanded(
             child: TextField(

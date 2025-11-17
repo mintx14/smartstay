@@ -1,13 +1,66 @@
+// Fixed ApiConfig with debugging capabilities
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 class ApiConfig {
   // Change this IP address when needed
-  static const String _baseUrl = 'http://192.168.0.27'; //URL RUMAH
-  //static const String _baseUrl = 'http://172.20.10.5'; //URL PHONE
+  //static String _baseUrl = 'http://192.168.0.4'; //URL RUMAHSEWA
+  static String _baseUrl = 'http://192.168.0.117'; //URL RUMAH
+  //static String _baseUrl = 'http://172.20.10.5'; //URL PHONE
+  //static String _baseUrl = 'https://databasetest.infinityfree.me'; //URL ONLINE
 
   // API endpoints
   static const String _apiPath = '/smartstay';
 
-  // Complete base URL
-  static String get baseUrl => '$_baseUrl$_apiPath';
+  // Complete base URL with debug logging
+  static String get baseUrl {
+    final url = '$_baseUrl$_apiPath';
+    // Uncomment next line for debugging
+    // print("🔍 Current Base URL: $url");
+    return url;
+  }
+
+  // Add debug method
+  static void debugCurrentConfig() {
+    print("🔍 ===================");
+    print("🔍 Current _baseUrl: $_baseUrl");
+    print("🔍 Current _apiPath: $_apiPath");
+    print("🔍 Final baseUrl: $baseUrl");
+    print("🔍 Sample endpoint: $loginUrl");
+    print("🔍 Timestamp: ${DateTime.now()}");
+    print("🔍 ===================");
+  }
+
+  // Method to update base URL
+  static void updateBaseUrl(String newBaseUrl) {
+    _baseUrl = newBaseUrl;
+    print("🔄 Base URL updated to: $_baseUrl");
+    // Reset any HTTP clients here
+    PropertyService.resetHttpClient();
+    debugCurrentConfig();
+  }
+
+  // Force refresh method
+  static Future<void> forceRefresh() async {
+    print("🔄 Forcing complete refresh...");
+    debugCurrentConfig();
+
+    // Reset HTTP clients
+    PropertyService.resetHttpClient();
+
+    // Clear any cached data if needed
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_base_url');
+      await prefs.remove('api_config');
+    } catch (e) {
+      print("No SharedPreferences to clear: $e");
+    }
+
+    print("✅ Refresh complete");
+  }
 
   // Authentication endpoints
   static String get loginUrl => '$baseUrl/login.php';
@@ -58,21 +111,13 @@ class ApiConfig {
   static String get messagesUrl => '$baseUrl/messages.php';
 
   // Booking endpoints
-  static final String createBooking = '$baseUrl/bookings_api.php/create';
-  // static String getTenantBookings(String tenantId) =>
-  //     '$baseUrl/bookings_api.php/tenant/$tenantId';
-  // static String getOwnerBookings(String ownerId) =>
-  //     '$baseUrl/bookings_api.php/owner/$ownerId';
-  // In api_config.dart, change these methods:
+  static String get createBooking => '$baseUrl/bookings_api.php/create';
   static String getTenantBookings(int tenantId) =>
       '$baseUrl/bookings_api.php/tenant/$tenantId';
-
   static String getOwnerBookings(int ownerId) =>
       '$baseUrl/bookings_api.php/owner/$ownerId';
   static String updateBookingStatus(String bookingId, String action) =>
       '$baseUrl/bookings_api.php/$bookingId/$action';
-
-  // Add this in ApiConfig class
   static String checkExistingBooking(String tenantId, String listingId) =>
       '$baseUrl/bookings_api.php/check-existing/$tenantId/$listingId';
 
@@ -152,39 +197,100 @@ class ApiConfig {
   }
 
   // NEW: Payment Banking endpoints for property owners
-  static final String ownerBankAccountsUrl = '$baseUrl/owner_bank_accounts.php';
-  static final String paymentTransactionsUrl =
+  static String get ownerBankAccountsUrl => '$baseUrl/owner_bank_accounts.php';
+  static String get paymentTransactionsUrl =>
       '$baseUrl/payment_transactions.php';
-  static final String paymentSummaryUrl = '$baseUrl/payment_summary.php';
-  static final String simulatePaymentUrl =
+  static String get paymentSummaryUrl => '$baseUrl/payment_summary.php';
+  static String get simulatePaymentUrl =>
       '$baseUrl/simulate_payment_webhook.php';
-
-  // static String getSupportTicketsUrlWithUserId(int userId) {
-  //   return '$supportTicketsUrl?user_id=$userId';
-  // }
-
-  // static String getTicketMessagesUrlWithParams(int userId, int ticketId) {
-  //   return '$ticketMessagesUrl?user_id=$userId&ticket_id=$ticketId';
-  // }
 
   // Method to easily switch between different environments
   static void setEnvironment(Environment env) {
     switch (env) {
       case Environment.development:
-        // Keep current IP
+        _baseUrl = 'http://192.168.0.34';
         break;
       case Environment.local:
-        // For Android emulator
+        _baseUrl = 'http://10.0.2.2'; // For Android emulator
         break;
       case Environment.production:
-        // Production URL
+        _baseUrl = 'https://your-production-url.com';
         break;
     }
+    PropertyService.resetHttpClient();
+    debugCurrentConfig();
   }
 }
 
-enum Environment {
-  development,
-  local,
-  production,
+enum Environment { development, local, production }
+
+// Fixed PropertyService with proper HTTP client management
+class PropertyService {
+  static http.Client? _httpClient;
+
+  // Get HTTP client with fresh configuration
+  static http.Client get httpClient {
+    _httpClient ??= http.Client();
+    return _httpClient!;
+  }
+
+  // Reset HTTP client to pick up new base URL
+  static void resetHttpClient() {
+    _httpClient?.close();
+    _httpClient = null;
+    print("🔄 HTTP Client reset");
+  }
+
+  Future<Map<String, dynamic>> getAllListings({
+    int page = 1,
+    String? searchQuery,
+  }) async {
+    try {
+      // Always use fresh base URL
+      String url = ApiConfig.getAllListingsUrl;
+
+      final uri = Uri.parse(url).replace(queryParameters: {
+        'page': page.toString(),
+        if (searchQuery != null && searchQuery.isNotEmpty)
+          'search': searchQuery,
+      });
+
+      print("🌐 Making request to: $uri");
+
+      final response = await httpClient.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 30));
+
+      print("📡 Response status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to load listings: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("❌ Error in getAllListings: $e");
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // Test connection method
+  Future<bool> testConnection() async {
+    try {
+      final response = await httpClient.get(
+        Uri.parse(ApiConfig.testConnectionUrl),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      print("🔗 Connection test - Status: ${response.statusCode}");
+      print("🔗 Response: ${response.body}");
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("❌ Connection test failed: $e");
+      return false;
+    }
+  }
 }

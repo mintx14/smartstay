@@ -44,6 +44,7 @@ class PropertyListing {
   final String postcode;
   final String? description;
   final double price;
+  final double deposit;
   final int bedrooms;
   final int bathrooms;
   final int areaSqft;
@@ -63,6 +64,7 @@ class PropertyListing {
     required this.postcode,
     this.description,
     required this.price,
+    required this.deposit,
     required this.bedrooms,
     required this.bathrooms,
     required this.areaSqft,
@@ -84,6 +86,7 @@ class PropertyListing {
       postcode: json['postcode'] ?? '',
       description: json['description'],
       price: double.tryParse(json['price'].toString()) ?? 0.0,
+      deposit: double.tryParse(json['price'].toString()) ?? 0.0,
       bedrooms: json['bedrooms'] ?? 0,
       bathrooms: json['bathrooms'] ?? 0,
       areaSqft: json['area_sqft'] ?? 0,
@@ -139,7 +142,7 @@ class PropertySearchResponse {
 
 class PropertySearchService {
   // Change this to your XAMPP server URL
-  static const String baseUrl = 'http://192.168.0.27/smartstay';
+  static const String baseUrl = 'http://192.168.0.34/smartstay';
 
   // For Android emulator, use: http://10.0.2.2/property_search
   // For iOS simulator, use: http://127.0.0.1/property_search
@@ -187,6 +190,7 @@ class PropertySearchService {
   }
 
   // Search properties by location - using enhanced API
+  // In property_search_service.dart, update the searchPropertiesByLocation method:
   Future<PropertySearchResponse> searchPropertiesByLocation({
     int? locationId,
     String? locationName,
@@ -206,12 +210,12 @@ class PropertySearchService {
         queryParams['location_name'] = locationName;
       }
 
-      // Use the enhanced API endpoint
       final uri =
           Uri.parse('$baseUrl/enhanced_search_properties_by_location.php')
               .replace(queryParameters: queryParams);
 
       print('🏠 Searching properties: $uri');
+      print('📋 Query params: $queryParams'); // 🔍 Debug query params
 
       final response = await http.get(
         uri,
@@ -222,12 +226,23 @@ class PropertySearchService {
       ).timeout(const Duration(seconds: 15));
 
       print('📡 Properties response status: ${response.statusCode}');
-      print('📄 Properties response: ${response.body}');
+      print(
+          '📄 Properties response body: ${response.body}'); // 🔍 Full response
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+
+        // 🔍 Debug the parsed response
+        print('🔍 Parsed JSON data:');
+        print('   Success: ${jsonData['success']}');
+        print('   Total: ${jsonData['total']}');
+        print(
+            '   Properties array length: ${(jsonData['properties'] as List?)?.length ?? 0}');
+
         return PropertySearchResponse.fromJson(jsonData);
       } else {
+        print('❌ HTTP Error: ${response.statusCode}');
+        print('❌ Response body: ${response.body}');
         throw Exception('Failed to search properties: ${response.statusCode}');
       }
     } catch (e) {

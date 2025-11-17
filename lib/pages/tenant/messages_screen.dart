@@ -5,9 +5,17 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:my_app/config/api_config.dart'; // Adjust path as needed
+import 'package:my_app/pages/tenant/toyyibpay_payment_screen.dart';
+import 'package:my_app/models/booking_status.dart';
+
+// --- NEW IMPORTS ---
+// We import your REAL models and give them aliases to avoid naming conflicts
+import 'package:my_app/models/user_model.dart' as MainUser;
+import 'package:my_app/models/chat_message.dart' as MainChatMessage;
+// --- END NEW IMPORTS ---
 
 class MessagesScreen extends StatefulWidget {
-  final int currentUserId;
+  final String currentUserId;
 
   const MessagesScreen({super.key, required this.currentUserId});
 
@@ -36,7 +44,6 @@ class _MessagesScreenState extends State<MessagesScreen>
         setState(() {
           _currentTabIndex = _tabController.index;
         });
-        // Reload bookings when switching to bookings tab
         if (_currentTabIndex == 1) {
           _loadBookings();
         }
@@ -58,12 +65,12 @@ class _MessagesScreenState extends State<MessagesScreen>
     _loadData();
     _animationController.forward();
 
-    // Set up refresh timer
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!mounted) return;
       if (_currentTabIndex == 1) {
-        _loadBookings(); // Only refresh bookings if on bookings tab
+        _loadBookings();
       } else {
-        _loadConversations(); // Otherwise refresh conversations
+        _loadConversations();
       }
     });
   }
@@ -86,8 +93,8 @@ class _MessagesScreenState extends State<MessagesScreen>
   Future<void> _loadConversations() async {
     try {
       final response = await http.get(
-        Uri.parse(
-            ApiConfig.getConversationsUrlWithUserId(widget.currentUserId)),
+        Uri.parse(ApiConfig.getConversationsUrlWithUserId(
+            int.parse(widget.currentUserId))),
       );
 
       if (response.statusCode == 200) {
@@ -112,13 +119,13 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   Future<void> _loadBookings() async {
+    if (!mounted) return;
     try {
       print('=== Loading Tenant Bookings ===');
       print('User ID: ${widget.currentUserId}');
 
-      // Use the same pattern as the ReservationsPage
       final response = await http.get(
-        Uri.parse(ApiConfig.getTenantBookings(widget.currentUserId)),
+        Uri.parse(ApiConfig.getTenantBookings(int.parse(widget.currentUserId))),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -190,16 +197,19 @@ class _MessagesScreenState extends State<MessagesScreen>
   Future<void> _showNewMessageDialog() async {
     try {
       final response = await http.get(
-        Uri.parse(
-            ApiConfig.getUsersUrlWithParams(widget.currentUserId, 'Tenant')),
+        Uri.parse(ApiConfig.getUsersUrlWithParams(
+            int.parse(widget.currentUserId), 'Tenant')),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['users'] != null) {
-          List<User> users = (data['users'] as List)
-              .map((user) => User.fromJson(user))
+          // --- UPDATED ---
+          // Use your main user model
+          List<MainUser.User> users = (data['users'] as List)
+              .map((user) => MainUser.User.fromJson(user))
               .toList();
+          // --- END UPDATE ---
 
           if (users.isEmpty) {
             _showError('No tenants available to message');
@@ -210,6 +220,7 @@ class _MessagesScreenState extends State<MessagesScreen>
             context: context,
             builder: (context) => _NewMessageDialog(
               users: users,
+              currentUserId: widget.currentUserId,
               onUserSelected: (user) {
                 Navigator.of(context).pop();
                 _openChatWithUser(user);
@@ -225,7 +236,9 @@ class _MessagesScreenState extends State<MessagesScreen>
     }
   }
 
-  void _openChatWithUser(User user) {
+  // --- UPDATED ---
+  // Use your main user model
+  void _openChatWithUser(MainUser.User user) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -236,6 +249,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       ),
     ).then((_) => _loadData());
   }
+  // --- END UPDATE ---
 
   void _openChat(MessagePreview message) {
     Navigator.push(
@@ -243,12 +257,16 @@ class _MessagesScreenState extends State<MessagesScreen>
       MaterialPageRoute(
         builder: (context) => OwnerChatScreen(
           currentUserId: widget.currentUserId,
-          otherUser: User(
+          // --- UPDATED ---
+          // Use your main user model and its constructor
+          otherUser: MainUser.User(
             id: message.otherUserId,
             fullName: message.name,
-            email: '',
+            email: '', // Not available in MessagePreview
             userType: message.otherUserType,
+            phoneNumber: '', // Not available in MessagePreview
           ),
+          // --- END UPDATE ---
         ),
       ),
     ).then((_) => _loadData());
@@ -260,7 +278,6 @@ class _MessagesScreenState extends State<MessagesScreen>
       backgroundColor: const Color(0xFFF7FAFC),
       body: Column(
         children: [
-          // Custom App Bar with Tabs
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -304,22 +321,6 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 ),
                               ),
                             ),
-                            if (_currentTabIndex == 0)
-                              IconButton(
-                                onPressed: _showNewMessageDialog,
-                                icon: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.edit_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -335,7 +336,6 @@ class _MessagesScreenState extends State<MessagesScreen>
                       ],
                     ),
                   ),
-                  // Tab Bar
                   TabBar(
                     controller: _tabController,
                     indicatorColor: Colors.white,
@@ -355,15 +355,11 @@ class _MessagesScreenState extends State<MessagesScreen>
               ),
             ),
           ),
-
-          // Tab View Content
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Messages Tab
                 _buildMessagesTab(),
-                // Bookings Tab
                 _buildBookingsTab(),
               ],
             ),
@@ -453,7 +449,6 @@ class _MessagesScreenState extends State<MessagesScreen>
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              // Show booking details dialog
               _showBookingDetailsDialog(booking);
             },
             borderRadius: BorderRadius.circular(20),
@@ -462,7 +457,6 @@ class _MessagesScreenState extends State<MessagesScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Property image and title
                   Row(
                     children: [
                       if (booking.propertyImageUrl != null)
@@ -521,12 +515,10 @@ class _MessagesScreenState extends State<MessagesScreen>
                           ],
                         ),
                       ),
-                      _buildStatusChip(booking.status),
+                      _buildStatusChip(booking),
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Booking details
                   _buildInfoRow(Icons.calendar_today,
                       'Check-in: ${DateFormat('MMM d, yyyy').format(DateTime.parse(booking.checkInDate))}'),
                   const SizedBox(height: 8),
@@ -535,7 +527,6 @@ class _MessagesScreenState extends State<MessagesScreen>
                   const SizedBox(height: 8),
                   _buildInfoRow(Icons.attach_money,
                       'RM ${booking.monthlyRent.toStringAsFixed(0)}/month'),
-
                   if (booking.ownerName != null) ...[
                     const SizedBox(height: 12),
                     Container(
@@ -561,7 +552,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                               ),
                             ),
                           ),
-                          if (booking.status == 'pending')
+                          if (booking.isPending)
                             Text(
                               'Awaiting response',
                               style: TextStyle(
@@ -570,6 +561,157 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (booking.isConfirmedAndNotPaid) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ToyyibPayPaymentScreen(
+                                booking: booking,
+                                currentUserId: int.parse(widget.currentUserId),
+                              ),
+                            ),
+                          ).then((_) => _loadBookings());
+                        },
+                        icon: const Icon(Icons.payment),
+                        label: Text(
+                          'Pay Deposit (RM ${booking.depositAmount.toStringAsFixed(0)})',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF667EEA),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (booking.isPaymentCompleted) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.green.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green.shade700,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Deposit Paid',
+                                    style: TextStyle(
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  if (booking.formattedPaidDate != null)
+                                    Text(
+                                      'Paid on ${booking.formattedPaidDate}',
+                                      style: TextStyle(
+                                        color: Colors.green.shade600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (booking.paymentTransactionRef != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.shade200,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Transaction Ref:',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      Text(
+                                        booking.paymentTransactionRef!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (booking.paymentAmount != null) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Amount Paid:',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        Text(
+                                          'RM ${booking.paymentAmount!.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.green[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -583,7 +725,79 @@ class _MessagesScreenState extends State<MessagesScreen>
     );
   }
 
-  // Add this method to show booking details:
+  Widget _buildStatusChip(BookingStatus booking) {
+    Color backgroundColor;
+    Color textColor;
+    IconData icon;
+    String statusText;
+
+    if (booking.isPaymentCompleted) {
+      backgroundColor = Colors.green.shade100;
+      textColor = Colors.green.shade800;
+      icon = Icons.check_circle;
+      statusText = 'PAID';
+    } else {
+      switch (booking.status.toLowerCase()) {
+        case 'confirmed':
+          backgroundColor = Colors.blue.shade100;
+          textColor = Colors.blue.shade800;
+          icon = Icons.check_circle_outline;
+          statusText = 'CONFIRMED';
+          break;
+        case 'pending':
+          backgroundColor = Colors.orange.shade100;
+          textColor = Colors.orange.shade800;
+          icon = Icons.access_time;
+          statusText = 'PENDING';
+          break;
+        case 'cancelled':
+          backgroundColor = Colors.red.shade100;
+          textColor = Colors.red.shade800;
+          icon = Icons.cancel;
+          statusText = 'CANCELLED';
+          break;
+        case 'completed':
+          backgroundColor = Colors.purple.shade100;
+          textColor = Colors.purple.shade800;
+          icon = Icons.done_all;
+          statusText = 'COMPLETED';
+          break;
+        default:
+          backgroundColor = Colors.grey.shade100;
+          textColor = Colors.grey.shade800;
+          icon = Icons.info;
+          statusText = booking.status.toUpperCase();
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: textColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            statusText,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showBookingDetailsDialog(BookingStatus booking) {
     showDialog(
       context: context,
@@ -593,9 +807,11 @@ class _MessagesScreenState extends State<MessagesScreen>
         ),
         title: Row(
           children: [
-            const Icon(
-              Icons.receipt_long,
-              color: Color(0xFF667EEA),
+            Icon(
+              booking.isPaymentCompleted ? Icons.payment : Icons.receipt_long,
+              color: booking.isPaymentCompleted
+                  ? Colors.green
+                  : const Color(0xFF667EEA),
             ),
             const SizedBox(width: 8),
             Text('Booking #${booking.id}'),
@@ -620,7 +836,32 @@ class _MessagesScreenState extends State<MessagesScreen>
               _buildDetailRow(
                   'Total', 'RM ${booking.totalAmount.toStringAsFixed(2)}'),
               const SizedBox(height: 12),
-              _buildDetailRow('Status', booking.status.toUpperCase()),
+              _buildDetailRow('Status', booking.displayStatus),
+              if (booking.hasPaymentTransaction) ...[
+                const Divider(),
+                Text(
+                  'Payment Information',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildDetailRow('Payment Status',
+                    booking.paymentStatus?.toUpperCase() ?? 'NO PAYMENT'),
+                if (booking.paymentTransactionRef != null)
+                  _buildDetailRow(
+                      'Transaction Ref', booking.paymentTransactionRef!),
+                if (booking.paymentAmount != null)
+                  _buildDetailRow('Amount Paid',
+                      'RM ${booking.paymentAmount!.toStringAsFixed(2)}'),
+                if (booking.paidAt != null)
+                  _buildDetailRow(
+                      'Paid On',
+                      DateFormat('MMMM d, yyyy h:mm a')
+                          .format(DateTime.parse(booking.paidAt!))),
+              ],
               if (booking.ownerName != null) ...[
                 const Divider(),
                 _buildDetailRow('Owner', booking.ownerName!),
@@ -635,17 +876,43 @@ class _MessagesScreenState extends State<MessagesScreen>
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
           ),
-          if (booking.ownerPhone != null)
+          if (booking.isConfirmedAndNotPaid)
             ElevatedButton.icon(
               onPressed: () {
-                // Add call functionality
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ToyyibPayPaymentScreen(
+                      booking: booking,
+                      currentUserId: int.parse(widget.currentUserId),
+                    ),
+                  ),
+                ).then((_) => _loadBookings());
               },
               icon: const Icon(Icons.payment),
-              label: const Text('Payment'),
+              label: const Text('Pay Deposit'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF667EEA),
+                foregroundColor: Colors.white,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  void _openReceipt(String receiptUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Receipt'),
+        content: Text('Receipt URL: $receiptUrl'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -681,66 +948,6 @@ class _MessagesScreenState extends State<MessagesScreen>
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
-    IconData icon;
-
-    switch (status.toLowerCase()) {
-      case 'confirmed':
-        backgroundColor = Colors.green.shade100;
-        textColor = Colors.green.shade800;
-        icon = Icons.check_circle;
-        break;
-      case 'pending':
-        backgroundColor = Colors.orange.shade100;
-        textColor = Colors.orange.shade800;
-        icon = Icons.access_time;
-        break;
-      case 'cancelled':
-        backgroundColor = Colors.red.shade100;
-        textColor = Colors.red.shade800;
-        icon = Icons.cancel;
-        break;
-      case 'completed':
-        backgroundColor = Colors.blue.shade100;
-        textColor = Colors.blue.shade800;
-        icon = Icons.done_all;
-        break;
-      default:
-        backgroundColor = Colors.grey.shade100;
-        textColor = Colors.grey.shade800;
-        icon = Icons.info;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: textColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            status,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
@@ -764,7 +971,6 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   Widget _buildMessageTile(MessagePreview message, int index) {
-    // Check if this conversation has an active booking
     final hasActiveBooking = bookings.any((booking) =>
         booking.tenantId == message.otherUserId &&
         (booking.status.toLowerCase() == 'confirmed' ||
@@ -1024,32 +1230,6 @@ class _MessagesScreenState extends State<MessagesScreen>
                 color: Colors.grey.shade800,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Start a conversation with tenants',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: _showNewMessageDialog,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('New Message'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -1101,8 +1281,11 @@ class _MessagesScreenState extends State<MessagesScreen>
 }
 
 class OwnerChatScreen extends StatefulWidget {
-  final int currentUserId;
-  final User otherUser;
+  final String currentUserId;
+  // --- UPDATED ---
+  // Use your main user model
+  final MainUser.User otherUser;
+  // --- END UPDATE ---
 
   const OwnerChatScreen({
     super.key,
@@ -1118,7 +1301,10 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  List<ChatMessage> messages = [];
+  // --- UPDATED ---
+  // Use your main chat message model
+  List<MainChatMessage.ChatMessage> messages = [];
+  // --- END UPDATE ---
   bool isLoading = true;
   Timer? _refreshTimer;
   bool _isTyping = false;
@@ -1180,16 +1366,19 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     try {
       final response = await http.get(
         Uri.parse(ApiConfig.getMessagesUrlWithParams(
-            widget.currentUserId, widget.otherUser.id)),
+            int.parse(widget.currentUserId), int.parse(widget.otherUser.id))),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['messages'] != null) {
           setState(() {
+            // --- UPDATED ---
+            // Use your main chat message model
             messages = (data['messages'] as List)
-                .map((msg) => ChatMessage.fromJson(msg))
+                .map((msg) => MainChatMessage.ChatMessage.fromJson(msg))
                 .toList();
+            // --- END UPDATE ---
             isLoading = false;
           });
           _scrollToBottom();
@@ -1468,7 +1657,10 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message, int index) {
+  // --- UPDATED ---
+  // Use your main chat message model
+  Widget _buildMessageBubble(MainChatMessage.ChatMessage message, int index) {
+    // --- END UPDATE ---
     final isOwnMessage = message.isOwnMessage;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -1647,114 +1839,18 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
   }
 }
 
-// Booking Status Model
-// Update the BookingStatus model to match the API response:
-class BookingStatus {
-  final int id;
-  final int listingId;
-  final int tenantId;
-  final String tenantName;
-  final String propertyTitle;
-  final String propertyAddress;
-  final String? propertyImageUrl;
-  final String status;
-  final String checkInDate;
-  final int durationMonths;
-  final double monthlyRent;
-  final double depositAmount;
-  final double totalAmount;
-  final String createdAt;
-  final String? message;
-  final String? ownerName;
-  final String? ownerEmail;
-  final String? ownerPhone;
-
-  BookingStatus({
-    required this.id,
-    required this.listingId,
-    required this.tenantId,
-    required this.tenantName,
-    required this.propertyTitle,
-    required this.propertyAddress,
-    this.propertyImageUrl,
-    required this.status,
-    required this.checkInDate,
-    required this.durationMonths,
-    required this.monthlyRent,
-    required this.depositAmount,
-    required this.totalAmount,
-    required this.createdAt,
-    this.message,
-    this.ownerName,
-    this.ownerEmail,
-    this.ownerPhone,
-  });
-
-  factory BookingStatus.fromJson(Map<String, dynamic> json) {
-    // Handle both tenant and owner booking structures
-    final property = json['property'] ?? {};
-    final owner = json['owner'] ?? {};
-    final tenant = json['tenant'] ?? {};
-
-    // Parse IDs carefully
-    int parseId(dynamic value) {
-      if (value == null) return 0;
-      if (value is int) return value;
-      if (value is String) return int.tryParse(value) ?? 0;
-      return 0;
-    }
-
-    // Parse doubles carefully
-    double parseDouble(dynamic value) {
-      if (value == null) return 0.0;
-      if (value is double) return value;
-      if (value is int) return value.toDouble();
-      if (value is String) return double.tryParse(value) ?? 0.0;
-      return 0.0;
-    }
-
-    return BookingStatus(
-      id: parseId(json['id']),
-      listingId: parseId(json['listing_id'] ?? property['id']),
-      tenantId: parseId(json['tenant_id'] ?? tenant['id']),
-      tenantName: tenant['full_name'] ?? json['tenant_full_name'] ?? 'Unknown',
-      propertyTitle:
-          property['title'] ?? json['property_title'] ?? 'Unknown Property',
-      propertyAddress: property['address'] ?? json['property_address'] ?? '',
-      propertyImageUrl: property['image_url'] ?? json['property_image_url'],
-      status: json['status'] ?? 'pending',
-      checkInDate: json['check_in_date'] ?? '',
-      durationMonths: parseId(json['duration_months']),
-      monthlyRent: parseDouble(json['monthly_rent']),
-      depositAmount: parseDouble(json['deposit_amount']),
-      totalAmount: parseDouble(json['total_amount']),
-      createdAt: json['created_at'] ?? '',
-      message: json['message'],
-      ownerName: owner['name'] ?? json['owner_name'],
-      ownerEmail: owner['email'] ?? json['owner_email'],
-      ownerPhone: owner['phone'] ?? json['owner_phone'],
-    );
-  }
-
-  String get checkOut {
-    try {
-      final checkIn = DateTime.parse(checkInDate);
-      final checkOutDate = checkIn.add(Duration(days: durationMonths * 30));
-      return DateFormat('MMM d, yyyy').format(checkOutDate);
-    } catch (e) {
-      return 'N/A';
-    }
-  }
-}
-
-// Keep existing classes below...
 class _NewMessageDialog extends StatelessWidget {
-  final List<User> users;
-  final Function(User) onUserSelected;
+  // --- UPDATED ---
+  // Use your main user model
+  final List<MainUser.User> users;
+  final Function(MainUser.User) onUserSelected;
+  final String currentUserId;
+  // --- END UPDATE ---
 
   const _NewMessageDialog({
     required this.users,
     required this.onUserSelected,
+    required this.currentUserId,
   });
 
   @override
@@ -1878,7 +1974,7 @@ class _NewMessageDialog extends StatelessWidget {
 
 class MessagePreview {
   final int conversationId;
-  final int otherUserId;
+  final String otherUserId;
   final String name;
   final String lastMessage;
   final String time;
@@ -1898,7 +1994,7 @@ class MessagePreview {
   factory MessagePreview.fromJson(Map<String, dynamic> json) {
     return MessagePreview(
       conversationId: json['conversation_id'],
-      otherUserId: json['other_user_id'],
+      otherUserId: json['other_user_id'].toString(),
       name: json['other_user_name'] ?? 'Unknown',
       lastMessage: json['last_message'] ?? 'No messages yet',
       time: _formatTime(json['last_message_time']),
@@ -1929,60 +2025,10 @@ class MessagePreview {
   }
 }
 
-class User {
-  final int id;
-  final String fullName;
-  final String email;
-  final String userType;
+// --- DELETED ---
+// The old, local 'User' class that was here has been removed.
+// ---
 
-  User({
-    required this.id,
-    required this.fullName,
-    required this.email,
-    required this.userType,
-  });
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      fullName: json['full_name'],
-      email: json['email'],
-      userType: json['user_type'],
-    );
-  }
-}
-
-class ChatMessage {
-  final int id;
-  final int senderId;
-  final int receiverId;
-  final String message;
-  final bool isRead;
-  final String createdAt;
-  final String senderName;
-  final bool isOwnMessage;
-
-  ChatMessage({
-    required this.id,
-    required this.senderId,
-    required this.receiverId,
-    required this.message,
-    required this.isRead,
-    required this.createdAt,
-    required this.senderName,
-    required this.isOwnMessage,
-  });
-
-  factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    return ChatMessage(
-      id: json['id'],
-      senderId: json['sender_id'],
-      receiverId: json['receiver_id'],
-      message: json['message'],
-      isRead: json['is_read'],
-      createdAt: json['created_at'],
-      senderName: json['sender_name'],
-      isOwnMessage: json['is_own_message'],
-    );
-  }
-}
+// --- DELETED ---
+// The old, local 'ChatMessage' class that was here has been removed.
+// ---

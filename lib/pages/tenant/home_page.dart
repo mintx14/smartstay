@@ -8,6 +8,8 @@ import 'package:my_app/services/property_service.dart';
 import 'package:my_app/services/property_search_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+
+import 'package:my_app/login.dart';
 // Import your screen classes
 import 'favorites_page.dart';
 import 'messages_screen.dart' as messaging;
@@ -37,7 +39,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Search and filter variables
   final TextEditingController _searchController = TextEditingController();
-  final String _searchQuery = '';
+  String _searchQuery = '';
 
   // Animation controllers
   late AnimationController _animationController;
@@ -55,7 +57,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Timer? _searchDebounceTimer;
   final FocusNode _searchFocusNode = FocusNode();
   //int _currentPage = 1;
-  int _totalPages = 1;
 
   @override
   void initState() {
@@ -63,9 +64,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _initializeAnimations();
     _loadFavoriteIds();
     _loadInitialData();
-
-    // Add search initialization
     _initializeSearch();
+
+    // Add this listener
+    _searchController.addListener(() {
+      _onSearchChanged(_searchController.text);
+    });
   }
 
   void _initializeAnimations() {
@@ -102,33 +106,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _animationController.dispose();
     _searchAnimationController.dispose();
     _heartAnimationController.dispose();
-    _searchFocusNode.dispose(); // Add this
-    _searchDebounceTimer?.cancel(); // Add this
+    _searchFocusNode.dispose();
+    _searchDebounceTimer?.cancel();
     super.dispose();
   }
 
   // Method to convert PropertyListing to Listing
-  Listing _convertPropertyListingToListing(PropertyListing property) {
-    return Listing(
-      id: property.id.toString(),
-      // userId: property.userId,
-      title: property.title,
-      address: property.address,
-      postcode: property.postcode,
-      description: property.description ?? '',
-      price: property.price,
-      bedrooms: property.bedrooms,
-      bathrooms: property.bathrooms,
-      areaSqft: property.areaSqft,
-      availableFrom:
-          DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
-      minimumTenure: property.minimumTenure,
-      status: property.status,
-      createdAt: DateTime.now(), // Default value since not in PropertyListing
-      updatedAt: DateTime.now(), // Default value since not in PropertyListing
-      imageUrls: [], // You'll need to fetch these separately or add to PropertyListing model
-    );
-  }
 
   // Load favorite IDs from SharedPreferences
   Future<void> _loadFavoriteIds() async {
@@ -306,16 +289,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final favoritesToPreserve =
           prefs.getStringList('favorite_listings') ?? [];
 
-      // Remove only user-related data, not favorites
+      // --- FIX 1: REMOVE ALL SESSION DATA ---
+      // These are the keys your LoginPage looks for!
+      await prefs.remove('isLoggedIn'); // <-- THE MOST IMPORTANT FIX
+      await prefs.remove('userData'); // <-- The key you save user data to
+
+      // Also remove the old keys just to be safe
       await prefs.remove('user_data');
       await prefs.remove('auth_token');
       await prefs.remove('user_id');
-      // Add any other user-specific keys you want to remove
 
       // Make sure favorites are still saved
       await prefs.setStringList('favorite_listings', favoritesToPreserve);
 
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      // Add a mounted check for safety after an await
+      if (!mounted) return;
+
+      // --- FIX 2: NAVIGATE USING MaterialPageRoute ---
+      // This matches how your LoginPage navigates to HomePage
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (Route<dynamic> route) => false,
+      );
     }
   }
 
@@ -336,6 +331,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+
     _searchDebounceTimer?.cancel();
 
     if (_selectedLocation != null && _selectedLocation!.name != query) {
@@ -347,7 +346,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
       if (query.isNotEmpty) {
+        // For location search
         _performLocationSearch(query);
+        // For immediate text filtering, update the display
+        setState(() {});
       } else {
         setState(() {
           _searchSuggestions = [];
@@ -403,6 +405,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Let's fix the _loadPropertiesForLocation method with debugging
   Future<void> _loadPropertiesForLocation(SearchLocation location,
       {int page = 1}) async {
+    // 🔍 Add debugging logs
+    print('🔍 Loading properties for location:');
+    print('   Location ID: ${location.id}');
+    print('   Location Name: ${location.name}');
+    print('   Expected Property Count: ${location.propertyCount}');
+    print('   Page: $page');
+
     setState(() {
       _isLoadingProperties = true;
     });
@@ -415,6 +424,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         limit: 10,
       );
 
+      // 🔍 Debug the response
+      print('📊 Search Response:');
+      print('   Success: ${response.success}');
+      print('   Total Found: ${response.total}');
+      print('   Properties Count: ${response.properties.length}');
+      print('   Page: ${response.page}');
+      print('   Total Pages: ${response.totalPages}');
+
+      // 🔍 Check if there's a mismatch
+      if (location.propertyCount > 0 && response.properties.isEmpty) {
+        print('⚠️ MISMATCH DETECTED!');
+        print('   Expected: ${location.propertyCount} properties');
+        print('   Actual: ${response.properties.length} properties');
+        print(
+            '   This suggests the search APIs are using different filters/data');
+      }
+
       if (mounted) {
         setState(() {
           if (page == 1) {
@@ -423,30 +449,64 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             _searchResults.addAll(response.properties);
           }
           _currentPage = response.page;
-          _totalPages = response.totalPages;
           _isLoadingProperties = false;
         });
 
-        // Show result count
+        // Show appropriate message based on results
+        if (response.properties.isEmpty && page == 1) {
+          // 🔍 Enhanced error message for debugging
+          String message = 'No properties found in ${location.name}';
+          if (location.propertyCount > 0) {
+            message +=
+                ' (Expected ${location.propertyCount} - possible API mismatch)';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.orange,
+              duration:
+                  const Duration(seconds: 4), // Longer duration for debugging
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        } else if (page == 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Found ${response.total} properties in ${location.name}'),
+              backgroundColor: const Color(0xFF48BB78),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading properties: $e');
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isLoadingProperties = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Found ${response.total} properties in ${location.name}'),
-            backgroundColor: const Color(0xFF48BB78),
-            duration: const Duration(seconds: 2),
+            content: Text('Error loading properties for ${location.name}: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
           ),
         );
-      }
-    } catch (e) {
-      print('Error loading properties: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingProperties = false;
-        });
       }
     }
   }
@@ -457,11 +517,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     setState(() {
       _showSuggestions = false;
       _searchSuggestions = [];
-      _searchResults = []; // Clear search results
+      _searchResults = [];
       _selectedLocation = null;
+      _searchQuery = ''; // Add this line
     });
     _searchFocusNode.unfocus();
-    // Reload all listings
     _loadAllListings();
   }
 
@@ -698,194 +758,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // Property card widget for search results
-  Widget _buildSearchResultCard(PropertyListing property, int index) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            // Navigate to property details
-            print('View property: ${property.title}');
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title and Location Match
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            property.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2D3748),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (property.locationMatch != null)
-                            Container(
-                              margin: const EdgeInsets.only(top: 6),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF667EEA).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                property.locationMatch!,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF667EEA),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        property.formattedPrice ?? 'RM ${property.price}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Address
-                Row(
-                  children: [
-                    Icon(Icons.location_on, color: Colors.grey[600], size: 16),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${property.address}, ${property.postcode}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Property Details
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildPropertyDetail(
-                      icon: Icons.bed,
-                      value: '${property.bedrooms}',
-                      label: 'Beds',
-                    ),
-                    _buildPropertyDetail(
-                      icon: Icons.bathtub,
-                      value: '${property.bathrooms}',
-                      label: 'Baths',
-                    ),
-                    _buildPropertyDetail(
-                      icon: Icons.square_foot,
-                      value: '${property.areaSqft}',
-                      label: 'sqft',
-                    ),
-                    _buildPropertyDetail(
-                      icon: Icons.calendar_today,
-                      value: property.formattedDate ?? property.availableFrom,
-                      label: 'Available',
-                    ),
-                  ],
-                ),
-
-                if (property.description != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    property.description!,
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPropertyDetail({
-    required IconData icon,
-    required String value,
-    required String label,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFF667EEA), size: 20),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
 
   // Update _buildPropertyCard to show location match badge
   Widget _buildPropertyCard(Listing listing, int index) {
@@ -1297,42 +1169,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // Replace your _buildContent method with this:
-  // 3. Simplified _buildContent method
   Widget _buildContent() {
-    // If loading
     if (_isLoadingProperties || _isLoading) {
       return _buildLoadingState();
     }
 
-    // Determine which data to show
-    final bool showingSearchResults =
-        _selectedLocation != null && _searchResults.isNotEmpty;
-    final itemCount =
-        showingSearchResults ? _searchResults.length : _allListings.length;
+    // Check for both location search AND text search
+    final bool inSearchMode =
+        _selectedLocation != null || _searchQuery.isNotEmpty;
 
-    // If no data
-    if (itemCount == 0) {
-      if (_selectedLocation != null) {
-        return _buildNoResultsState();
-      }
-      return _buildEmptyState();
+    List<Listing> displayListings;
+    if (_selectedLocation != null) {
+      // Show location-based search results
+      displayListings =
+          _searchResults.map((p) => _createListingFromProperty(p)).toList();
+    } else if (_searchQuery.isNotEmpty) {
+      // Show filtered results from all listings
+      displayListings = _allListings.where((listing) {
+        return listing.title
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            listing.address
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            listing.postcode.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    } else {
+      // Show all listings
+      displayListings = _allListings;
     }
 
-    // Build the list
+    if (displayListings.isEmpty) {
+      return inSearchMode ? _buildNoResultsState() : _buildEmptyState();
+    }
+
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 20),
-      itemCount: itemCount,
+      itemCount: displayListings.length,
       itemBuilder: (context, index) {
-        if (showingSearchResults) {
-          // For search results, convert on the fly
-          final property = _searchResults[index];
-          final listing = _createListingFromProperty(property);
-          return _buildPropertyCard(listing, index);
-        } else {
-          // For regular listings, use as is
-          return _buildPropertyCard(_allListings[index], index);
-        }
+        return _buildPropertyCard(displayListings[index], index);
       },
     );
   }
@@ -1355,6 +1231,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       postcode: property.postcode,
       description: property.description ?? '',
       price: property.price,
+      deposit: property.deposit,
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
       areaSqft: property.areaSqft,
@@ -1558,24 +1435,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             });
           },
         );
-      // case 2:
-      //   return MapPage(user: widget.user);
       case 2:
-        // Convert string ID to int for MessagesScreen with error handling
-        try {
-          return messaging.MessagesScreen(
-            currentUserId: int.parse(widget.user.id),
-          );
-        } catch (e) {
-          // Handle case where user ID is not a valid integer
-          print('Error parsing user ID: ${widget.user.id}');
-          return const Center(
-            child: Text(
-              'Error: Invalid user ID format',
-              style: TextStyle(color: Colors.red),
-            ),
-          );
-        }
+        // Pass the String ID directly
+        return messaging.MessagesScreen(
+          currentUserId: widget.user.id,
+        );
+      // case 2:
+      //   // Convert string ID to int for MessagesScreen with error handling
+      //   try {
+      //     return messaging.MessagesScreen(
+      //       currentUserId: int.parse(widget.user.id),
+      //     );
+      //   } catch (e) {
+      //     // Handle case where user ID is not a valid integer
+      //     print('Error parsing user ID: ${widget.user.id}');
+      //     return const Center(
+      //       child: Text(
+      //         'Error: Invalid user ID format',
+      //         style: TextStyle(color: Colors.red),
+      //       ),
+      //     );
+      //   }
       case 3:
         return ProfileScreen(user: widget.user);
       default:

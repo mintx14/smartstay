@@ -3,16 +3,18 @@ import 'package:my_app/models/listing.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:my_app/widgets/chat_screen.dart' as chat;
 import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 import 'booking_request_page.dart';
-import 'package:my_app/models/user_model.dart';
+import 'package:my_app/models/user_model.dart' as UserModel;
+import 'package:video_player/video_player.dart';
+// Import the messages screen to use OwnerChatScreen and User class with alias
+import 'package:my_app/pages/tenant/messages_screen.dart' as chat_screen;
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
   final bool isFavorite;
   final Function(Listing) onFavoriteToggle;
-  final User user; // ADD THIS LINE
+  final UserModel.User user; // ADD THIS LINE
 
   const PropertyDetailsPage({
     super.key,
@@ -345,27 +347,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               ),
             ),
             actions: [
-              // Container(
-              //   margin: const EdgeInsets.only(right: 8),
-              //   child: IconButton(
-              //     icon: const Icon(Icons.share),
-              //     style: IconButton.styleFrom(
-              //       backgroundColor: Colors.white.withOpacity(0.9),
-              //       foregroundColor: Colors.black87,
-              //     ),
-              //     onPressed: () {
-              //       ScaffoldMessenger.of(context).showSnackBar(
-              //         SnackBar(
-              //           content: const Text('Share feature coming soon'),
-              //           backgroundColor: Theme.of(context).primaryColor,
-              //           shape: RoundedRectangleBorder(
-              //             borderRadius: BorderRadius.circular(10),
-              //           ),
-              //         ),
-              //       );
-              //     },
-              //   ),
-              // ),
               Container(
                 margin: const EdgeInsets.only(right: 16),
                 child: ScaleTransition(
@@ -604,7 +585,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
         child: Column(
           children: [
             // Book Now Button
-            // Book Now Button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -729,23 +709,46 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
 
   // Updated _showContactDialog method in PropertyDetailsPage
 
-  // Updated _showContactDialog method with proper type conversion
+  // Updated _showContactDialog method with better error handling and debugging
   void _showContactDialog() async {
+    // Show loading indicator while fetching owner data
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
     try {
       // Convert listing.id to int if it's a String
       int listingId;
       listingId = int.parse(widget.listing.id);
+
+      print('Fetching owner for listing ID: $listingId'); // Debug log
 
       // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
         Uri.parse(ApiConfig.getListingOwnerUrlWithId(listingId)),
       );
 
+      print('API Response Status: ${response.statusCode}'); // Debug log
+      print('API Response Body: ${response.body}'); // Debug log
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
         if (data['success'] == true && data['owner'] != null) {
           final owner = data['owner'];
+
+          print('Owner data: $owner'); // Debug log
+
+          if (!mounted) return;
 
           showDialog(
             context: context,
@@ -775,7 +778,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Owner: ${owner['full_name']}'),
+                    Text('Owner: ${owner['full_name'] ?? 'Unknown'}'),
                     const SizedBox(height: 8),
                     Text('Property: ${widget.listing.title}'),
                     const SizedBox(height: 16),
@@ -787,10 +790,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Cancel'),
                   ),
-                  if (owner['phone'] != null && owner['phone'].isNotEmpty)
+                  if (owner['phone'] != null &&
+                      owner['phone'].toString().isNotEmpty)
                     TextButton.icon(
                       onPressed: () {
                         Navigator.of(context).pop();
+                        // TODO: Implement actual phone call functionality
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Calling ${owner['phone']}...'),
@@ -803,25 +808,96 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     ),
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.of(context).pop();
-                      // Navigate to chat screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => chat.ChatScreen(
-                            currentUserId: getCurrentUserId(),
-                            otherUser: chat.User(
-                              // Use chat.User for the chat screen's User class
-                              id: int.parse(owner['owner_id'].toString()),
-                              fullName: owner['full_name'],
-                              email: owner['email'],
-                              userType: 'Owner',
+                      try {
+                        Navigator.of(context).pop();
+
+                        // Debug: Check if all required data is present
+                        final ownerIdRaw = owner['owner_id'] ??
+                            owner['id'] ??
+                            owner['user_id'];
+                        final ownerName =
+                            owner['full_name'] ?? owner['name'] ?? 'Unknown';
+                        final ownerEmail = owner['email'] ?? '';
+
+                        print('Navigating to chat with:'); // Debug log
+                        print(
+                            'Owner ID Raw: $ownerIdRaw (Type: ${ownerIdRaw.runtimeType})');
+                        print('Owner Name: $ownerName');
+                        print('Owner Email: $ownerEmail');
+                        print('Current User ID: ${getCurrentUserId()}');
+
+                        // Safely parse owner ID
+                        int ownerIdInt;
+                        if (ownerIdRaw == null ||
+                            ownerIdRaw.toString().isEmpty) {
+                          throw Exception('Owner ID is missing or empty');
+                        }
+
+                        // Handle different types of owner ID
+                        if (ownerIdRaw is int) {
+                          ownerIdInt = ownerIdRaw;
+                        } else if (ownerIdRaw is String) {
+                          // Trim whitespace and check if valid
+                          final trimmedId = ownerIdRaw.trim();
+                          if (trimmedId.isEmpty) {
+                            throw Exception('Owner ID is empty');
+                          }
+                          try {
+                            ownerIdInt = int.parse(trimmedId);
+                          } catch (e) {
+                            throw Exception(
+                                'Owner ID "$trimmedId" is not a valid number');
+                          }
+                        } else {
+                          throw Exception(
+                              'Owner ID has unexpected type: ${ownerIdRaw.runtimeType}');
+                        }
+
+                        print('Parsed Owner ID: $ownerIdInt');
+
+                        // Navigate to chat screen (same as in messages screen)
+                        // In the _showContactDialog method, update this part:
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => chat_screen.OwnerChatScreen(
+                              currentUserId:
+                                  getCurrentUserId(), // Convert String to int here
+                              otherUser: UserModel.User(
+                                id: ownerIdInt.toString(),
+                                fullName: ownerName,
+                                email: ownerEmail,
+                                userType: 'Owner',
+                                phoneNumber: '',
+                              ),
                             ),
-                            listingId: listingId,
-                            listingTitle: widget.listing.title,
                           ),
-                        ),
-                      );
+                        ).then((value) {
+                          print('Returned from chat screen'); // Debug log
+                          // Optionally reload data if needed
+                        }).catchError((error) {
+                          print(
+                              'Error navigating to chat: $error'); // Debug log
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Error opening chat: ${error.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        });
+                      } catch (e) {
+                        print('Error in message button: $e'); // Debug log
+                        print(
+                            'Full owner data: $owner'); // Debug log to see full structure
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.message),
                     label: const Text('Message'),
@@ -836,30 +912,76 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             },
           );
         } else {
-          throw Exception('Owner not found');
+          throw Exception('Owner data not found in response');
         }
       } else {
-        throw Exception('Failed to load owner information');
+        throw Exception(
+            'Failed to load owner information. Status: ${response.statusCode}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Close loading dialog if still open
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      print('Error in _showContactDialog: $e'); // Debug log
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
-  // Helper function to get current user ID (implement based on your auth system)
-  // Helper function to get current user ID
-  int getCurrentUserId() {
-    // Now you can use widget.user
-    return int.parse(widget.user.id);
+  // Helper function to get current user ID with error handling
+  String getCurrentUserId() {
+    try {
+      // Get the user ID from widget.user
+      final userIdValue = widget.user.id;
+
+      // Return the string ID directly
+      if (userIdValue.trim().isNotEmpty) {
+        return userIdValue.trim();
+      } else {
+        print('Error: Current user ID is null or empty');
+        return '0'; // Return default string value
+      }
+    } catch (e) {
+      print('Error getting current user ID: $e');
+      print('User object: ${widget.user}');
+      return '0'; // Return default string value
+    }
   }
 }
 
-// Enhanced Property Details Image Slider Widget
+// Media type detection for slider
+enum SliderMediaType { image, video }
+
+class SliderMediaItem {
+  final String url;
+  final SliderMediaType type;
+
+  SliderMediaItem({required this.url, required this.type});
+
+  factory SliderMediaItem.fromUrl(String url) {
+    final lowerUrl = url.toLowerCase();
+    if (lowerUrl.endsWith('.mp4') ||
+        lowerUrl.endsWith('.mov') ||
+        lowerUrl.endsWith('.avi') ||
+        lowerUrl.endsWith('.mkv') ||
+        lowerUrl.endsWith('.webm')) {
+      return SliderMediaItem(url: url, type: SliderMediaType.video);
+    }
+    return SliderMediaItem(url: url, type: SliderMediaType.image);
+  }
+}
+
+// Enhanced Property Details Image Slider Widget with Video Support
 class PropertyDetailsImageSlider extends StatefulWidget {
   final List<String> imageUrls;
   final String title;
@@ -874,231 +996,6 @@ class PropertyDetailsImageSlider extends StatefulWidget {
   State<PropertyDetailsImageSlider> createState() =>
       _PropertyDetailsImageSliderState();
 }
-// 1. Add this new FullScreenImageViewer widget at the end of your file (after PropertyDetailsImageSlider)
-
-class FullScreenImageViewer extends StatefulWidget {
-  final List<String> imageUrls;
-  final int initialIndex;
-  final String title;
-
-  const FullScreenImageViewer({
-    super.key,
-    required this.imageUrls,
-    required this.initialIndex,
-    required this.title,
-  });
-
-  @override
-  State<FullScreenImageViewer> createState() => _FullScreenImageViewerState();
-}
-
-class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
-  late PageController _pageController;
-  late int _currentIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: widget.initialIndex);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Full screen image viewer
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            itemCount: widget.imageUrls.length,
-            itemBuilder: (context, index) {
-              return Center(
-                child: Hero(
-                  tag: widget.imageUrls[index],
-                  child: InteractiveViewer(
-                    panEnabled: true,
-                    boundaryMargin: const EdgeInsets.all(20),
-                    minScale: 0.5,
-                    maxScale: 3.0,
-                    child: Image.network(
-                      widget.imageUrls[index],
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: Colors.white,
-                                size: 64,
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'Failed to load image',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // Top bar with close button and title
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: MediaQuery.of(context).padding.top + 60,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.7),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Bottom bar with indicators and image counter
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.7),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Image counter
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${_currentIndex + 1} of ${widget.imageUrls.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Page indicators
-                    if (widget.imageUrls.length > 1)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          widget.imageUrls.length,
-                          (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: _currentIndex == index ? 24 : 8,
-                            height: 8,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4),
-                              color: _currentIndex == index
-                                  ? Colors.white
-                                  : Colors.white.withOpacity(0.4),
-                            ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     with SingleTickerProviderStateMixin {
@@ -1106,27 +1003,80 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
   int _currentIndex = 0;
   late int _totalSlides;
   late AnimationController _indicatorController;
+  late List<SliderMediaItem> _mediaItems;
+  final Map<int, VideoPlayerController> _videoControllers = {};
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _totalSlides =
-        widget.imageUrls.isNotEmpty ? widget.imageUrls.length + 1 : 0;
+
+    // Convert URLs to MediaItems
+    _mediaItems =
+        widget.imageUrls.map((url) => SliderMediaItem.fromUrl(url)).toList();
+
+    _totalSlides = _mediaItems.isNotEmpty ? _mediaItems.length + 1 : 0;
     _indicatorController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+
+    // Initialize first video if needed
+    _initializeVideoForIndex(1); // Index 1 because 0 is grid view
+  }
+
+  void _initializeVideoForIndex(int pageIndex) {
+    if (pageIndex > 0 && pageIndex <= _mediaItems.length) {
+      final mediaIndex = pageIndex - 1;
+      final mediaItem = _mediaItems[mediaIndex];
+
+      if (mediaItem.type == SliderMediaType.video &&
+          !_videoControllers.containsKey(mediaIndex)) {
+        final controller =
+            VideoPlayerController.networkUrl(Uri.parse(mediaItem.url));
+        _videoControllers[mediaIndex] = controller;
+        controller.initialize().then((_) {
+          if (mounted) setState(() {});
+        });
+      }
+    }
+  }
+
+  void _pauseAllVideos() {
+    for (final controller in _videoControllers.values) {
+      if (controller.value.isInitialized && controller.value.isPlaying) {
+        controller.pause();
+      }
+    }
+  }
+
+  void _toggleVideoPlayback(int mediaIndex) {
+    final controller = _videoControllers[mediaIndex];
+    if (controller != null && controller.value.isInitialized) {
+      if (controller.value.isPlaying) {
+        controller.pause();
+      } else {
+        _pauseAllVideos(); // Pause other videos
+        controller.play();
+      }
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _indicatorController.dispose();
+
+    // Dispose all video controllers
+    for (final controller in _videoControllers.values) {
+      controller.dispose();
+    }
+
     super.dispose();
   }
 
-  void _openFullScreenImage(int index) {
+  void _openFullScreenMediaViewer(int index) {
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -1186,6 +1136,152 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     );
   }
 
+  Widget _buildVideoPlayer(SliderMediaItem mediaItem, int mediaIndex,
+      {bool isGridItem = false}) {
+    final controller = _videoControllers[mediaIndex];
+
+    if (controller == null || !controller.value.isInitialized) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.grey[800]!, Colors.grey[700]!],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: isGridItem ? 2 : 3,
+              ),
+              if (!isGridItem) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Loading video...',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ]
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: controller.value.size.width,
+              height: controller.value.size.height,
+              child: VideoPlayer(controller),
+            ),
+          ),
+        ),
+
+        // Video controls overlay
+        if (!isGridItem)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => _toggleVideoPlayback(mediaIndex),
+              child: Container(
+                color: Colors.transparent,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: controller.value.isPlaying ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Icon(
+                        controller.value.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // Video indicator
+        Positioned(
+          top: 12,
+          right: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.videocam,
+                  color: Colors.white,
+                  size: isGridItem ? 12 : 16,
+                ),
+                if (!isGridItem) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDuration(controller.value.duration),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ]
+              ],
+            ),
+          ),
+        ),
+
+        // Progress bar for non-grid items
+        if (!isGridItem && controller.value.isPlaying)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: VideoProgressIndicator(
+                controller,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.white,
+                  bufferedColor: Colors.white30,
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+
   Widget _buildPlaceholder(bool isGridItem, {bool isError = false}) {
     return Container(
       decoration: BoxDecoration(
@@ -1227,9 +1323,9 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
   }
 
   Widget _buildGridView() {
-    List<String?> displayImages = List.filled(4, null);
-    for (int i = 0; i < 4 && i < widget.imageUrls.length; i++) {
-      displayImages[i] = widget.imageUrls[i];
+    List<SliderMediaItem?> displayItems = List.filled(4, null);
+    for (int i = 0; i < 4 && i < _mediaItems.length; i++) {
+      displayItems[i] = _mediaItems[i];
     }
 
     return Stack(
@@ -1239,7 +1335,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             Expanded(
               flex: 2,
               child: GestureDetector(
-                onTap: () => _openFullScreenImage(0),
+                onTap: () => _openFullScreenMediaViewer(0),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius:
@@ -1255,8 +1351,13 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   child: ClipRRect(
                     borderRadius:
                         const BorderRadius.only(topLeft: Radius.circular(0)),
-                    child: _buildNetworkImage(displayImages[0] ?? '',
-                        isGridItem: true),
+                    child: displayItems[0] != null
+                        ? (displayItems[0]!.type == SliderMediaType.video
+                            ? _buildVideoPlayer(displayItems[0]!, 0,
+                                isGridItem: true)
+                            : _buildNetworkImage(displayItems[0]!.url,
+                                isGridItem: true))
+                        : _buildPlaceholder(true),
                   ),
                 ),
               ),
@@ -1268,14 +1369,19 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _openFullScreenImage(1),
+                      onTap: () => _openFullScreenMediaViewer(1),
                       child: SizedBox(
                         width: double.infinity,
                         child: ClipRRect(
                           borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(0)),
-                          child: _buildNetworkImage(displayImages[1] ?? '',
-                              isGridItem: true),
+                          child: displayItems[1] != null
+                              ? (displayItems[1]!.type == SliderMediaType.video
+                                  ? _buildVideoPlayer(displayItems[1]!, 1,
+                                      isGridItem: true)
+                                  : _buildNetworkImage(displayItems[1]!.url,
+                                      isGridItem: true))
+                              : _buildPlaceholder(true),
                         ),
                       ),
                     ),
@@ -1283,12 +1389,17 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   const SizedBox(height: 2),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _openFullScreenImage(2),
+                      onTap: () => _openFullScreenMediaViewer(2),
                       child: SizedBox(
                         width: double.infinity,
                         child: ClipRRect(
-                          child: _buildNetworkImage(displayImages[2] ?? '',
-                              isGridItem: true),
+                          child: displayItems[2] != null
+                              ? (displayItems[2]!.type == SliderMediaType.video
+                                  ? _buildVideoPlayer(displayItems[2]!, 2,
+                                      isGridItem: true)
+                                  : _buildNetworkImage(displayItems[2]!.url,
+                                      isGridItem: true))
+                              : _buildPlaceholder(true),
                         ),
                       ),
                     ),
@@ -1296,17 +1407,23 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                   const SizedBox(height: 2),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _openFullScreenImage(3),
+                      onTap: () => _openFullScreenMediaViewer(3),
                       child: Stack(
                         children: [
                           SizedBox(
                             width: double.infinity,
                             child: ClipRRect(
-                              child: _buildNetworkImage(displayImages[3] ?? '',
-                                  isGridItem: true),
+                              child: displayItems[3] != null
+                                  ? (displayItems[3]!.type ==
+                                          SliderMediaType.video
+                                      ? _buildVideoPlayer(displayItems[3]!, 3,
+                                          isGridItem: true)
+                                      : _buildNetworkImage(displayItems[3]!.url,
+                                          isGridItem: true))
+                                  : _buildPlaceholder(true),
                             ),
                           ),
-                          if (widget.imageUrls.length > 4)
+                          if (_mediaItems.length > 4)
                             Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
@@ -1325,7 +1442,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                                         color: Colors.white, size: 16),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '+${widget.imageUrls.length - 4}',
+                                      '+${_mediaItems.length - 4}',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 12,
@@ -1353,15 +1470,20 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.7),
               borderRadius: BorderRadius.circular(20),
-              // backdropFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.photo_library, color: Colors.white, size: 16),
+                Icon(
+                  _mediaItems.any((item) => item.type == SliderMediaType.video)
+                      ? Icons.photo_library
+                      : Icons.photo_library,
+                  color: Colors.white,
+                  size: 16,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  '${widget.imageUrls.length} Photos',
+                  '${_mediaItems.length}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -1378,13 +1500,19 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.imageUrls.isEmpty) {
+    if (_mediaItems.isEmpty) {
       return _buildPlaceholder(false);
     }
 
-    if (widget.imageUrls.length == 1) {
-      return ClipRRect(
-        child: _buildNetworkImage(widget.imageUrls[0]),
+    if (_mediaItems.length == 1) {
+      final mediaItem = _mediaItems[0];
+      return GestureDetector(
+        onTap: () => _openFullScreenMediaViewer(0),
+        child: ClipRRect(
+          child: mediaItem.type == SliderMediaType.video
+              ? _buildVideoPlayer(mediaItem, 0)
+              : _buildNetworkImage(mediaItem.url),
+        ),
       );
     }
 
@@ -1400,20 +1528,28 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                 _currentIndex = index;
               });
               _indicatorController.forward(from: 0);
+
+              // Pause all videos when changing pages
+              _pauseAllVideos();
+
+              // Initialize video for new page if needed
+              _initializeVideoForIndex(index);
             },
             itemCount: _totalSlides,
             allowImplicitScrolling: true,
             pageSnapping: true,
             physics: const PageScrollPhysics(),
-            // In the PageView.builder itemBuilder, wrap the image with GestureDetector:
             itemBuilder: (context, index) {
               if (index == 0) {
                 return _buildGridView();
               } else {
-                final imageIndex = index - 1;
+                final mediaIndex = index - 1;
+                final mediaItem = _mediaItems[mediaIndex];
                 return GestureDetector(
-                  onTap: () => _openFullScreenImage(imageIndex),
-                  child: _buildNetworkImage(widget.imageUrls[imageIndex]),
+                  onTap: () => _openFullScreenMediaViewer(mediaIndex),
+                  child: mediaItem.type == SliderMediaType.video
+                      ? _buildVideoPlayer(mediaItem, mediaIndex)
+                      : _buildNetworkImage(mediaItem.url),
                 );
               }
             },
@@ -1455,7 +1591,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
         ),
 
         // Navigation hint with animation
-        if (_currentIndex == 0 && widget.imageUrls.length > 1)
+        if (_currentIndex == 0 && _mediaItems.length > 1)
           Positioned(
             bottom: 50,
             right: 16,
@@ -1480,7 +1616,7 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Swipe for more photos',
+                          'Swipe for more',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -1501,6 +1637,374 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
             ),
           ),
       ],
+    );
+  }
+}
+
+// Enhanced FullScreenImageViewer with video support
+class FullScreenImageViewer extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+  final String title;
+
+  const FullScreenImageViewer({
+    super.key,
+    required this.imageUrls,
+    required this.initialIndex,
+    required this.title,
+  });
+
+  @override
+  State<FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+  late List<SliderMediaItem> _mediaItems;
+  final Map<int, VideoPlayerController> _videoControllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+
+    // Convert URLs to MediaItems
+    _mediaItems =
+        widget.imageUrls.map((url) => SliderMediaItem.fromUrl(url)).toList();
+
+    // Initialize first video if needed
+    _initializeVideoForIndex(widget.initialIndex);
+  }
+
+  void _initializeVideoForIndex(int index) {
+    if (index >= 0 && index < _mediaItems.length) {
+      final mediaItem = _mediaItems[index];
+
+      if (mediaItem.type == SliderMediaType.video &&
+          !_videoControllers.containsKey(index)) {
+        final controller =
+            VideoPlayerController.networkUrl(Uri.parse(mediaItem.url));
+        _videoControllers[index] = controller;
+        controller.initialize().then((_) {
+          if (mounted) setState(() {});
+        });
+      }
+    }
+  }
+
+  void _pauseAllVideos() {
+    for (final controller in _videoControllers.values) {
+      if (controller.value.isInitialized && controller.value.isPlaying) {
+        controller.pause();
+      }
+    }
+  }
+
+  void _toggleVideoPlayback(int index) {
+    final controller = _videoControllers[index];
+    if (controller != null && controller.value.isInitialized) {
+      if (controller.value.isPlaying) {
+        controller.pause();
+      } else {
+        _pauseAllVideos();
+        controller.play();
+      }
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+
+    // Dispose all video controllers
+    for (final controller in _videoControllers.values) {
+      controller.dispose();
+    }
+
+    super.dispose();
+  }
+
+  Widget _buildMediaContent(int index) {
+    final mediaItem = _mediaItems[index];
+
+    if (mediaItem.type == SliderMediaType.video) {
+      final controller = _videoControllers[index];
+      if (controller == null || !controller.value.isInitialized) {
+        return const Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+          ),
+        );
+      }
+
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          AspectRatio(
+            aspectRatio: controller.value.aspectRatio,
+            child: VideoPlayer(controller),
+          ),
+          // Play/Pause overlay
+          GestureDetector(
+            onTap: () => _toggleVideoPlayback(index),
+            child: Container(
+              color: Colors.transparent,
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: controller.value.isPlaying ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Icon(
+                      controller.value.isPlaying
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Video progress indicator
+          if (controller.value.isPlaying)
+            Positioned(
+              bottom: 40,
+              left: 20,
+              right: 20,
+              child: VideoProgressIndicator(
+                controller,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.white,
+                  bufferedColor: Colors.white30,
+                  backgroundColor: Colors.white24,
+                ),
+              ),
+            ),
+        ],
+      );
+    } else {
+      // Image viewer
+      return Hero(
+        tag: mediaItem.url,
+        child: InteractiveViewer(
+          panEnabled: true,
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 0.5,
+          maxScale: 3.0,
+          child: Image.network(
+            mediaItem.url,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                  color: Colors.white,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Failed to load media',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Full screen media viewer
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+
+              // Pause all videos when changing pages
+              _pauseAllVideos();
+
+              // Initialize video for new page if needed
+              _initializeVideoForIndex(index);
+            },
+            itemCount: _mediaItems.length,
+            itemBuilder: (context, index) {
+              return Center(
+                child: _buildMediaContent(index),
+              );
+            },
+          ),
+
+          // Top bar with close button and title
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: MediaQuery.of(context).padding.top + 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom bar with indicators and media counter
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 100,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Media counter
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _mediaItems[_currentIndex].type ==
+                                    SliderMediaType.video
+                                ? Icons.videocam
+                                : Icons.photo,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_currentIndex + 1} of ${_mediaItems.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Page indicators
+                    if (_mediaItems.length > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _mediaItems.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: _currentIndex == index ? 24 : 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              color: _currentIndex == index
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

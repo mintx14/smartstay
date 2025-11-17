@@ -21,6 +21,8 @@ class _AddListingPageState extends State<AddListingPage> {
   final _priceController = TextEditingController();
   final _bedroomsController = TextEditingController();
   final _bathroomsController = TextEditingController();
+  //final _depositController = TextEditingController();
+  int? _selectedDepositMonth;
   final _areaSqftController = TextEditingController();
   final _descriptionController = TextEditingController();
   DateTime _availableFrom = DateTime.now();
@@ -222,6 +224,13 @@ class _AddListingPageState extends State<AddListingPage> {
           allMediaUrls.addAll(videoUrls);
         }
 
+        final double monthlyRent =
+            double.tryParse(_priceController.text) ?? 0.0;
+
+        // Calculate the deposit based on selected months
+        // Default to 0 months if null
+        final double calculatedDeposit =
+            (_selectedDepositMonth ?? 0) * monthlyRent;
         // Create and save the listing with all media URLs in imageUrls field
         final listing = Listing(
           id: '',
@@ -230,7 +239,9 @@ class _AddListingPageState extends State<AddListingPage> {
           postcode: _postcodeController.text,
           description: _descriptionController.text,
           imageUrls: allMediaUrls, // All media URLs go here
-          price: double.parse(_priceController.text),
+          //price: double.parse(_priceController.text),
+          price: monthlyRent,
+          deposit: calculatedDeposit,
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),
@@ -329,11 +340,13 @@ class _AddListingPageState extends State<AddListingPage> {
                       ],
                     ),
 
-                    // Property Features Card
+                    // Property Features Card - IMPROVED VERSION
+                    // Property Features Card - IMPROVED VERSION
                     _buildSectionCard(
                       title: 'Property Features',
                       icon: Icons.featured_play_list,
                       children: [
+                        // Row 1: Bedrooms and Bathrooms
                         Row(
                           children: [
                             Expanded(
@@ -354,31 +367,71 @@ class _AddListingPageState extends State<AddListingPage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildFeatureField(
-                                controller: _areaSqftController,
-                                label: 'Size (sqft)',
-                                icon: Icons.square_foot,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildModernTextField(
-                                controller: _priceController,
-                                label: 'Monthly Rent',
-                                prefixIcon: Icons.attach_money,
-                                prefixText: 'RM ',
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly
-                                ],
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Required' : null,
-                              ),
-                            ),
+
+                        // Row 2: Size
+                        _buildFeatureField(
+                          controller: _areaSqftController,
+                          label: 'Size (sqft)',
+                          icon: Icons.square_foot,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Row 3: Monthly Rent
+                        _buildModernTextField(
+                          controller: _priceController,
+                          label: 'Monthly Rent',
+                          prefixIcon: Icons.attach_money,
+                          prefixText: 'RM ',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
                           ],
+                          validator: (value) =>
+                              value!.isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Row 4: Deposit (full width to prevent overflow)
+                        DropdownButtonFormField<int>(
+                          value: _selectedDepositMonth,
+                          onChanged: (int? newValue) {
+                            setState(() {
+                              _selectedDepositMonth = newValue;
+                            });
+                          },
+                          items: List.generate(12, (index) {
+                            int month = index + 1;
+                            return DropdownMenuItem<int>(
+                              value: month,
+                              child: Text(
+                                '$month month${month > 1 ? 's' : ''}',
+                              ),
+                            );
+                          }).toList(),
+                          decoration: InputDecoration(
+                            labelText: 'Deposit',
+                            prefixIcon:
+                                const Icon(Icons.calendar_today_outlined),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          validator: (value) =>
+                              value == null ? 'Required' : null,
                         ),
                       ],
                     ),

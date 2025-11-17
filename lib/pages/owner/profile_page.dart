@@ -126,18 +126,18 @@ class ProfilePage extends StatelessWidget {
             ),
 
             // Support section
-            _buildSection(
-              title: 'Support',
-              items: [
-                ProfileMenuItem(
-                  icon: Icons.help_outline,
-                  title: 'Help & Support',
-                  onTap: () {
-                    _navigateToHelpSupport(context);
-                  },
-                ),
-              ],
-            ),
+            // _buildSection(
+            //   title: 'Support',
+            //   items: [
+            //     ProfileMenuItem(
+            //       icon: Icons.help_outline,
+            //       title: 'Help & Support',
+            //       onTap: () {
+            //         _navigateToHelpSupport(context);
+            //       },
+            //     ),
+            //   ],
+            // ),
 
             // Logout button
             Padding(
@@ -168,7 +168,7 @@ class ProfilePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 24),
               child: Text(
-                'Version 1.0.0',
+                'Version 1.0.1',
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ),

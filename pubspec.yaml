@@ -38,6 +38,7 @@ dependencies:
   mime: ^1.0.4
   intl: ^0.18.1
   video_player: ^2.8.2
+  url_launcher: ^6.1.14
   
 
 

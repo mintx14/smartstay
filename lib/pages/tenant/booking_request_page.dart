@@ -293,7 +293,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                   MaterialPageRoute(
                     builder: (context) => messages.MessagesScreen(
                       // Use the alias here
-                      currentUserId: int.parse(widget.currentUser.id),
+                      currentUserId: widget.currentUser.id,
                     ),
                   ),
                 );
@@ -1206,7 +1206,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Pay Deposit & Confirm Booking',
+                        'Confirm Booking',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,

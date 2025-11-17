@@ -379,14 +379,14 @@ class _ReservationsPageState extends State<ReservationsPage>
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Expected: ${status == 'Pending' ? '1' : status == 'History' ? '4' : '0'} bookings based on API data',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.red[600],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
+            // Text(
+            //   'Expected: ${status == 'Pending' ? '1' : status == 'History' ? '4' : '0'} bookings based on API data',
+            //   style: TextStyle(
+            //     fontSize: 12,
+            //     color: Colors.red[600],
+            //     fontStyle: FontStyle.italic,
+            //   ),
+            // ),
           ],
         ),
       );

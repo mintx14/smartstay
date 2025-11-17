@@ -1,4 +1,4 @@
-// // services/dashboard_service.dart
+// services/dashboard_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/dashboard_models.dart';
@@ -34,7 +34,10 @@ class DashboardService {
     }
   }
 
-  // Updated method signature to accept dynamic userId
+  // ============================================
+  // ENHANCED DASHBOARD STATS (with occupancy)
+  // ============================================
+
   static Future<DashboardStats?> getDashboardStats(dynamic userId) async {
     try {
       // Safely parse the user ID
@@ -78,6 +81,217 @@ class DashboardService {
       rethrow; // Re-throw to let the caller handle it
     }
   }
+
+  // ============================================
+  // NEW: OCCUPANCY SPECIFIC METHODS
+  // ============================================
+
+  /// Get occupancy statistics (occupied/total properties)
+  static Future<Map<String, dynamic>> getOccupancyStats(dynamic userId) async {
+    try {
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        throw Exception('Invalid user ID provided');
+      }
+
+      final url = '${ApiConfig.baseUrl}/dashboard.php/occupancy-stats/$ownerId';
+      print('🏠 Occupancy Stats API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      print('📡 Occupancy Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return jsonData['data'];
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to fetch occupancy stats');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in getOccupancyStats: $e');
+      rethrow;
+    }
+  }
+
+  /// Get list of occupied properties with details
+  static Future<List<Map<String, dynamic>>> getOccupiedProperties(
+      dynamic userId) async {
+    try {
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        throw Exception('Invalid user ID provided');
+      }
+
+      final url = '${ApiConfig.baseUrl}/dashboard.php/occupied/$ownerId';
+      print('🏠 Occupied Properties API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      print('📡 Occupied Properties Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to fetch occupied properties');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in getOccupiedProperties: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // NEW: BOOKING MANAGEMENT METHODS
+  // ============================================
+
+  /// Get all bookings for an owner with optional filters
+  static Future<List<Map<String, dynamic>>> getOwnerBookings(
+    dynamic userId, {
+    String? status,
+    String? paymentStatus,
+    int? listingId,
+  }) async {
+    try {
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        throw Exception('Invalid user ID provided');
+      }
+
+      String url = '${ApiConfig.baseUrl}/dashboard.php/bookings/$ownerId';
+      List<String> queryParams = [];
+
+      if (status != null) queryParams.add('status=$status');
+      if (paymentStatus != null) {
+        queryParams.add('payment_status=$paymentStatus');
+      }
+      if (listingId != null) queryParams.add('listing_id=$listingId');
+
+      if (queryParams.isNotEmpty) {
+        url += '?${queryParams.join('&')}';
+      }
+
+      print('📋 Bookings API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        } else {
+          throw Exception(jsonData['message'] ?? 'Failed to fetch bookings');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in getOwnerBookings: $e');
+      rethrow;
+    }
+  }
+
+  /// Get specific booking by ID
+  static Future<Map<String, dynamic>> getBookingById(int bookingId) async {
+    try {
+      final url = '${ApiConfig.baseUrl}/dashboard.php/booking/$bookingId';
+      print('📄 Booking Details API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return jsonData['data'];
+        } else {
+          throw Exception(jsonData['message'] ?? 'Booking not found');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in getBookingById: $e');
+      rethrow;
+    }
+  }
+
+  /// Update payment status for a booking
+  static Future<Map<String, dynamic>> updatePaymentStatus(
+    int bookingId,
+    String paymentStatus, {
+    String? transactionId,
+    String? receiptUrl,
+  }) async {
+    try {
+      final url = '${ApiConfig.baseUrl}/dashboard.php/payment/$bookingId';
+      print('💰 Payment Update API Call: $url');
+
+      final body = {
+        'payment_status': paymentStatus,
+        if (transactionId != null) 'transaction_id': transactionId,
+        if (receiptUrl != null) 'receipt_url': receiptUrl,
+      };
+
+      print('💰 Payment Update Body: $body');
+
+      final response = await http
+          .put(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print(
+          '📡 Payment Update Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return jsonData;
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to update payment status');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in updatePaymentStatus: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // EXISTING METHODS (Enhanced)
+  // ============================================
 
   static Future<List<RecentActivity>> getRecentActivities(
       dynamic userId) async {
@@ -168,12 +382,16 @@ class DashboardService {
     }
   }
 
+  // ============================================
+  // UTILITY METHODS
+  // ============================================
+
   // Additional helper method to test if user ID is valid
   static bool isValidUserId(dynamic userId) {
     return _safeParseUserId(userId) != null;
   }
 
-  // Method to get all dashboard data at once
+  /// Get all dashboard data at once (ENHANCED - now includes occupancy)
   static Future<Map<String, dynamic>> getAllDashboardData(
       dynamic userId) async {
     try {
@@ -182,9 +400,41 @@ class DashboardService {
         throw Exception('Invalid user ID provided');
       }
 
-      print('🔄 Loading all dashboard data for user: $userId');
+      int? ownerId = _safeParseUserId(userId);
+      print('🔄 Loading all dashboard data for user: $ownerId');
 
-      // Run all requests concurrently for better performance
+      // Option 1: Use the new single API call (RECOMMENDED)
+      final url = ApiConfig.getDashboardUrlWithParams('all', ownerId!);
+      print('🌐 All Dashboard Data API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return {
+            'stats': jsonData['stats'] != null
+                ? DashboardStats.fromJson(jsonData['stats'])
+                : null,
+            'activities': (jsonData['activities'] as List? ?? [])
+                .map((json) => RecentActivity.fromJson(json))
+                .toList(),
+            'notifications': (jsonData['notifications'] as List? ?? [])
+                .map((json) => NotificationItem.fromJson(json))
+                .toList(),
+          };
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to fetch dashboard data');
+        }
+      }
+
+      // Option 2: Fallback to individual calls if the 'all' endpoint fails
+      print('⚠️ Single call failed, falling back to individual calls');
+
       final results = await Future.wait([
         getDashboardStats(userId),
         getRecentActivities(userId),
@@ -199,6 +449,201 @@ class DashboardService {
     } catch (e) {
       print('❌ Error in getAllDashboardData: $e');
       rethrow;
+    }
+  }
+
+  // ============================================
+  // NEW: PAYMENT TRANSACTION METHODS
+  // ============================================
+
+  /// Get payment transactions for an owner with optional filters
+  static Future<Map<String, dynamic>> getPaymentTransactions(
+    dynamic userId, {
+    String? status,
+    int? month,
+    int? year,
+    int? bookingId,
+  }) async {
+    try {
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        throw Exception('Invalid user ID provided');
+      }
+
+      String url = '${ApiConfig.baseUrl}/dashboard.php/payments/$ownerId';
+      List<String> queryParams = [];
+
+      if (status != null) queryParams.add('status=$status');
+      if (month != null) queryParams.add('month=$month');
+      if (year != null) queryParams.add('year=$year');
+      if (bookingId != null) queryParams.add('booking_id=$bookingId');
+
+      if (queryParams.isNotEmpty) {
+        url += '?${queryParams.join('&')}';
+      }
+
+      print('💰 Payment Transactions API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return jsonData;
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to fetch payment transactions');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in getPaymentTransactions: $e');
+      rethrow;
+    }
+  }
+
+  /// Get monthly income summary for the year
+  static Future<Map<String, dynamic>> getMonthlyIncomeSummary(
+    dynamic userId, {
+    int? year,
+  }) async {
+    try {
+      int? ownerId = _safeParseUserId(userId);
+      if (ownerId == null) {
+        throw Exception('Invalid user ID provided');
+      }
+
+      String url = '${ApiConfig.baseUrl}/dashboard.php/income-summary/$ownerId';
+      if (year != null) {
+        url += '?year=$year';
+      }
+
+      print('📊 Monthly Income Summary API Call: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return jsonData;
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to fetch income summary');
+        }
+      } else {
+        throw Exception(
+            'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('❌ Error in getMonthlyIncomeSummary: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // CONVENIENCE METHODS FOR PAYMENTS
+  // ============================================
+
+  /// Get current month's payments
+  static Future<Map<String, dynamic>> getCurrentMonthPayments(
+      dynamic userId) async {
+    final now = DateTime.now();
+    return getPaymentTransactions(
+      userId,
+      status: 'paid',
+      month: now.month,
+      year: now.year,
+    );
+  }
+
+  /// Get total income for current month (quick method)
+  static Future<double> getCurrentMonthIncome(dynamic userId) async {
+    try {
+      final payments = await getCurrentMonthPayments(userId);
+      return (payments['total_amount'] ?? 0.0).toDouble();
+    } catch (e) {
+      print('❌ Error getting current month income: $e');
+      return 0.0;
+    }
+  }
+
+  /// Get paid transactions only
+  static Future<List<Map<String, dynamic>>> getPaidTransactions(
+      dynamic userId) async {
+    try {
+      final result = await getPaymentTransactions(userId, status: 'paid');
+      return List<Map<String, dynamic>>.from(result['data'] ?? []);
+    } catch (e) {
+      print('❌ Error getting paid transactions: $e');
+      return [];
+    }
+  }
+
+  /// Get pending transactions that need attention
+  static Future<List<Map<String, dynamic>>> getPendingTransactions(
+      dynamic userId) async {
+    try {
+      final result = await getPaymentTransactions(userId, status: 'pending');
+      return List<Map<String, dynamic>>.from(result['data'] ?? []);
+    } catch (e) {
+      print('❌ Error getting pending transactions: $e');
+      return [];
+    }
+  }
+
+  /// Get pending bookings that need attention
+  static Future<List<Map<String, dynamic>>> getPendingBookings(
+      dynamic userId) async {
+    return getOwnerBookings(userId, status: 'pending');
+  }
+
+  /// Get confirmed and paid bookings (active tenants)
+  static Future<List<Map<String, dynamic>>> getActiveBookings(
+      dynamic userId) async {
+    return getOwnerBookings(userId, status: 'confirmed', paymentStatus: 'paid');
+  }
+
+  /// Mark a booking as paid (common use case)
+  static Future<Map<String, dynamic>> markBookingAsPaid(
+    int bookingId, {
+    String? transactionId,
+    String? receiptUrl,
+  }) async {
+    return updatePaymentStatus(
+      bookingId,
+      'paid',
+      transactionId: transactionId,
+      receiptUrl: receiptUrl,
+    );
+  }
+
+  /// Get occupancy summary for dashboard display
+  static Future<String> getOccupancyDisplayString(dynamic userId) async {
+    try {
+      final stats = await getOccupancyStats(userId);
+      return stats['occupancy_display'] ?? '0/0';
+    } catch (e) {
+      print('❌ Error getting occupancy display: $e');
+      return '0/0';
+    }
+  }
+
+  /// Get vacancy rate as percentage
+  static Future<double> getVacancyRate(dynamic userId) async {
+    try {
+      final stats = await getOccupancyStats(userId);
+      return (stats['vacancy_rate'] ?? 0.0).toDouble();
+    } catch (e) {
+      print('❌ Error getting vacancy rate: $e');
+      return 0.0;
     }
   }
 }

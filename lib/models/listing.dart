@@ -6,6 +6,7 @@ class Listing {
   final String description;
   final List<String> imageUrls; // This will contain both images and videos
   final double price;
+  final double deposit;
   final int bedrooms;
   final int bathrooms;
   final int areaSqft;
@@ -23,6 +24,7 @@ class Listing {
     required this.description,
     required this.imageUrls,
     required this.price,
+    required this.deposit,
     required this.bedrooms,
     required this.bathrooms,
     required this.areaSqft,
@@ -66,6 +68,7 @@ class Listing {
           ? List<String>.from(json['image_urls'])
           : [],
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      deposit: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       bedrooms: int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
       bathrooms: int.tryParse(json['bathrooms']?.toString() ?? '0') ?? 0,
       areaSqft: int.tryParse(json['area_sqft']?.toString() ?? '0') ?? 0,
@@ -110,6 +113,7 @@ class Listing {
     String? description,
     List<String>? imageUrls,
     double? price,
+    double? deposit,
     int? bedrooms,
     int? bathrooms,
     int? areaSqft,
@@ -127,6 +131,7 @@ class Listing {
       description: description ?? this.description,
       imageUrls: imageUrls ?? this.imageUrls,
       price: price ?? this.price,
+      deposit: deposit ?? this.deposit,
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       areaSqft: areaSqft ?? this.areaSqft,
