@@ -26,6 +26,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
 
   final DatabaseService _databaseService = DatabaseService();
 
+  bool _hasChanges = false;
+
   @override
   void initState() {
     super.initState();
@@ -63,17 +65,18 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     try {
       final result = await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => EditListingPage(
-              listing: listing), // You'll need to create this page
+          builder: (context) => EditListingPage(listing: listing),
         ),
       );
 
-      if (result == true && mounted) {
-        // Refresh the current listing data
+      if (result is Listing && mounted) {
+        setState(() {
+          _currentListing = result;
+          _hasChanges = true; // <--- MARK AS CHANGED
+        });
         _showSuccessMessage('Property updated successfully');
-        // You might want to refresh the listing data here
-        // await _refreshListingData();
       }
+      // ...
     } catch (e) {
       _showErrorMessage('Failed to edit property: $e');
     }
@@ -106,9 +109,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       if (mounted) Navigator.pop(context);
 
       if (success && mounted) {
-        // Update local state
         setState(() {
           _currentListing = listing.copyWith(status: newStatus);
+          _hasChanges = true; // <--- MARK AS CHANGED
         });
 
         // Show success message
@@ -622,6 +625,22 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const Text(
+                'Rent Deposit',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                'RM ${_currentListing.deposit.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           Container(
@@ -639,228 +658,235 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 320, // Increased to accommodate top space
-            pinned: true,
-            elevation: 0,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                children: [
-                  _buildImageSlider(),
-                  // Gradient overlay for better text visibility
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 120, // Increased to cover the top space area
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.transparent,
-                          ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Pass the _hasChanges flag back to the previous screen
+        Navigator.pop(context, _hasChanges);
+        return false; // Prevent default pop since we popped manually
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 320, // Increased to accommodate top space
+              pinned: true,
+              elevation: 0,
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  children: [
+                    _buildImageSlider(),
+                    // Gradient overlay for better text visibility
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 120, // Increased to cover the top space area
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.3),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status Badge
-                _buildStatusBadge(),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status Badge
+                  _buildStatusBadge(),
 
-                // Action Buttons (Reactive/Deactivate and Edit)
-                _buildActionButtons(),
+                  // Action Buttons (Reactive/Deactivate and Edit)
+                  _buildActionButtons(),
 
-                // Title and Location
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Container(
-                    margin: const EdgeInsets.all(20),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _currentListing.title,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                            height: 1.2,
+                  // Title and Location
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      margin: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: Colors.red[600],
-                              ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _currentListing.title,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              height: 1.2,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${_currentListing.address}, ${_currentListing.postcode}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[700],
-                                  fontWeight: FontWeight.w500,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: Colors.red[600],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '${_currentListing.address}, ${_currentListing.postcode}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                // Price Card
-                _buildPriceCard(),
+                  // Price Card
+                  _buildPriceCard(),
 
-                // Property Overview
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection('Property Overview', [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildOverviewCard(
-                            Icons.bed,
-                            '${_currentListing.bedrooms}',
-                            'Bedrooms',
-                            Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildOverviewCard(
-                            Icons.bathroom,
-                            '${_currentListing.bathrooms}',
-                            'Bathrooms',
-                            Colors.green,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildOverviewCard(
-                            Icons.square_foot,
-                            '${_currentListing.areaSqft}',
-                            'sqft',
-                            Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ]),
-                ),
-
-                // Description
-                if (_currentListing.description.isNotEmpty)
+                  // Property Overview
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildInfoSection('Description', [
-                      Text(
-                        _currentListing.description,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Colors.black87,
-                        ),
+                    child: _buildInfoSection('Property Overview', [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.bed,
+                              '${_currentListing.bedrooms}',
+                              'Bedrooms',
+                              Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.bathroom,
+                              '${_currentListing.bathrooms}',
+                              'Bathrooms',
+                              Colors.green,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.square_foot,
+                              '${_currentListing.areaSqft}',
+                              'sqft',
+                              Colors.orange,
+                            ),
+                          ),
+                        ],
                       ),
                     ]),
                   ),
 
-                // Property Details
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection('Property Details', [
-                    _buildDetailRow(
-                      'Bedrooms',
-                      '${_currentListing.bedrooms}',
-                      icon: Icons.bed,
+                  // Description
+                  if (_currentListing.description.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildInfoSection('Description', [
+                        Text(
+                          _currentListing.description,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.6,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ]),
                     ),
-                    _buildDetailRow(
-                      'Bathrooms',
-                      '${_currentListing.bathrooms}',
-                      icon: Icons.bathroom,
-                    ),
-                    _buildDetailRow(
-                      'Area',
-                      '${_currentListing.areaSqft} sqft',
-                      icon: Icons.square_foot,
-                    ),
-                    _buildDetailRow(
-                      'Available From',
-                      DateFormat(
-                        'd MMMM y',
-                      ).format(_currentListing.availableFrom),
-                      icon: Icons.calendar_today,
-                    ),
-                    _buildDetailRow(
-                      'Minimum Tenure',
-                      '${_currentListing.minimumTenure} month',
-                      icon: Icons.timelapse,
-                    ),
-                  ]),
-                ),
 
-                // Location
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection('Location', [
-                    _buildDetailRow(
-                      'Address',
-                      _currentListing.address,
-                      icon: Icons.location_on,
-                    ),
-                    _buildDetailRow(
-                      'Postcode',
-                      _currentListing.postcode,
-                      icon: Icons.mail,
-                    ),
-                  ]),
-                ),
+                  // Property Details
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildInfoSection('Property Details', [
+                      _buildDetailRow(
+                        'Bedrooms',
+                        '${_currentListing.bedrooms}',
+                        icon: Icons.bed,
+                      ),
+                      _buildDetailRow(
+                        'Bathrooms',
+                        '${_currentListing.bathrooms}',
+                        icon: Icons.bathroom,
+                      ),
+                      _buildDetailRow(
+                        'Area',
+                        '${_currentListing.areaSqft} sqft',
+                        icon: Icons.square_foot,
+                      ),
+                      _buildDetailRow(
+                        'Available From',
+                        DateFormat(
+                          'd MMMM y',
+                        ).format(_currentListing.availableFrom),
+                        icon: Icons.calendar_today,
+                      ),
+                      _buildDetailRow(
+                        'Minimum Tenure',
+                        '${_currentListing.minimumTenure} month',
+                        icon: Icons.timelapse,
+                      ),
+                    ]),
+                  ),
 
-                const SizedBox(height: 120), // Space for floating button
-              ],
+                  // Location
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildInfoSection('Location', [
+                      _buildDetailRow(
+                        'Address',
+                        _currentListing.address,
+                        icon: Icons.location_on,
+                      ),
+                      _buildDetailRow(
+                        'Postcode',
+                        _currentListing.postcode,
+                        icon: Icons.mail,
+                      ),
+                    ]),
+                  ),
+
+                  const SizedBox(height: 120), // Space for floating button
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

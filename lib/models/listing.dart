@@ -7,6 +7,7 @@ class Listing {
   final List<String> imageUrls; // This will contain both images and videos
   final double price;
   final double deposit;
+  final int depositMonths; // <--- ADDED THIS
   final int bedrooms;
   final int bathrooms;
   final int areaSqft;
@@ -25,6 +26,7 @@ class Listing {
     required this.imageUrls,
     required this.price,
     required this.deposit,
+    required this.depositMonths, // <--- ADDED THIS
     required this.bedrooms,
     required this.bathrooms,
     required this.areaSqft,
@@ -68,7 +70,12 @@ class Listing {
           ? List<String>.from(json['image_urls'])
           : [],
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      deposit: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      deposit: double.tryParse(json['deposit']?.toString() ?? '0') ?? 0.0,
+
+      // <--- ADDED THIS: Parse deposit_months safely
+      depositMonths:
+          int.tryParse(json['deposit_months']?.toString() ?? '0') ?? 0,
+
       bedrooms: int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
       bathrooms: int.tryParse(json['bathrooms']?.toString() ?? '0') ?? 0,
       areaSqft: int.tryParse(json['area_sqft']?.toString() ?? '0') ?? 0,
@@ -90,6 +97,8 @@ class Listing {
       'description': description,
       'image_urls': imageUrls,
       'price': price,
+      'deposit': deposit,
+      'deposit_months': depositMonths, // <--- ADDED THIS
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area_sqft': areaSqft,
@@ -114,6 +123,7 @@ class Listing {
     List<String>? imageUrls,
     double? price,
     double? deposit,
+    int? depositMonths, // <--- ADDED THIS
     int? bedrooms,
     int? bathrooms,
     int? areaSqft,
@@ -132,6 +142,7 @@ class Listing {
       imageUrls: imageUrls ?? this.imageUrls,
       price: price ?? this.price,
       deposit: deposit ?? this.deposit,
+      depositMonths: depositMonths ?? this.depositMonths, // <--- ADDED THIS
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       areaSqft: areaSqft ?? this.areaSqft,

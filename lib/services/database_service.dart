@@ -5,16 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/models/listing.dart';
-// ADD THIS IMPORT
-import 'package:my_app/config/api_config.dart'; // Adjust path as needed
+import 'package:my_app/config/api_config.dart';
 
 class DatabaseService {
-  // REMOVE THESE LINES - No longer needed
-  // static const String _baseUrl = 'http://192.168.0.11/smartstay';
-
-  // UPDATED: Use API config instead
   String get baseUrl => ApiConfig.baseUrl;
-
   static const Duration _timeout = Duration(seconds: 30);
 
   Future<String?> get currentUserId async {
@@ -27,9 +21,14 @@ class DatabaseService {
     }
   }
 
+  Map<String, String> _getHeaders() => {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+      };
+
   Future<bool> testConnection() async {
     try {
-      // UPDATED: Use API config instead of hardcoded URL
       final response = await http
           .get(Uri.parse(ApiConfig.testConnectionUrl))
           .timeout(_timeout);
@@ -41,18 +40,8 @@ class DatabaseService {
     }
   }
 
-  Map<String, String> _getHeaders() {
-    return {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Accept': 'application/json',
-      'Cache-Control': 'no-cache',
-    };
-  }
-
   Future<List<String>> uploadImages(
-    List<String> filePaths,
-    String userId,
-  ) async {
+      List<String> filePaths, String userId) async {
     List<String> imageUrls = [];
 
     for (String filePath in filePaths) {
@@ -66,36 +55,24 @@ class DatabaseService {
         }
 
         final fileName = basename(file.path);
-        var request = http.MultipartRequest(
-          'POST',
-          // UPDATED: Use API config instead of hardcoded URL
-          Uri.parse(ApiConfig.uploadImageUrl),
-        );
+        var request =
+            http.MultipartRequest('POST', Uri.parse(ApiConfig.uploadImageUrl));
         request.headers.addAll({'Accept': 'application/json'});
         request.fields['user_id'] = userId;
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'image',
-            file.path,
-            filename: fileName,
-          ),
-        );
+        request.files.add(await http.MultipartFile.fromPath('image', file.path,
+            filename: fileName));
 
         var streamedResponse = await request.send();
         var responseBody = await streamedResponse.stream.bytesToString();
-        final parsedResponse = json.decode(responseBody);
+        print('Upload image response: $responseBody');
 
+        final parsedResponse = _tryParseJson(responseBody);
         if (parsedResponse['success'] == true) {
           final imageUrl = parsedResponse['image_url'];
-          if (imageUrl != null && imageUrl.isNotEmpty) {
-            imageUrls.add(imageUrl);
-          } else {
-            throw Exception('Empty image URL returned');
-          }
+          if (imageUrl != null && imageUrl.isNotEmpty) imageUrls.add(imageUrl);
         } else {
           throw Exception(
-            'Upload failed: ${parsedResponse['error'] ?? 'Unknown error'}',
-          );
+              'Upload failed: ${parsedResponse['error'] ?? 'Unknown error'}');
         }
       } catch (e) {
         throw Exception('Failed to upload image ${basename(filePath)}: $e');
@@ -106,9 +83,7 @@ class DatabaseService {
   }
 
   Future<List<String>> uploadVideos(
-    List<String> filePaths,
-    String userId,
-  ) async {
+      List<String> filePaths, String userId) async {
     List<String> videoUrls = [];
 
     for (String filePath in filePaths) {
@@ -121,49 +96,34 @@ class DatabaseService {
           throw Exception('File is empty: $filePath');
         }
 
-        // Check file size (limit to 100MB for videos)
         final fileSize = await file.length();
         if (fileSize > 100 * 1024 * 1024) {
           throw Exception('Video file size exceeds 100MB limit');
         }
 
         final fileName = basename(file.path);
-        var request = http.MultipartRequest(
-          'POST',
-          // UPDATED: Use API config instead of hardcoded URL
-          Uri.parse(ApiConfig.uploadVideoUrl),
-        );
+        var request =
+            http.MultipartRequest('POST', Uri.parse(ApiConfig.uploadVideoUrl));
         request.headers.addAll({'Accept': 'application/json'});
         request.fields['user_id'] = userId;
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'video',
-            file.path,
-            filename: fileName,
-          ),
-        );
+        request.files.add(await http.MultipartFile.fromPath('video', file.path,
+            filename: fileName));
 
         var streamedResponse = await request.send().timeout(
-          const Duration(minutes: 5),
-          onTimeout: () {
-            throw TimeoutException('Video upload timeout');
-          },
-        );
+              const Duration(minutes: 5),
+              onTimeout: () => throw TimeoutException('Video upload timeout'),
+            );
 
         var responseBody = await streamedResponse.stream.bytesToString();
-        final parsedResponse = json.decode(responseBody);
+        print('Upload video response: $responseBody');
 
+        final parsedResponse = _tryParseJson(responseBody);
         if (parsedResponse['success'] == true) {
           final videoUrl = parsedResponse['image_url'];
-          if (videoUrl != null && videoUrl.isNotEmpty) {
-            videoUrls.add(videoUrl);
-          } else {
-            throw Exception('Empty video URL returned');
-          }
+          if (videoUrl != null && videoUrl.isNotEmpty) videoUrls.add(videoUrl);
         } else {
           throw Exception(
-            'Upload failed: ${parsedResponse['error'] ?? 'Unknown error'}',
-          );
+              'Upload failed: ${parsedResponse['error'] ?? 'Unknown error'}');
         }
       } catch (e) {
         throw Exception('Failed to upload video ${basename(filePath)}: $e');
@@ -175,9 +135,7 @@ class DatabaseService {
 
   Future<void> addListing(Listing listing) async {
     final userId = await currentUserId;
-    if (userId == null) {
-      throw Exception('User not authenticated');
-    }
+    if (userId == null) throw Exception('User not authenticated');
 
     try {
       final requestBody = {
@@ -187,6 +145,8 @@ class DatabaseService {
         'postcode': listing.postcode,
         'description': listing.description,
         'price': listing.price,
+        'deposit': listing.deposit,
+        'deposit_months': listing.depositMonths, // ADDED THIS FIELD
         'bedrooms': listing.bedrooms,
         'bathrooms': listing.bathrooms,
         'area_sqft': listing.areaSqft,
@@ -196,22 +156,30 @@ class DatabaseService {
       };
 
       final response = await http
-          .post(
-            // UPDATED: Use API config instead of hardcoded URL
-            Uri.parse(ApiConfig.addListingUrl),
-            headers: _getHeaders(),
-            body: json.encode(requestBody),
-          )
+          .post(Uri.parse(ApiConfig.addListingUrl),
+              headers: _getHeaders(), body: json.encode(requestBody))
           .timeout(_timeout);
 
-      final responseData = json.decode(response.body);
+      print('Add listing response: ${response.body}');
+
+      final responseData = _tryParseJson(response.body);
       if (response.statusCode != 200 || responseData['success'] != true) {
         throw Exception(
-          'Failed to add listing: ${responseData['error'] ?? 'Unknown error'}',
-        );
+            'Failed to add listing: ${responseData['error'] ?? 'Unknown error'}');
       }
     } catch (e) {
       throw Exception('Error adding listing: $e');
+    }
+  }
+
+  // Helper method to safely parse JSON
+  Map<String, dynamic> _tryParseJson(String responseBody) {
+    try {
+      final data = json.decode(responseBody);
+      if (data is Map<String, dynamic>) return data;
+      throw FormatException('Expected JSON object but got ${data.runtimeType}');
+    } catch (e) {
+      throw FormatException('Invalid JSON response: $responseBody\nError: $e');
     }
   }
 
@@ -322,7 +290,10 @@ class DatabaseService {
     }
   }
 
-  Future<bool> updateListing(
+  // --------------- MODIFIED METHOD BELOW ---------------
+
+  // Changed return type from Future<bool> to Future<Listing>
+  Future<Listing> updateListing(
       Listing listing, List<String> deletedMediaUrls) async {
     try {
       final userId = await currentUserId;
@@ -337,6 +308,8 @@ class DatabaseService {
         'address': listing.address,
         'postcode': listing.postcode,
         'price': listing.price,
+        'deposit': listing.deposit,
+        'deposit_months': listing.depositMonths, // ADDED THIS FIELD
         'bedrooms': listing.bedrooms,
         'bathrooms': listing.bathrooms,
         'area_sqft': listing.areaSqft,
@@ -344,7 +317,8 @@ class DatabaseService {
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,
         'deleted_media': deletedMediaUrls,
-        'new_media': [],
+        'new_media':
+            [], // New media urls are usually handled inside edit_listing_page before calling this
       };
 
       // UPDATED: Use API config instead of hardcoded URL
@@ -354,15 +328,27 @@ class DatabaseService {
         body: json.encode(data),
       );
 
+      print('Update Response: ${response.body}');
+
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
-        return result['success'] == true;
+        if (result['success'] == true) {
+          // Assuming your PHP returns the updated listing object in a 'listing' key
+          if (result['listing'] != null) {
+            return Listing.fromJson(result['listing']);
+          } else {
+            // Fallback: return the original listing object if server didn't return new one (less ideal)
+            return listing;
+          }
+        } else {
+          throw Exception('Failed to update: ${result['error']}');
+        }
       } else {
         throw Exception('Failed to update listing: ${response.statusCode}');
       }
     } catch (e) {
       print('Error updating listing: $e');
-      return false;
+      throw e; // Re-throw so the UI knows it failed
     }
   }
 

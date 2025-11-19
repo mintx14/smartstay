@@ -238,10 +238,10 @@ class _AddListingPageState extends State<AddListingPage> {
           address: _addressController.text,
           postcode: _postcodeController.text,
           description: _descriptionController.text,
-          imageUrls: allMediaUrls, // All media URLs go here
-          //price: double.parse(_priceController.text),
+          imageUrls: allMediaUrls,
           price: monthlyRent,
           deposit: calculatedDeposit,
+          depositMonths: _selectedDepositMonth ?? 0, // <--- ADD THIS LINE
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),

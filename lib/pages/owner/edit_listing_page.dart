@@ -27,6 +27,7 @@ class _EditListingPageState extends State<EditListingPage> {
   late TextEditingController _descriptionController;
   late DateTime _availableFrom;
   late String _minimumTenure;
+  int? _selectedDepositMonth;
 
   // Existing media from database
   List<String> _existingMediaUrls = [];
@@ -62,10 +63,26 @@ class _EditListingPageState extends State<EditListingPage> {
     _descriptionController =
         TextEditingController(text: widget.listing.description);
     _availableFrom = widget.listing.availableFrom;
-
-    // Transform the minimum tenure to match dropdown format
     _minimumTenure =
         _transformTenureToDropdownFormat(widget.listing.minimumTenure);
+
+    // IMPROVED: Calculate deposit month from deposit amount
+    final double monthlyRent = widget.listing.price;
+    if (monthlyRent > 0 && widget.listing.deposit > 0) {
+      // Calculate months and round to nearest integer
+      int calculatedMonths = (widget.listing.deposit / monthlyRent).round();
+
+      // Ensure it's within valid range (1-12 months)
+      if (calculatedMonths >= 1 && calculatedMonths <= 12) {
+        _selectedDepositMonth = calculatedMonths;
+      } else {
+        // If deposit doesn't match standard months, set to null or closest value
+        _selectedDepositMonth = calculatedMonths > 12 ? 12 : 1;
+      }
+    } else if (widget.listing.deposit == 0) {
+      // If deposit is 0, don't pre-select any month
+      _selectedDepositMonth = null;
+    }
 
     // Copy existing media URLs
     _existingMediaUrls = List<String>.from(widget.listing.imageUrls);
@@ -311,6 +328,13 @@ class _EditListingPageState extends State<EditListingPage> {
         // Combine existing and new media URLs
         List<String> allMediaUrls = [..._existingMediaUrls, ...newMediaUrls];
 
+        final double monthlyRent =
+            double.tryParse(_priceController.text) ?? 0.0;
+
+        // Calculate the deposit based on selected months
+        final double calculatedDeposit =
+            (_selectedDepositMonth ?? 0) * monthlyRent;
+
         // Update the listing
         final updatedListing = Listing(
           id: widget.listing.id,
@@ -320,14 +344,13 @@ class _EditListingPageState extends State<EditListingPage> {
           description: _descriptionController.text,
           imageUrls: allMediaUrls,
           price: double.parse(_priceController.text),
-          deposit: double.parse(_priceController.text),
+          deposit: calculatedDeposit,
+          depositMonths: _selectedDepositMonth ?? 0, // <--- ADD THIS LINE
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),
           availableFrom: _availableFrom,
-          // Transform tenure back to database format if needed
-          minimumTenure:
-              _minimumTenure, // or _transformTenureForDatabase(_minimumTenure)
+          minimumTenure: _minimumTenure,
           status: widget.listing.status,
           createdAt: widget.listing.createdAt,
           updatedAt: DateTime.now(),
@@ -336,7 +359,7 @@ class _EditListingPageState extends State<EditListingPage> {
         await _databaseService.updateListing(updatedListing, _deletedMediaUrls);
 
         if (mounted) {
-          Navigator.pop(context, true);
+          Navigator.pop(context, updatedListing);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Property listing updated successfully'),
@@ -422,10 +445,12 @@ class _EditListingPageState extends State<EditListingPage> {
                     ),
 
                     // Property Features Card
+                    // Property Features Card - IMPROVED VERSION
                     _buildSectionCard(
                       title: 'Property Features',
                       icon: Icons.featured_play_list,
                       children: [
+                        // Row 1: Bedrooms and Bathrooms
                         Row(
                           children: [
                             Expanded(
@@ -446,32 +471,32 @@ class _EditListingPageState extends State<EditListingPage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildFeatureField(
-                                controller: _areaSqftController,
-                                label: 'Size (sqft)',
-                                icon: Icons.square_foot,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildModernTextField(
-                                controller: _priceController,
-                                label: 'Monthly Rent',
-                                prefixIcon: Icons.attach_money,
-                                prefixText: 'RM ',
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly
-                                ],
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Required' : null,
-                              ),
-                            ),
-                          ],
+
+                        // Row 2: Size
+                        _buildFeatureField(
+                          controller: _areaSqftController,
+                          label: 'Size (sqft)',
+                          icon: Icons.square_foot,
                         ),
+                        const SizedBox(height: 16),
+
+                        // Row 3: Monthly Rent
+                        _buildModernTextField(
+                          controller: _priceController,
+                          label: 'Monthly Rent',
+                          prefixIcon: Icons.attach_money,
+                          prefixText: 'RM ',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          validator: (value) =>
+                              value!.isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Row 4: Deposit (full width to prevent overflow)
+                        _buildDepositField(),
                       ],
                     ),
 
@@ -608,6 +633,80 @@ class _EditListingPageState extends State<EditListingPage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildDepositField() {
+    final double currentRent = double.tryParse(_priceController.text) ?? 0.0;
+    final double calculatedDeposit = (_selectedDepositMonth ?? 0) * currentRent;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<int>(
+          value: _selectedDepositMonth,
+          onChanged: (int? newValue) {
+            setState(() {
+              _selectedDepositMonth = newValue;
+            });
+          },
+          items: List.generate(12, (index) {
+            int month = index + 1;
+            return DropdownMenuItem<int>(
+              value: month,
+              child: Text(
+                '$month month${month > 1 ? 's' : ''}',
+              ),
+            );
+          }).toList(),
+          decoration: InputDecoration(
+            labelText: 'Deposit (in months)',
+            prefixIcon: const Icon(Icons.calendar_today_outlined),
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).primaryColor,
+                width: 2,
+              ),
+            ),
+          ),
+          validator: (value) => value == null ? 'Required' : null,
+        ),
+        if (_selectedDepositMonth != null && currentRent > 0) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Total Deposit: RM ${calculatedDeposit.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 

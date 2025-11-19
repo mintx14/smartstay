@@ -1225,13 +1225,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ];
 
     return Listing(
-      id: property.id.toString(), // Convert to String
+      id: property.id.toString(),
       title: property.title,
       address: property.address,
       postcode: property.postcode,
       description: property.description ?? '',
       price: property.price,
       deposit: property.deposit,
+
+      // FIX 1: Use 0 default since 'PropertyListing' does not have this field yet
+      depositMonths: 0,
+
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
       areaSqft: property.areaSqft,
@@ -1239,8 +1243,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
       minimumTenure: property.minimumTenure,
       status: property.status,
+
+      // FIX 2: Use current time since 'PropertyListing' does not have 'createdAt'
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+
       imageUrls: images,
     );
   }
