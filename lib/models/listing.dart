@@ -16,6 +16,7 @@ class Listing {
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? contractUrl;
 
   Listing({
     required this.id,
@@ -35,6 +36,7 @@ class Listing {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.contractUrl,
   });
 
   // Helper methods to separate images and videos
@@ -85,6 +87,7 @@ class Listing {
       status: json['status'] ?? 'Active',
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      contractUrl: json['contract_url'],
     );
   }
 
@@ -107,6 +110,7 @@ class Listing {
       'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'contract_url': contractUrl,
     };
   }
 

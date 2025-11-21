@@ -6,6 +6,7 @@ import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/config/api_config.dart';
+import 'package:http_parser/http_parser.dart';
 
 class DatabaseService {
   String get baseUrl => ApiConfig.baseUrl;
@@ -153,6 +154,7 @@ class DatabaseService {
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,
         'image_urls': listing.imageUrls,
+        'contract_url': listing.contractUrl,
       };
 
       final response = await http
@@ -416,6 +418,43 @@ class DatabaseService {
     } catch (e) {
       print('Error deleting listing: $e');
       return false;
+    }
+  }
+
+  // Inside Class DatabaseService
+  Future<String?> uploadContract(File file, String userId) async {
+    try {
+      if (!await file.exists()) throw Exception('File not found');
+
+      var request = http.MultipartRequest(
+          'POST',
+          Uri.parse(ApiConfig.baseUrl +
+              '/upload_contract.php') // Make sure to add this endpoint in your config
+          );
+
+      request.fields['user_id'] = userId;
+
+      // Attach the file
+      request.files.add(await http.MultipartFile.fromPath(
+        'contract', // This must match the $_FILES['contract'] key in PHP
+        file.path,
+        contentType: MediaType(
+            'application', 'pdf'), // explicitly tell server it's a pdf
+      ));
+
+      var streamedResponse = await request.send();
+      var responseBody = await streamedResponse.stream.bytesToString();
+
+      final parsedResponse = _tryParseJson(responseBody);
+
+      if (parsedResponse['success'] == true) {
+        return parsedResponse['contract_url'];
+      } else {
+        throw Exception(parsedResponse['error']);
+      }
+    } catch (e) {
+      print("Upload contract error: $e");
+      throw Exception('Failed to upload contract: $e');
     }
   }
 }
