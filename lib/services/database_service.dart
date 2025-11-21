@@ -318,6 +318,7 @@ class DatabaseService {
         'description': listing.description,
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,
+        'contract_url': listing.contractUrl,
         'deleted_media': deletedMediaUrls,
         'new_media':
             [], // New media urls are usually handled inside edit_listing_page before calling this

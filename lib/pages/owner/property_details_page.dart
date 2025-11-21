@@ -901,7 +901,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                         ),
                       ]),
                     ),
-                  _buildContractSection(),
                   // Property Details
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -952,7 +951,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                       ),
                     ]),
                   ),
-
+                  _buildContractSection(),
                   const SizedBox(height: 120), // Space for floating button
                 ],
               ),

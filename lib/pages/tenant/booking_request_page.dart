@@ -7,6 +7,8 @@ import 'dart:convert';
 import 'package:my_app/config/api_config.dart';
 import 'package:my_app/pages/tenant/messages_screen.dart'
     as messages; // Add alias here
+import 'package:url_launcher/url_launcher.dart'; // Add this for opening the PDF
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class BookingRequestPage extends StatefulWidget {
   final Listing listing;
@@ -108,7 +110,11 @@ class _BookingRequestPageState extends State<BookingRequestPage>
 
   void _calculateCosts() {
     _monthlyRent = widget.listing.price;
-    _depositAmount = _monthlyRent * 2; // 2 months deposit (common practice)
+
+    // OLD: _depositAmount = _monthlyRent * 2;
+    // NEW: Get the actual deposit value directly from the Listing model
+    _depositAmount = widget.listing.deposit;
+
     _totalAmount = (_monthlyRent * _selectedDuration) + _depositAmount;
     setState(() {});
   }
@@ -137,6 +143,29 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       setState(() {
         _selectedCheckInDate = picked;
       });
+    }
+  }
+
+  Future<void> _launchContract() async {
+    final urlString = widget.listing.contractUrl;
+    if (urlString != null && urlString.isNotEmpty) {
+      final Uri url = Uri.parse(urlString);
+      try {
+        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open contract file')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening contract: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No contract document available for this property')),
+      );
     }
   }
 
@@ -319,6 +348,103 @@ class _BookingRequestPageState extends State<BookingRequestPage>
     );
   }
 
+  // 1. Function to Open Viewer
+  void _openContractViewer() {
+    final urlString = widget.listing.contractUrl;
+    if (urlString == null || urlString.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No contract available for this property.')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ContractViewerPage(
+          contractUrl: urlString,
+          title: 'Rental Agreement - ${widget.listing.title}',
+        ),
+      ),
+    );
+  }
+
+  // 2. UI Widget (Matches PropertyDetailsPage style)
+  Widget _buildContractCard() {
+    if (widget.listing.contractUrl == null ||
+        widget.listing.contractUrl!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return InkWell(
+      onTap: _openContractViewer,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue[100]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.visibility_outlined,
+                  color: Colors.blue, size: 32),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'View Rental Agreement',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap to read the agreement now',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.blue[100]!),
+              ),
+              child: Icon(Icons.arrow_forward_ios,
+                  size: 16, color: Colors.blue[300]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -371,6 +497,13 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                     const SizedBox(height: 16),
                     _buildCostSummaryCard(),
                     const SizedBox(height: 24),
+
+                    // --- NEW: INSERT CONTRACT CARD HERE ---
+                    _buildSectionTitle('Contract'),
+                    const SizedBox(height: 12),
+                    _buildContractCard(),
+                    const SizedBox(height: 24),
+                    // --------------------------------------
 
                     // Terms and Conditions
                     _buildTermsCheckbox(),
@@ -1411,6 +1544,56 @@ class _BookingRequestPageState extends State<BookingRequestPage>
           ],
         );
       },
+    );
+  }
+}
+
+class ContractViewerPage extends StatelessWidget {
+  final String contractUrl;
+  final String title;
+
+  const ContractViewerPage({
+    super.key,
+    required this.contractUrl,
+    required this.title,
+  });
+
+  Future<void> _downloadFile() async {
+    final Uri url = Uri.parse(contractUrl);
+    // Opens in external browser/downloader
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch contract URL');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+        actions: [
+          // Download Button in AppBar
+          IconButton(
+            onPressed: _downloadFile,
+            icon: const Icon(Icons.download_rounded),
+            tooltip: 'Download PDF',
+          ),
+        ],
+      ),
+      // View PDF internally
+      body: SfPdfViewer.network(
+        contractUrl,
+        canShowScrollHead: false,
+        canShowScrollStatus: false,
+        onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load PDF: ${details.error}')),
+          );
+        },
+      ),
     );
   }
 }
