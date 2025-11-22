@@ -301,8 +301,9 @@ class _EditListingPageState extends State<EditListingPage> {
 
       try {
         String? userId = await _databaseService.currentUserId;
-        if (userId == null)
+        if (userId == null) {
           throw Exception("You must be logged in to edit a listing");
+        }
 
         // 4. Handle Contract Upload Logic
         String? finalContractUrl = _existingContractUrl;
@@ -392,7 +393,7 @@ class _EditListingPageState extends State<EditListingPage> {
     bool isBold = false;
 
     if (_newContractFile != null) {
-      displayText = "New: ${_newContractFileName}";
+      displayText = "New: $_newContractFileName";
       icon = Icons.picture_as_pdf;
       iconColor = Colors.blue;
       showDelete = true;

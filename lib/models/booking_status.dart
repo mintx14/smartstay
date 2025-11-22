@@ -1,4 +1,4 @@
-// models/booking_status.dart - Compatible version
+// models/booking_status.dart - Updated Fix
 import 'package:intl/intl.dart';
 
 class BookingStatus {
@@ -64,7 +64,7 @@ class BookingStatus {
 
   factory BookingStatus.fromJson(Map<String, dynamic> json) {
     print('=== Parsing BookingStatus ===');
-    print('Raw JSON: $json');
+    // print('Raw JSON: $json'); // Uncomment to debug
 
     // Handle both nested and flat structures for backward compatibility
     final property = json['property'] ?? {};
@@ -97,14 +97,13 @@ class BookingStatus {
       return null;
     }
 
-    // Parse property title - try multiple sources
+    // Parse property title
     String propertyTitle = 'Unknown Property';
     if (property['title'] != null) {
       propertyTitle = property['title'];
     } else if (json['property_title'] != null) {
       propertyTitle = json['property_title'];
     }
-    print('Property title: $propertyTitle');
 
     // Parse property address
     String propertyAddress = '';
@@ -155,14 +154,18 @@ class BookingStatus {
       ownerEmail: owner['email'] ?? json['owner_email'],
       ownerPhone: owner['phone'] ?? json['owner_phone'],
 
-      // Payment related fields - handle both old and new structure
+      // --- UPDATED PAYMENT PARSING ---
       paymentStatus: json['payment_status'],
       paidAt: json['paid_at'] ?? json['payment_paid_at'],
       paymentTransactionRef:
           json['payment_transaction_ref'] ?? json['transaction_ref'],
       paymentAmount: parseNullableDouble(json['payment_amount']),
+
+      // FIX: Only set true if payment is CONFIRMED 'paid' or explicit flag is true.
+      // Previous code set it to true if payment_status was just NOT null (which included 'pending')
       hasPaymentTransaction: json['has_payment_transaction'] == true ||
-          json['payment_status'] != null,
+          json['payment_status'] == 'paid',
+      // --------------------------------
 
       tenantEmail: json['tenant_email'],
       tenantPhone: json['tenant_phone'],
@@ -170,19 +173,26 @@ class BookingStatus {
     );
 
     print(
-        'Parsed booking: ID=${result.id}, Title=${result.propertyTitle}, Status=${result.status}, PaymentStatus=${result.paymentStatus}');
+        'Parsed booking: ID=${result.id}, Status=${result.status}, PaymentStatus=${result.paymentStatus}');
     return result;
   }
 
-  // Helper getters
-  bool get isPaymentCompleted => paymentStatus?.toLowerCase() == 'paid';
+  // --- UPDATED HELPERS ---
+  bool get isPaymentCompleted {
+    // Check multiple conditions to be safe
+    return paymentStatus?.toLowerCase() == 'paid' ||
+        status.toLowerCase() == 'paid' || // In case main status is updated
+        hasPaymentTransaction;
+  }
+
   bool get isConfirmedAndNotPaid =>
       status.toLowerCase() == 'confirmed' && !isPaymentCompleted;
+
   bool get isPending => status.toLowerCase() == 'pending';
   bool get isCancelled => status.toLowerCase() == 'cancelled';
 
   String get displayStatus {
-    if (isPaymentCompleted) return 'Paid';
+    if (isPaymentCompleted) return 'PAID';
     return status.toUpperCase();
   }
 

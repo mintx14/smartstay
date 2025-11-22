@@ -351,7 +351,7 @@ class DatabaseService {
       }
     } catch (e) {
       print('Error updating listing: $e');
-      throw e; // Re-throw so the UI knows it failed
+      rethrow; // Re-throw so the UI knows it failed
     }
   }
 
@@ -429,8 +429,8 @@ class DatabaseService {
 
       var request = http.MultipartRequest(
           'POST',
-          Uri.parse(ApiConfig.baseUrl +
-              '/upload_contract.php') // Make sure to add this endpoint in your config
+          Uri.parse(
+              '${ApiConfig.baseUrl}/upload_contract.php') // Make sure to add this endpoint in your config
           );
 
       request.fields['user_id'] = userId;

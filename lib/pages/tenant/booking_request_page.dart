@@ -146,29 +146,6 @@ class _BookingRequestPageState extends State<BookingRequestPage>
     }
   }
 
-  Future<void> _launchContract() async {
-    final urlString = widget.listing.contractUrl;
-    if (urlString != null && urlString.isNotEmpty) {
-      final Uri url = Uri.parse(urlString);
-      try {
-        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open contract file')),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening contract: $e')),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No contract document available for this property')),
-      );
-    }
-  }
-
   Future<void> _submitBookingRequest() async {
     if (!_formKey.currentState!.validate()) return;
 

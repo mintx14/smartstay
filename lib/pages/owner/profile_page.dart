@@ -5,7 +5,6 @@ import 'package:my_app/widgets/profile_menu_item.dart';
 import 'package:my_app/pages/owner/personal_info_page.dart';
 import 'package:my_app/pages/owner/payment_methods_page.dart';
 import 'package:my_app/pages/owner/rental_history_page.dart';
-import 'package:my_app/pages/owner/help_support_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final User user;
@@ -241,15 +240,6 @@ class ProfilePage extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const RentalHistoryPage(),
-      ),
-    );
-  }
-
-  // Navigate to Help & Support page
-  void _navigateToHelpSupport(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const HelpSupportPage(),
       ),
     );
   }

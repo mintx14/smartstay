@@ -81,58 +81,6 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  Future<void> _showNewMessageDialog() async {
-    // Get list of owners to start conversation with
-    try {
-      // UPDATED: Use API config instead of hardcoded URL
-      final response = await http.get(
-        Uri.parse(
-            ApiConfig.getUsersUrlWithParams(widget.currentUserId, 'Owner')),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['users'] != null) {
-          List<User> users = (data['users'] as List)
-              .map((user) => User.fromJson(user))
-              .toList();
-
-          if (users.isEmpty) {
-            _showError('No property owners available to message');
-            return;
-          }
-
-          showDialog(
-            context: context,
-            builder: (context) => _NewMessageDialog(
-              users: users,
-              onUserSelected: (user) {
-                Navigator.of(context).pop();
-                _openChatWithUser(user);
-              },
-            ),
-          );
-        }
-      } else {
-        throw Exception('Failed to load users');
-      }
-    } catch (e) {
-      _showError('Error loading users: $e');
-    }
-  }
-
-  void _openChatWithUser(User user) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          currentUserId: widget.currentUserId,
-          otherUser: user,
-        ),
-      ),
-    ).then((_) => _loadConversations()); // Refresh when returning
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -405,53 +353,6 @@ class _MessagesPageState extends State<MessagesPage> {
       Colors.orange,
     ];
     return colors[index % colors.length];
-  }
-}
-
-class _NewMessageDialog extends StatelessWidget {
-  final List<User> users;
-  final Function(User) onUserSelected;
-
-  const _NewMessageDialog({
-    required this.users,
-    required this.onUserSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Start New Conversation'),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 300,
-        child: ListView.builder(
-          itemCount: users.length,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.indigo,
-                child: Text(
-                  user.fullName.isNotEmpty
-                      ? user.fullName[0].toUpperCase()
-                      : 'U',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              title: Text(user.fullName),
-              subtitle: Text('${user.userType} • ${user.email}'),
-              onTap: () => onUserSelected(user),
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-      ],
-    );
   }
 }
 

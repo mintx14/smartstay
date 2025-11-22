@@ -181,7 +181,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,

@@ -74,7 +74,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
     try {
       // Create bill (will use mock or real ToyyibPay based on server config)
       final response = await http.post(
-        Uri.parse('http://192.168.0.34/smartstay/toyyibpay/create_bill.php'),
+        Uri.parse('http://192.168.0.117/smartstay/toyyibpay/create_bill.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'booking_id': widget.booking.id,
@@ -89,6 +89,9 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
           'payment_method': _selectedPaymentMethod == 'fpx' ? '1' : '2',
         }),
       );
+
+      // --- ADD THIS DEBUG BLOCK ---
+      print("PAYMENT SERVER RAW RESPONSE: ${response.body}");
 
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
@@ -364,8 +367,8 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
                 const SizedBox(height: 24),
                 _buildBookingSummary(),
                 const SizedBox(height: 24),
-                _buildPaymentMethods(),
-                const SizedBox(height: 32),
+                // _buildPaymentMethods(),
+                // const SizedBox(height: 32),
                 _buildPayButton(),
                 const SizedBox(height: 16),
                 _buildSecurityBadges(),
@@ -481,97 +484,97 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
     );
   }
 
-  Widget _buildPaymentMethods() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Payment Method',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildPaymentOption(
-                'fpx',
-                Icons.account_balance,
-                'FPX',
-                'Online Banking',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildPaymentOption(
-                'card',
-                Icons.credit_card,
-                'Card',
-                'Debit/Credit',
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildPaymentMethods() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       const Text(
+  //         'Payment Method',
+  //         style: TextStyle(
+  //           fontSize: 16,
+  //           fontWeight: FontWeight.bold,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 12),
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: _buildPaymentOption(
+  //               'fpx',
+  //               Icons.account_balance,
+  //               'FPX',
+  //               'Online Banking',
+  //             ),
+  //           ),
+  //           const SizedBox(width: 12),
+  //           Expanded(
+  //             child: _buildPaymentOption(
+  //               'card',
+  //               Icons.credit_card,
+  //               'Card',
+  //               'Debit/Credit',
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
-  Widget _buildPaymentOption(
-    String value,
-    IconData icon,
-    String title,
-    String subtitle,
-  ) {
-    final isSelected = _selectedPaymentMethod == value;
+  // Widget _buildPaymentOption(
+  //   String value,
+  //   IconData icon,
+  //   String title,
+  //   String subtitle,
+  // ) {
+  //   final isSelected = _selectedPaymentMethod == value;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedPaymentMethod = value;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF667EEA).withOpacity(0.1)
-              : Colors.white,
-          border: Border.all(
-            color: isSelected ? const Color(0xFF667EEA) : Colors.grey.shade300,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
-              size: 28,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? const Color(0xFF667EEA) : Colors.black87,
-              ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  //   return GestureDetector(
+  //     onTap: () {
+  //       setState(() {
+  //         _selectedPaymentMethod = value;
+  //       });
+  //     },
+  //     child: AnimatedContainer(
+  //       duration: const Duration(milliseconds: 200),
+  //       padding: const EdgeInsets.all(16),
+  //       decoration: BoxDecoration(
+  //         color: isSelected
+  //             ? const Color(0xFF667EEA).withOpacity(0.1)
+  //             : Colors.white,
+  //         border: Border.all(
+  //           color: isSelected ? const Color(0xFF667EEA) : Colors.grey.shade300,
+  //           width: 2,
+  //         ),
+  //         borderRadius: BorderRadius.circular(12),
+  //       ),
+  //       child: Column(
+  //         children: [
+  //           Icon(
+  //             icon,
+  //             color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
+  //             size: 28,
+  //           ),
+  //           const SizedBox(height: 8),
+  //           Text(
+  //             title,
+  //             style: TextStyle(
+  //               fontWeight: FontWeight.bold,
+  //               color: isSelected ? const Color(0xFF667EEA) : Colors.black87,
+  //             ),
+  //           ),
+  //           Text(
+  //             subtitle,
+  //             style: TextStyle(
+  //               fontSize: 11,
+  //               color: Colors.grey[600],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildPayButton() {
     return SizedBox(

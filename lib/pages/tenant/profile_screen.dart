@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/widgets/profile_menu_item.dart';
 import 'package:my_app/pages/owner/personal_info_page.dart';
-import 'package:my_app/pages/tenant/payment_methods_page.dart';
 import 'package:my_app/pages/owner/rental_history_page.dart';
-import 'package:my_app/pages/owner/help_support_page.dart';
-
-import 'package:my_app/login.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User user;
@@ -228,15 +224,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Payment Methods page
-  void _navigateToPaymentMethods(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PaymentMethodsPage(user: user),
-      ),
-    );
-  }
-
   // Navigate to Rental History page
   void _navigateToRentalHistory(BuildContext context) {
     Navigator.of(context).push(
@@ -244,97 +231,5 @@ class ProfileScreen extends StatelessWidget {
         builder: (context) => const RentalHistoryPage(),
       ),
     );
-  }
-
-  // Navigate to Help & Support page
-  void _navigateToHelpSupport(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const HelpSupportPage(),
-      ),
-    );
-  }
-
-  // Show logout dialog and handle logout action
-  Future<void> _showLogoutDialog(BuildContext context) async {
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onPressed: () {
-                // Handle logout process
-                _handleLogout(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  //
-  // --- THIS IS THE CORRECTED FUNCTION ---
-  //
-  // Handle the logout process
-  void _handleLogout(BuildContext context) {
-    // --- 1. GET REFERENCES BEFORE THE ASYNC GAP ---
-    // Get the Navigator and ScaffoldMessenger *before* any async calls.
-    // Using rootNavigator: true helps ensure you're popping the dialogs
-    // and not a nested navigator.
-    final NavigatorState navigator = Navigator.of(context, rootNavigator: true);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-
-    // Close the alert dialog
-    navigator.pop();
-
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF190152)),
-          ),
-        );
-      },
-    );
-
-    // Simulate logout process with a delay
-    Future.delayed(const Duration(seconds: 2), () {
-      // --- 2. USE THE STORED REFERENCES ---
-      // Use 'navigator' and 'messenger' variables, NOT 'Navigator.of(context)'
-
-      // Close loading dialog
-      navigator.pop();
-
-      // Navigate to login screen
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const LoginPage(),
-        ),
-        (route) => false, // This clears the navigation stack
-      );
-
-      // Optional: Show success message
-      // This will NOW work correctly!
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Successfully logged out'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    });
   }
 }
