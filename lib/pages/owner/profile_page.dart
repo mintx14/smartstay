@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/widgets/profile_menu_item.dart';
@@ -273,47 +274,41 @@ class ProfilePage extends StatelessWidget {
   }
 
   // Handle the logout process
-  void _handleLogout(BuildContext context) {
+  Future<void> _handleLogout(BuildContext context) async {
     // Close the dialog
     Navigator.of(context).pop();
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF190152)),
-          ),
-        );
-      },
-    );
+    try {
+      // Clear user session from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // This clears all saved data including login status
 
-    // Simulate logout process with a delay
-    Future.delayed(const Duration(seconds: 2), () {
-      // Close loading dialog
-      Navigator.of(context).pop();
+      if (!context.mounted) return;
 
-      // Navigate to login screen (replace with your actual navigation)
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const Scaffold(
-            body: Center(
-              child: Text('Login Screen'),
-            ),
-          ),
-        ),
-        (route) => false, // This clears the navigation stack
+      // Navigate to login screen and clear navigation stack (instant)
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false, // This clears the entire navigation stack
       );
 
-      // Optional: Show success message
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Successfully logged out'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
-    });
+    } catch (e) {
+      if (!context.mounted) return;
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

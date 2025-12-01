@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
 import 'register.dart';
@@ -8,6 +9,23 @@ import 'package:my_app/models/user_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Keep system status bar visible and ensure proper layout
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.edgeToEdge,
+    overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+  );
+  
+  // Set status bar style (dark icons on light background)
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
   final prefs = await SharedPreferences.getInstance();
 
   // Check login status

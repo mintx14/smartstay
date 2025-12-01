@@ -35,6 +35,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    
+    print('🚀 OwnerPage initState called');
+    
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -46,8 +49,18 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     // Initialize screens first
     _initializeScreens();
 
+    // Load dashboard data immediately
+    print('🔄 Triggering dashboard data load...');
     _loadDashboardData().then((_) {
+      print('✅ Dashboard data load completed');
       // Rebuild screens after data loads
+      if (mounted) {
+        setState(() {
+          print('🔄 Rebuilding after dashboard load');
+        });
+      }
+    }).catchError((error) {
+      print('❌ Dashboard data load failed: $error');
       if (mounted) {
         setState(() {});
       }
@@ -114,7 +127,12 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       });
 
       print('✅ All dashboard data loaded successfully');
-      print('📊 Stats: ${_dashboardStats != null}');
+      print('📊 Stats object: $_dashboardStats');
+      print('📊 Stats is null: ${_dashboardStats == null}');
+      if (_dashboardStats != null) {
+        print('   Total Properties: ${_dashboardStats!.totalProperties}');
+        print('   Occupied: ${_dashboardStats!.propertyOccupancyDisplay}');
+      }
       print('📝 Activities: ${_recentActivities.length}');
       print('🔔 Notifications: ${_notifications.length}');
     } catch (e, stackTrace) {
@@ -194,41 +212,41 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
           ],
         ),
       ),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF190152),
-        elevation: 0,
-        title: Text(
-          _getAppBarTitle(),
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.notifications_outlined, color: Colors.white),
-                if (_notifications.where((n) => !n.isRead).isNotEmpty)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            onPressed: _showNotifications,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _logout,
-          ),
-        ],
-      ),
+      // appBar: AppBar(
+      //   backgroundColor: const Color(0xFF190152),
+      //   elevation: 0,
+      //   title: Text(
+      //     //_getAppBarTitle(),
+      //     style: const TextStyle(color: Colors.white),
+      //   ),
+      //   actions: [
+      //     IconButton(
+      //       icon: Stack(
+      //         children: [
+      //           const Icon(Icons.notifications_outlined, color: Colors.white),
+      //           if (_notifications.where((n) => !n.isRead).isNotEmpty)
+      //             Positioned(
+      //               right: 0,
+      //               top: 0,
+      //               child: Container(
+      //                 width: 8,
+      //                 height: 8,
+      //                 decoration: const BoxDecoration(
+      //                   color: Colors.red,
+      //                   shape: BoxShape.circle,
+      //                 ),
+      //               ),
+      //             ),
+      //         ],
+      //       ),
+      //       onPressed: _showNotifications,
+      //     ),
+      //     IconButton(
+      //       icon: const Icon(Icons.logout, color: Colors.white),
+      //       onPressed: _logout,
+      //     ),
+      //   ],
+      // ),
     );
   }
 
@@ -274,112 +292,115 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   }
   // --- END MODIFICATION ---
 
-  String _getAppBarTitle() {
-    switch (_currentIndex) {
-      case 0:
-        return 'Dashboard';
-      case 1:
-        return 'My Properties';
-      case 2:
-        return 'Bookings';
-      case 3:
-        return 'Messages';
-      case 4:
-        return 'Profile';
-      default:
-        return 'Owner Dashboard';
-    }
-  }
+  // String _getAppBarTitle() {
+  //   switch (_currentIndex) {
+  //     case 0:
+  //       return 'Dashboard';
+  //     case 1:
+  //       return 'My Properties';
+  //     case 2:
+  //       return 'Bookings';
+  //     case 3:
+  //       return 'Messages';
+  //     case 4:
+  //       return 'Profile';
+  //     default:
+  //       return 'Owner Dashboard';
+  //   }
+  // }
 
   Widget _buildDashboard() {
     print(
         '🏗️ Building dashboard - Loading: $_isLoading, Error: $_errorMessage, Stats: ${_dashboardStats != null}');
 
-    return Container(
-      key: ValueKey(
-          'dashboard_${_isLoading}_${_dashboardStats != null}'), // Force rebuild
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.grey[50]!, Colors.white],
+    return SafeArea(
+      child: Container(
+        key: ValueKey(
+            'dashboard_${_isLoading}_${_dashboardStats != null}'), // Force rebuild
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey[50]!, Colors.white],
+          ),
         ),
-      ),
-      child: RefreshIndicator(
-        onRefresh: _refreshDashboard,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Section
-              Container(
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF190152),
-                      const Color(0xFF190152).withOpacity(0.8),
+        child: RefreshIndicator(
+          onRefresh: _refreshDashboard,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8), // Extra spacing at top
+                // Welcome Section
+                Container(
+                  margin: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF190152),
+                        const Color(0xFF190152).withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF190152).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF190152).withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      child: const Icon(
-                        Icons.person,
-                        size: 35,
-                        color: Colors.white,
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        child: const Icon(
+                          Icons.person,
+                          size: 35,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome, ${widget.user.fullName.split(' ')[0]}!',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome, ${widget.user.fullName.split(' ')[0]}!',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Manage your properties easily',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Manage your properties easily',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // Show loading OR content - never both
-              _isLoading
-                  ? _buildLoadingState()
-                  : _errorMessage != null
-                      ? _buildErrorState()
-                      : _buildDashboardContent(),
+                // Show loading OR content - never both
+                _isLoading
+                    ? _buildLoadingState()
+                    : _errorMessage != null
+                        ? _buildErrorState()
+                        : _buildDashboardContent(),
 
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
