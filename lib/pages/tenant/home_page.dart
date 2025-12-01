@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:my_app/config/api_config.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
@@ -1677,6 +1678,8 @@ class _InlineImageSliderState extends State<InlineImageSlider>
       return _buildPlaceholder(isGridItem);
     }
 
+    final String fullUrl = ApiConfig.generateFullImageUrl(imageUrl);
+
     return ClipRRect(
       borderRadius: isGridItem
           ? BorderRadius.circular(12)
@@ -1685,7 +1688,7 @@ class _InlineImageSliderState extends State<InlineImageSlider>
               topRight: Radius.circular(25),
             ),
       child: Image.network(
-        imageUrl,
+        fullUrl, // <--- Use the fixed fullUrl here
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
@@ -1714,6 +1717,8 @@ class _InlineImageSliderState extends State<InlineImageSlider>
           );
         },
         errorBuilder: (context, error, stackTrace) {
+          // Helpful debug print if image fails
+          print("❌ Image Error for $fullUrl: $error");
           return _buildPlaceholder(isGridItem);
         },
       ),

@@ -1,18 +1,22 @@
 // Fixed ApiConfig with debugging capabilities
-import 'dart:convert';
+// import 'dart:convert';
 
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   // Change this IP address when needed
-  //static String _baseUrl = 'http://192.168.0.4'; //URL RUMAHSEWA
-  static String _baseUrl = 'http://192.168.0.117'; //URL RUMAH
+  static const String _baseUrl = 'http://192.168.0.4'; //URL RUMAHSEWA
+  //static String _baseUrl = 'http://192.168.0.117'; //URL RUMAH
   //static String _baseUrl = 'http://172.20.10.5'; //URL PHONE
   //static String _baseUrl = 'https://databasetest.infinityfree.me'; //URL ONLINE
 
   // API endpoints
   static const String _apiPath = '/smartstay';
+
+  // 2. NEW GETTER FOR RAW DOMAIN (For images)
+  // This returns just 'http://192.168.0.4' without '/smartstay'
+  static String get rawBaseUrl => _baseUrl;
 
   // Complete base URL with debug logging
   static String get baseUrl {
@@ -34,33 +38,33 @@ class ApiConfig {
   }
 
   // Method to update base URL
-  static void updateBaseUrl(String newBaseUrl) {
-    _baseUrl = newBaseUrl;
-    print("🔄 Base URL updated to: $_baseUrl");
-    // Reset any HTTP clients here
-    PropertyService.resetHttpClient();
-    debugCurrentConfig();
-  }
+  // static void updateBaseUrl(String newBaseUrl) {
+  //   _baseUrl = newBaseUrl;
+  //   print("🔄 Base URL updated to: $_baseUrl");
+  //   // Reset any HTTP clients here
+  //   PropertyService.resetHttpClient();
+  //   debugCurrentConfig();
+  // }
 
-  // Force refresh method
-  static Future<void> forceRefresh() async {
-    print("🔄 Forcing complete refresh...");
-    debugCurrentConfig();
+  // // Force refresh method
+  // static Future<void> forceRefresh() async {
+  //   print("🔄 Forcing complete refresh...");
+  //   debugCurrentConfig();
 
-    // Reset HTTP clients
-    PropertyService.resetHttpClient();
+  //   // Reset HTTP clients
+  //   PropertyService.resetHttpClient();
 
-    // Clear any cached data if needed
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('cached_base_url');
-      await prefs.remove('api_config');
-    } catch (e) {
-      print("No SharedPreferences to clear: $e");
-    }
+  //   // Clear any cached data if needed
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     await prefs.remove('cached_base_url');
+  //     await prefs.remove('api_config');
+  //   } catch (e) {
+  //     print("No SharedPreferences to clear: $e");
+  //   }
 
-    print("✅ Refresh complete");
-  }
+  //   print("✅ Refresh complete");
+  // }
 
   // Authentication endpoints
   static String get loginUrl => '$baseUrl/login.php';
@@ -134,6 +138,22 @@ class ApiConfig {
   static String get supportTicketsUrl => '$baseUrl/support_tickets.php';
   static String get ticketMessagesUrl => '$baseUrl/ticket_messages.php';
 
+  // 3. NEW HELPER FUNCTION TO GENERATE FULL MEDIA URL
+  static String generateFullImageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+
+    // If it's already a full URL (e.g. from external source), return it
+    if (path.startsWith('http')) return path;
+
+    // Remove leading slash to prevent double slashes if needed,
+    // but usually _baseUrl does NOT end with / and path starts with /
+    // stored path: /smartstay/uploads/3/image.jpg
+    // _baseUrl:    http://192.168.0.4
+
+    // Result: http://192.168.0.4/smartstay/uploads/3/image.jpg
+    return '$rawBaseUrl$path';
+  }
+
   // Methods with parameters
   static String getListingOwnerUrlWithId(int listingId) {
     return '$getListingOwnerUrl?listing_id=$listingId';
@@ -205,92 +225,92 @@ class ApiConfig {
       '$baseUrl/simulate_payment_webhook.php';
 
   // Method to easily switch between different environments
-  static void setEnvironment(Environment env) {
-    switch (env) {
-      case Environment.development:
-        _baseUrl = 'http://192.168.0.34';
-        break;
-      case Environment.local:
-        _baseUrl = 'http://10.0.2.2'; // For Android emulator
-        break;
-      case Environment.production:
-        _baseUrl = 'https://your-production-url.com';
-        break;
-    }
-    PropertyService.resetHttpClient();
-    debugCurrentConfig();
-  }
+  // static void setEnvironment(Environment env) {
+  //   switch (env) {
+  //     case Environment.development:
+  //       _baseUrl = 'http://192.168.0.34';
+  //       break;
+  //     case Environment.local:
+  //       _baseUrl = 'http://10.0.2.2'; // For Android emulator
+  //       break;
+  //     case Environment.production:
+  //       _baseUrl = 'https://your-production-url.com';
+  //       break;
+  //   }
+  //   PropertyService.resetHttpClient();
+  //   debugCurrentConfig();
+  // }
 }
 
 enum Environment { development, local, production }
 
 // Fixed PropertyService with proper HTTP client management
-class PropertyService {
-  static http.Client? _httpClient;
+// class PropertyService {
+//   static http.Client? _httpClient;
 
-  // Get HTTP client with fresh configuration
-  static http.Client get httpClient {
-    _httpClient ??= http.Client();
-    return _httpClient!;
-  }
+//   // Get HTTP client with fresh configuration
+//   static http.Client get httpClient {
+//     _httpClient ??= http.Client();
+//     return _httpClient!;
+//   }
 
-  // Reset HTTP client to pick up new base URL
-  static void resetHttpClient() {
-    _httpClient?.close();
-    _httpClient = null;
-    print("🔄 HTTP Client reset");
-  }
+//   // Reset HTTP client to pick up new base URL
+//   static void resetHttpClient() {
+//     _httpClient?.close();
+//     _httpClient = null;
+//     print("🔄 HTTP Client reset");
+//   }
 
-  Future<Map<String, dynamic>> getAllListings({
-    int page = 1,
-    String? searchQuery,
-  }) async {
-    try {
-      // Always use fresh base URL
-      String url = ApiConfig.getAllListingsUrl;
+//   Future<Map<String, dynamic>> getAllListings({
+//     int page = 1,
+//     String? searchQuery,
+//   }) async {
+//     try {
+//       // Always use fresh base URL
+//       String url = ApiConfig.getAllListingsUrl;
 
-      final uri = Uri.parse(url).replace(queryParameters: {
-        'page': page.toString(),
-        if (searchQuery != null && searchQuery.isNotEmpty)
-          'search': searchQuery,
-      });
+//       final uri = Uri.parse(url).replace(queryParameters: {
+//         'page': page.toString(),
+//         if (searchQuery != null && searchQuery.isNotEmpty)
+//           'search': searchQuery,
+//       });
 
-      print("🌐 Making request to: $uri");
+//       print("🌐 Making request to: $uri");
 
-      final response = await httpClient.get(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 30));
+//       final response = await httpClient.get(
+//         uri,
+//         headers: {'Content-Type': 'application/json'},
+//       ).timeout(const Duration(seconds: 30));
 
-      print("📡 Response status: ${response.statusCode}");
+//       print("📡 Response status: ${response.statusCode}");
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data;
-      } else {
-        throw Exception('Failed to load listings: ${response.statusCode}');
-      }
-    } catch (e) {
-      print("❌ Error in getAllListings: $e");
-      throw Exception('Network error: $e');
-    }
-  }
+//       if (response.statusCode == 200) {
+//         final data = json.decode(response.body);
+//         return data;
+//       } else {
+//         throw Exception('Failed to load listings: ${response.statusCode}');
+//       }
+//     } catch (e) {
+//       print("❌ Error in getAllListings: $e");
+//       throw Exception('Network error: $e');
+//     }
+//   }
 
-  // Test connection method
-  Future<bool> testConnection() async {
-    try {
-      final response = await httpClient.get(
-        Uri.parse(ApiConfig.testConnectionUrl),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+//   // Test connection method
+//   Future<bool> testConnection() async {
+//     try {
+//       final response = await httpClient.get(
+//         Uri.parse(ApiConfig.testConnectionUrl),
+//         headers: {'Content-Type': 'application/json'},
+//       ).timeout(const Duration(seconds: 10));
 
-      print("🔗 Connection test - Status: ${response.statusCode}");
-      print("🔗 Response: ${response.body}");
+//       print("🔗 Connection test - Status: ${response.statusCode}");
+//       print("🔗 Response: ${response.body}");
 
-      return response.statusCode == 200;
-    } catch (e) {
-      print("❌ Connection test failed: $e");
-      return false;
-    }
-  }
-}
+//       return response.statusCode == 200;
+//     } catch (e) {
+//       print("❌ Connection test failed: $e");
+//       return false;
+//     }
+//   }
+// }

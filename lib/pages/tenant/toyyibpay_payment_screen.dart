@@ -74,7 +74,8 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
     try {
       // Create bill (will use mock or real ToyyibPay based on server config)
       final response = await http.post(
-        Uri.parse('http://192.168.0.117/smartstay/toyyibpay/create_bill.php'),
+        //Uri.parse('http://192.168.0.117/smartstay/toyyibpay/create_bill.php'),
+        Uri.parse('${ApiConfig.baseUrl}/toyyibpay/create_bill.php'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'booking_id': widget.booking.id,

@@ -41,6 +41,24 @@ class DatabaseService {
     }
   }
 
+  Map<String, dynamic> _fixListingUrls(Map<String, dynamic> listingData) {
+    // 1. Fix Image URLs
+    if (listingData['image_urls'] != null) {
+      List<dynamic> rawImages = listingData['image_urls'];
+      listingData['image_urls'] = rawImages
+          .map((url) => ApiConfig.generateFullImageUrl(url.toString()))
+          .toList();
+    }
+
+    // 2. Fix Contract URL
+    if (listingData['contract_url'] != null) {
+      listingData['contract_url'] = ApiConfig.generateFullImageUrl(
+          listingData['contract_url'].toString());
+    }
+
+    return listingData;
+  }
+
   Future<List<String>> uploadImages(
       List<String> filePaths, String userId) async {
     List<String> imageUrls = [];
@@ -69,8 +87,22 @@ class DatabaseService {
 
         final parsedResponse = _tryParseJson(responseBody);
         if (parsedResponse['success'] == true) {
-          final imageUrl = parsedResponse['image_url'];
-          if (imageUrl != null && imageUrl.isNotEmpty) imageUrls.add(imageUrl);
+          final fullUrl = parsedResponse['image_url'];
+
+          // --- MODIFIED SECTION START ---
+          // We convert the full URL (http://10.0.2.2/smartstay/...)
+          // to just the path (/smartstay/...)
+          if (fullUrl != null && fullUrl.isNotEmpty) {
+            try {
+              final uri = Uri.parse(fullUrl);
+              // uri.path returns "/smartstay/uploads/3/filename.jpg"
+              imageUrls.add(uri.path);
+            } catch (e) {
+              // Fallback: use the original if parsing fails
+              imageUrls.add(fullUrl);
+            }
+          }
+          // --- MODIFIED SECTION END ---
         } else {
           throw Exception(
               'Upload failed: ${parsedResponse['error'] ?? 'Unknown error'}');
@@ -120,8 +152,19 @@ class DatabaseService {
 
         final parsedResponse = _tryParseJson(responseBody);
         if (parsedResponse['success'] == true) {
-          final videoUrl = parsedResponse['image_url'];
-          if (videoUrl != null && videoUrl.isNotEmpty) videoUrls.add(videoUrl);
+          final fullUrl = parsedResponse[
+              'image_url']; // Note: PHP might return key 'image_url' even for videos
+
+          // --- MODIFIED SECTION START ---
+          if (fullUrl != null && fullUrl.isNotEmpty) {
+            try {
+              final uri = Uri.parse(fullUrl);
+              videoUrls.add(uri.path);
+            } catch (e) {
+              videoUrls.add(fullUrl);
+            }
+          }
+          // --- MODIFIED SECTION END ---
         } else {
           throw Exception(
               'Upload failed: ${parsedResponse['error'] ?? 'Unknown error'}');
@@ -130,7 +173,6 @@ class DatabaseService {
         throw Exception('Failed to upload video ${basename(filePath)}: $e');
       }
     }
-
     return videoUrls;
   }
 
@@ -147,7 +189,7 @@ class DatabaseService {
         'description': listing.description,
         'price': listing.price,
         'deposit': listing.deposit,
-        'deposit_months': listing.depositMonths, // ADDED THIS FIELD
+        'deposit_months': listing.depositMonths,
         'bedrooms': listing.bedrooms,
         'bathrooms': listing.bathrooms,
         'area_sqft': listing.areaSqft,
@@ -191,7 +233,6 @@ class DatabaseService {
     int? userId,
   }) async {
     try {
-      // UPDATED: Use API config instead of hardcoded URL
       String url = ApiConfig.getListingsUrl;
       List<String> queryParams = [];
 
@@ -225,12 +266,16 @@ class DatabaseService {
         try {
           final data = json.decode(response.body);
 
-          if (data is Map<String, dynamic>) {
-            return data;
-          } else {
-            throw Exception(
-                'Invalid response format: expected Map but got ${data.runtimeType}');
-          }
+          // INTERCEPT AND FIX URLs HERE
+          if (data['listings'] != null) {
+            List<dynamic> listings = data['listings'];
+            data['listings'] =
+                listings.map((item) => _fixListingUrls(item)).toList();
+          } //else {
+          //   throw Exception(
+          //       'Invalid response format: expected Map but got ${data.runtimeType}');
+          // }
+          return data;
         } catch (e) {
           print('❌ JSON parsing error: $e');
           throw Exception('Failed to parse server response: $e');
@@ -271,7 +316,6 @@ class DatabaseService {
 
   Future<Map<String, int>> getListingsCount(int userId) async {
     try {
-      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
         Uri.parse(ApiConfig.getListingsCountUrlWithUserId(userId)),
       );
@@ -292,9 +336,6 @@ class DatabaseService {
     }
   }
 
-  // --------------- MODIFIED METHOD BELOW ---------------
-
-  // Changed return type from Future<bool> to Future<Listing>
   Future<Listing> updateListing(
       Listing listing, List<String> deletedMediaUrls) async {
     try {
@@ -311,7 +352,7 @@ class DatabaseService {
         'postcode': listing.postcode,
         'price': listing.price,
         'deposit': listing.deposit,
-        'deposit_months': listing.depositMonths, // ADDED THIS FIELD
+        'deposit_months': listing.depositMonths,
         'bedrooms': listing.bedrooms,
         'bathrooms': listing.bathrooms,
         'area_sqft': listing.areaSqft,
@@ -320,11 +361,9 @@ class DatabaseService {
         'minimum_tenure': listing.minimumTenure,
         'contract_url': listing.contractUrl,
         'deleted_media': deletedMediaUrls,
-        'new_media':
-            [], // New media urls are usually handled inside edit_listing_page before calling this
+        'new_media': [],
       };
 
-      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
         Uri.parse(ApiConfig.updateListingUrl),
         headers: {'Content-Type': 'application/json'},
@@ -336,11 +375,9 @@ class DatabaseService {
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
         if (result['success'] == true) {
-          // Assuming your PHP returns the updated listing object in a 'listing' key
           if (result['listing'] != null) {
             return Listing.fromJson(result['listing']);
           } else {
-            // Fallback: return the original listing object if server didn't return new one (less ideal)
             return listing;
           }
         } else {
@@ -351,7 +388,7 @@ class DatabaseService {
       }
     } catch (e) {
       print('Error updating listing: $e');
-      rethrow; // Re-throw so the UI knows it failed
+      rethrow;
     }
   }
 
@@ -359,14 +396,18 @@ class DatabaseService {
     try {
       final userId = await currentUserId;
 
-      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
         Uri.parse(ApiConfig.getSingleListingUrlWithParams(listingId, userId!)),
       );
 
       if (response.statusCode == 200) {
-        final result = json.decode(response.body);
+        var result = json.decode(
+            response.body); // var instead of final to allow modification
+
         if (result['success'] == true && result['listing'] != null) {
+          // INTERCEPT AND FIX URLs HERE
+          result['listing'] = _fixListingUrls(result['listing']);
+
           return Listing.fromJson(result['listing']);
         }
       }
@@ -379,7 +420,6 @@ class DatabaseService {
 
   Future<bool> updateListingStatus(int listingId, String status) async {
     try {
-      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
         Uri.parse(ApiConfig.updateListingStatusUrl),
         headers: {'Content-Type': 'application/json'},
@@ -402,7 +442,6 @@ class DatabaseService {
 
   Future<bool> deleteListing(int listingId) async {
     try {
-      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
         Uri.parse(ApiConfig.deleteListingUrl),
         headers: {'Content-Type': 'application/json'},
@@ -422,25 +461,19 @@ class DatabaseService {
     }
   }
 
-  // Inside Class DatabaseService
   Future<String?> uploadContract(File file, String userId) async {
     try {
       if (!await file.exists()) throw Exception('File not found');
 
       var request = http.MultipartRequest(
-          'POST',
-          Uri.parse(
-              '${ApiConfig.baseUrl}/upload_contract.php') // Make sure to add this endpoint in your config
-          );
+          'POST', Uri.parse('${ApiConfig.baseUrl}/upload_contract.php'));
 
       request.fields['user_id'] = userId;
 
-      // Attach the file
       request.files.add(await http.MultipartFile.fromPath(
-        'contract', // This must match the $_FILES['contract'] key in PHP
+        'contract',
         file.path,
-        contentType: MediaType(
-            'application', 'pdf'), // explicitly tell server it's a pdf
+        contentType: MediaType('application', 'pdf'),
       ));
 
       var streamedResponse = await request.send();
@@ -449,6 +482,9 @@ class DatabaseService {
       final parsedResponse = _tryParseJson(responseBody);
 
       if (parsedResponse['success'] == true) {
+        // You might want to do the same parsing for contracts if needed:
+        // final uri = Uri.parse(parsedResponse['contract_url']);
+        // return uri.path;
         return parsedResponse['contract_url'];
       } else {
         throw Exception(parsedResponse['error']);

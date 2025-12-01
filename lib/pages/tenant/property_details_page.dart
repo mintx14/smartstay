@@ -878,8 +878,13 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
     super.initState();
     _pageController = PageController();
 
-    _mediaItems =
-        widget.imageUrls.map((url) => SliderMediaItem.fromUrl(url)).toList();
+    // --- FIX START: Convert raw paths to full URLs ---
+    _mediaItems = widget.imageUrls.map((url) {
+      // This helper ensures we get 'http://IP/path' instead of just '/path'
+      final fullUrl = ApiConfig.generateFullImageUrl(url);
+      return SliderMediaItem.fromUrl(fullUrl);
+    }).toList();
+    // --- FIX END ---
 
     _totalSlides = _mediaItems.isNotEmpty ? _mediaItems.length + 1 : 0;
     _indicatorController = AnimationController(
@@ -1521,8 +1526,13 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
 
-    _mediaItems =
-        widget.imageUrls.map((url) => SliderMediaItem.fromUrl(url)).toList();
+    // --- FIX START: Convert raw paths to full URLs ---
+    _mediaItems = widget.imageUrls.map((url) {
+      // Apply the same fix here so full screen images load correctly too
+      final fullUrl = ApiConfig.generateFullImageUrl(url);
+      return SliderMediaItem.fromUrl(fullUrl);
+    }).toList();
+    // --- FIX END ---
 
     _initializeVideoForIndex(widget.initialIndex);
   }
