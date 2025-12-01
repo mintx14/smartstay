@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// We no longer need 'dart:convert' for this page
 import 'register.dart';
 import 'package:my_app/services/api_service.dart'; // Import the API service
 import 'package:my_app/models/user_model.dart'; // Import the User model
@@ -24,24 +25,65 @@ class _LoginPageState extends State<LoginPage> {
   final ApiService _apiService = ApiService(); // Create instance of API service
 
   @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  // UPDATED: Reads individual keys and uses your User model's constructor
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    if (isLoggedIn) {
+      // Read all the individual keys we know are correct
+      final String userId = prefs.getString('user_id') ?? '';
+      final String fullName = prefs.getString('fullName') ?? '';
+      final String email = prefs.getString('email') ?? '';
+      final String userType = prefs.getString('userType') ?? '';
+      final String phoneNumber = prefs.getString('phoneNumber') ?? '';
+      final bool hasPassword = prefs.getBool('hasPassword') ?? true;
+
+      // Re-create the User object using the constructor from your user_model.dart
+      final user = User(
+        id: userId,
+        fullName: fullName,
+        email: email,
+        userType: userType,
+        phoneNumber: phoneNumber,
+        hasPassword: hasPassword,
+      );
+
+      // Important: Check if the widget is still "mounted" before navigating
+      if (!mounted) return;
+
+      // Use your existing navigation logic to send them to the right page
+      _navigateBasedOnUserType(user);
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  // Save user session data
+  // UPDATED: Saves all individual fields from the User object
   Future<void> _saveUserSession(User user) async {
     final prefs = await SharedPreferences.getInstance();
-    // await prefs.setString('userId', user.id);
+
+    // We only need to save the individual, correct pieces of data
+    await prefs.setBool('isLoggedIn', true);
     await prefs.setString('user_id', user.id);
     await prefs.setString('fullName', user.fullName);
     await prefs.setString('email', user.email);
     await prefs.setString('userType', user.userType);
-    await prefs.setBool('isLoggedIn', true);
+    await prefs.setString('phoneNumber', user.phoneNumber);
+    await prefs.setBool('hasPassword', user.hasPassword);
   }
 
-  // Navigate based on user type
+  // Navigate based on user type (No changes needed here)
   void _navigateBasedOnUserType(User user) {
     // Check user type and navigate accordingly
     if (user.userType.toLowerCase() == 'tenant') {
@@ -83,6 +125,7 @@ class _LoginPageState extends State<LoginPage> {
           final user = User.fromJson(userData);
 
           // Save user session
+          // UPDATED: Call the simplified save function
           await _saveUserSession(user);
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -109,6 +152,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // --- No changes to the build method ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,21 +245,6 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       const SizedBox(height: 12),
-
-                      // Forgot Password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            // Handle forgot password
-                          },
-                          child: Text(
-                            'Forgot Password?',
-                            style: TextStyle(color: Colors.grey[800]),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
 
                       // Login Button
                       SizedBox(

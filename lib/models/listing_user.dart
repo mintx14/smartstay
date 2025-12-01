@@ -6,6 +6,7 @@ class Listing {
   final String postcode;
   final String? description;
   final double price;
+  final double deposit;
   final int bedrooms;
   final int bathrooms;
   final int areaSqft;
@@ -32,6 +33,7 @@ class Listing {
     required this.postcode,
     this.description,
     required this.price,
+    required this.deposit,
     required this.bedrooms,
     required this.bathrooms,
     required this.areaSqft,
@@ -61,6 +63,7 @@ class Listing {
         postcode: _safeString(data['postcode']),
         description: data['description']?.toString(),
         price: _safeDouble(data['price']),
+        deposit: _safeDouble(data['deposit']),
         bedrooms: _safeInt(data['bedrooms'], 1),
         bathrooms: _safeInt(data['bathrooms'], 1),
         areaSqft: _safeInt(data['area_sqft']),
@@ -151,6 +154,7 @@ class Listing {
       'postcode': postcode,
       'description': description,
       'price': price,
+      'deposit': deposit,
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area_sqft': areaSqft,

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'package:my_app/pages/owner/edit_listing_page.dart';
 import 'package:my_app/services/database_service.dart';
+import 'package:url_launcher/url_launcher.dart'; // Add this
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;
@@ -13,6 +15,56 @@ class PropertyDetailsPage extends StatefulWidget {
 
   @override
   State<PropertyDetailsPage> createState() => _PropertyDetailsPageState();
+}
+
+class ContractViewerPage extends StatelessWidget {
+  final String contractUrl;
+  final String title;
+
+  const ContractViewerPage({
+    super.key,
+    required this.contractUrl,
+    required this.title,
+  });
+
+  Future<void> _downloadFile() async {
+    final Uri url = Uri.parse(contractUrl);
+    // Opens in external browser/downloader
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch contract URL');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+        actions: [
+          // This is the Optional Download Button
+          IconButton(
+            onPressed: _downloadFile,
+            icon: const Icon(Icons.download_rounded),
+            tooltip: 'Download PDF',
+          ),
+        ],
+      ),
+      // This Widget Views the PDF directly in the app
+      body: SfPdfViewer.network(
+        contractUrl,
+        canShowScrollHead: false,
+        canShowScrollStatus: false,
+        onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load PDF: ${details.error}')),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _PropertyDetailsPageState extends State<PropertyDetailsPage>
@@ -25,6 +77,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   late Listing _currentListing;
 
   final DatabaseService _databaseService = DatabaseService();
+
+  bool _hasChanges = false;
 
   @override
   void initState() {
@@ -63,17 +117,18 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     try {
       final result = await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => EditListingPage(
-              listing: listing), // You'll need to create this page
+          builder: (context) => EditListingPage(listing: listing),
         ),
       );
 
-      if (result == true && mounted) {
-        // Refresh the current listing data
+      if (result is Listing && mounted) {
+        setState(() {
+          _currentListing = result;
+          _hasChanges = true; // <--- MARK AS CHANGED
+        });
         _showSuccessMessage('Property updated successfully');
-        // You might want to refresh the listing data here
-        // await _refreshListingData();
       }
+      // ...
     } catch (e) {
       _showErrorMessage('Failed to edit property: $e');
     }
@@ -106,9 +161,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       if (mounted) Navigator.pop(context);
 
       if (success && mounted) {
-        // Update local state
         setState(() {
           _currentListing = listing.copyWith(status: newStatus);
+          _hasChanges = true; // <--- MARK AS CHANGED
         });
 
         // Show success message
@@ -296,6 +351,26 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
         ),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+// FUNCTION TO OPEN CONTRACT
+  void _openContractViewer() {
+    final urlString = _currentListing.contractUrl;
+    if (urlString == null || urlString.isEmpty) {
+      _showErrorMessage('No contract available for this property.');
+      return;
+    }
+
+    // Navigate to the internal viewer page
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ContractViewerPage(
+          contractUrl: urlString,
+          title: 'Tenancy Contract - ${_currentListing.title}',
+        ),
       ),
     );
   }
@@ -622,6 +697,22 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const Text(
+                'Rent Deposit',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                'RM ${_currentListing.deposit.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           Container(
@@ -639,229 +730,315 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 320, // Increased to accommodate top space
-            pinned: true,
-            elevation: 0,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                children: [
-                  _buildImageSlider(),
-                  // Gradient overlay for better text visibility
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 120, // Increased to cover the top space area
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.transparent,
-                          ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Pass the _hasChanges flag back to the previous screen
+        Navigator.pop(context, _hasChanges);
+        return false; // Prevent default pop since we popped manually
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 320, // Increased to accommodate top space
+              pinned: true,
+              elevation: 0,
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  children: [
+                    _buildImageSlider(),
+                    // Gradient overlay for better text visibility
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 120, // Increased to cover the top space area
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.3),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status Badge
-                _buildStatusBadge(),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status Badge
+                  _buildStatusBadge(),
 
-                // Action Buttons (Reactive/Deactivate and Edit)
-                _buildActionButtons(),
+                  // Action Buttons (Reactive/Deactivate and Edit)
+                  _buildActionButtons(),
 
-                // Title and Location
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Container(
-                    margin: const EdgeInsets.all(20),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _currentListing.title,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                            height: 1.2,
+                  // Title and Location
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      margin: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: Colors.red[600],
-                              ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _currentListing.title,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              height: 1.2,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${_currentListing.address}, ${_currentListing.postcode}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[700],
-                                  fontWeight: FontWeight.w500,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: Colors.red[600],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '${_currentListing.address}, ${_currentListing.postcode}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                // Price Card
-                _buildPriceCard(),
+                  // Price Card
+                  _buildPriceCard(),
 
-                // Property Overview
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection('Property Overview', [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildOverviewCard(
-                            Icons.bed,
-                            '${_currentListing.bedrooms}',
-                            'Bedrooms',
-                            Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildOverviewCard(
-                            Icons.bathroom,
-                            '${_currentListing.bathrooms}',
-                            'Bathrooms',
-                            Colors.green,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildOverviewCard(
-                            Icons.square_foot,
-                            '${_currentListing.areaSqft}',
-                            'sqft',
-                            Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ]),
-                ),
-
-                // Description
-                if (_currentListing.description.isNotEmpty)
+                  // Property Overview
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildInfoSection('Description', [
-                      Text(
-                        _currentListing.description,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Colors.black87,
-                        ),
+                    child: _buildInfoSection('Property Overview', [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.bed,
+                              '${_currentListing.bedrooms}',
+                              'Bedrooms',
+                              Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.bathroom,
+                              '${_currentListing.bathrooms}',
+                              'Bathrooms',
+                              Colors.green,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.square_foot,
+                              '${_currentListing.areaSqft}',
+                              'sqft',
+                              Colors.orange,
+                            ),
+                          ),
+                        ],
                       ),
                     ]),
                   ),
 
-                // Property Details
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection('Property Details', [
-                    _buildDetailRow(
-                      'Bedrooms',
-                      '${_currentListing.bedrooms}',
-                      icon: Icons.bed,
+                  // Description
+                  if (_currentListing.description.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildInfoSection('Description', [
+                        Text(
+                          _currentListing.description,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.6,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ]),
                     ),
-                    _buildDetailRow(
-                      'Bathrooms',
-                      '${_currentListing.bathrooms}',
-                      icon: Icons.bathroom,
-                    ),
-                    _buildDetailRow(
-                      'Area',
-                      '${_currentListing.areaSqft} sqft',
-                      icon: Icons.square_foot,
-                    ),
-                    _buildDetailRow(
-                      'Available From',
-                      DateFormat(
-                        'd MMMM y',
-                      ).format(_currentListing.availableFrom),
-                      icon: Icons.calendar_today,
-                    ),
-                    _buildDetailRow(
-                      'Minimum Tenure',
-                      '${_currentListing.minimumTenure} month',
-                      icon: Icons.timelapse,
-                    ),
-                  ]),
-                ),
+                  // Property Details
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildInfoSection('Property Details', [
+                      _buildDetailRow(
+                        'Bedrooms',
+                        '${_currentListing.bedrooms}',
+                        icon: Icons.bed,
+                      ),
+                      _buildDetailRow(
+                        'Bathrooms',
+                        '${_currentListing.bathrooms}',
+                        icon: Icons.bathroom,
+                      ),
+                      _buildDetailRow(
+                        'Area',
+                        '${_currentListing.areaSqft} sqft',
+                        icon: Icons.square_foot,
+                      ),
+                      _buildDetailRow(
+                        'Available From',
+                        DateFormat(
+                          'd MMMM y',
+                        ).format(_currentListing.availableFrom),
+                        icon: Icons.calendar_today,
+                      ),
+                      _buildDetailRow(
+                        'Minimum Tenure',
+                        '${_currentListing.minimumTenure} month',
+                        icon: Icons.timelapse,
+                      ),
+                    ]),
+                  ),
 
-                // Location
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildInfoSection('Location', [
-                    _buildDetailRow(
-                      'Address',
-                      _currentListing.address,
-                      icon: Icons.location_on,
-                    ),
-                    _buildDetailRow(
-                      'Postcode',
-                      _currentListing.postcode,
-                      icon: Icons.mail,
-                    ),
-                  ]),
-                ),
+                  // Location
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildInfoSection('Location', [
+                      _buildDetailRow(
+                        'Address',
+                        _currentListing.address,
+                        icon: Icons.location_on,
+                      ),
+                      _buildDetailRow(
+                        'Postcode',
+                        _currentListing.postcode,
+                        icon: Icons.mail,
+                      ),
+                    ]),
+                  ),
+                  _buildContractSection(),
+                  const SizedBox(height: 120), // Space for floating button
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                const SizedBox(height: 120), // Space for floating button
+  Widget _buildContractSection() {
+    if (_currentListing.contractUrl == null ||
+        _currentListing.contractUrl!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: _buildInfoSection('Rental Agreement', [
+        InkWell(
+          onTap: _openContractViewer, // Calls the new function
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50], // Changed to Blue to signify "View"/Info
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue[100]!),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  // Eye icon indicates "View"
+                  child: const Icon(Icons.visibility_outlined,
+                      color: Colors.blue, size: 32),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'View Tenancy Contract',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap to read the agreement now',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.blue[100]!),
+                  ),
+                  child: Icon(Icons.arrow_forward_ios,
+                      size: 16, color: Colors.blue[300]),
+                ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 
@@ -1623,27 +1800,269 @@ class _PropertyDetailsImageSliderState extends State<PropertyDetailsImageSlider>
   }
 }
 
-// Placeholder function for opening fullscreen viewer
+// ==========================================
+// REPLACE THE BOTTOM PLACEHOLDER WITH THIS:
+// ==========================================
+
 void openFullScreenMediaViewer(BuildContext context, List<String> imageUrls,
     int initialIndex, String title) {
-  // Implement your fullscreen image viewer here
   Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (context) => Scaffold(
-        appBar: AppBar(
-          title: Text(title),
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-        ),
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Text(
-            'Fullscreen viewer for image $initialIndex\n(To be implemented)',
-            style: const TextStyle(color: Colors.white),
-            textAlign: TextAlign.center,
-          ),
-        ),
+      builder: (context) => FullScreenMediaViewer(
+        mediaUrls: imageUrls,
+        initialIndex: initialIndex,
       ),
     ),
   );
+}
+
+class FullScreenMediaViewer extends StatefulWidget {
+  final List<String> mediaUrls;
+  final int initialIndex;
+
+  const FullScreenMediaViewer({
+    super.key,
+    required this.mediaUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<FullScreenMediaViewer> createState() => _FullScreenMediaViewerState();
+}
+
+class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  bool _isVideo(String url) {
+    final lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith('.mp4') ||
+        lowerUrl.endsWith('.mov') ||
+        lowerUrl.endsWith('.avi') ||
+        lowerUrl.endsWith('.mkv') ||
+        lowerUrl.endsWith('.webm');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. Main Swipeable Content
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.mediaUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final url = widget.mediaUrls[index];
+              if (_isVideo(url)) {
+                return _FullScreenVideoPlayer(videoUrl: url);
+              } else {
+                return _FullScreenImageViewer(imageUrl: url);
+              }
+            },
+          ),
+
+          // 2. Top Bar (Close Button & Counter)
+          Positioned(
+            top: 50,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Close Button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 24),
+                    ),
+                  ),
+                ),
+                // Counter (e.g., 1/5)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "${_currentIndex + 1} / ${widget.mediaUrls.length}",
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Helper: Zoomable Image ---
+class _FullScreenImageViewer extends StatelessWidget {
+  final String imageUrl;
+  const _FullScreenImageViewer({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return InteractiveViewer(
+      minScale: 0.5,
+      maxScale: 4.0,
+      child: Center(
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) => const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image, color: Colors.white54, size: 48),
+              SizedBox(height: 8),
+              Text("Failed to load image",
+                  style: TextStyle(color: Colors.white54)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- Helper: Video Player with Controls ---
+class _FullScreenVideoPlayer extends StatefulWidget {
+  final String videoUrl;
+  const _FullScreenVideoPlayer({required this.videoUrl});
+
+  @override
+  State<_FullScreenVideoPlayer> createState() => _FullScreenVideoPlayerState();
+}
+
+class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+  bool _showControls = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+            _controller.play(); // Auto-play when entering full screen
+          });
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return const Center(
+          child: CircularProgressIndicator(color: Colors.white));
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _showControls = !_showControls;
+        });
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // The Video
+          AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          ),
+
+          // Play/Pause Overlay
+          if (_showControls)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: Center(
+                child: IconButton(
+                  iconSize: 64,
+                  icon: Icon(
+                    _controller.value.isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _controller.value.isPlaying
+                          ? _controller.pause()
+                          : _controller.play();
+                    });
+                  },
+                ),
+              ),
+            ),
+
+          // Simple Progress Indicator at bottom
+          if (_showControls)
+            Positioned(
+              bottom: 40,
+              left: 20,
+              right: 20,
+              child: VideoProgressIndicator(
+                _controller,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.white,
+                  bufferedColor: Colors.white24,
+                  backgroundColor: Colors.grey,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

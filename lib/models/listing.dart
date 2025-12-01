@@ -6,6 +6,8 @@ class Listing {
   final String description;
   final List<String> imageUrls; // This will contain both images and videos
   final double price;
+  final double deposit;
+  final int depositMonths; // <--- ADDED THIS
   final int bedrooms;
   final int bathrooms;
   final int areaSqft;
@@ -14,6 +16,7 @@ class Listing {
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? contractUrl;
 
   Listing({
     required this.id,
@@ -23,6 +26,8 @@ class Listing {
     required this.description,
     required this.imageUrls,
     required this.price,
+    required this.deposit,
+    required this.depositMonths, // <--- ADDED THIS
     required this.bedrooms,
     required this.bathrooms,
     required this.areaSqft,
@@ -31,6 +36,7 @@ class Listing {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.contractUrl,
   });
 
   // Helper methods to separate images and videos
@@ -66,6 +72,12 @@ class Listing {
           ? List<String>.from(json['image_urls'])
           : [],
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      deposit: double.tryParse(json['deposit']?.toString() ?? '0') ?? 0.0,
+
+      // <--- ADDED THIS: Parse deposit_months safely
+      depositMonths:
+          int.tryParse(json['deposit_months']?.toString() ?? '0') ?? 0,
+
       bedrooms: int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
       bathrooms: int.tryParse(json['bathrooms']?.toString() ?? '0') ?? 0,
       areaSqft: int.tryParse(json['area_sqft']?.toString() ?? '0') ?? 0,
@@ -75,6 +87,7 @@ class Listing {
       status: json['status'] ?? 'Active',
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      contractUrl: json['contract_url'],
     );
   }
 
@@ -87,6 +100,8 @@ class Listing {
       'description': description,
       'image_urls': imageUrls,
       'price': price,
+      'deposit': deposit,
+      'deposit_months': depositMonths, // <--- ADDED THIS
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area_sqft': areaSqft,
@@ -95,6 +110,7 @@ class Listing {
       'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'contract_url': contractUrl,
     };
   }
 
@@ -110,6 +126,8 @@ class Listing {
     String? description,
     List<String>? imageUrls,
     double? price,
+    double? deposit,
+    int? depositMonths, // <--- ADDED THIS
     int? bedrooms,
     int? bathrooms,
     int? areaSqft,
@@ -127,6 +145,8 @@ class Listing {
       description: description ?? this.description,
       imageUrls: imageUrls ?? this.imageUrls,
       price: price ?? this.price,
+      deposit: deposit ?? this.deposit,
+      depositMonths: depositMonths ?? this.depositMonths, // <--- ADDED THIS
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       areaSqft: areaSqft ?? this.areaSqft,

@@ -1,7 +1,7 @@
 class ChatMessage {
   final int id;
-  final int senderId;
-  final int receiverId;
+  final String senderId;
+  final String receiverId;
   final String message;
   final bool isRead;
   final String createdAt;
@@ -22,8 +22,8 @@ class ChatMessage {
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
       id: _parseToInt(json['id']),
-      senderId: _parseToInt(json['sender_id']),
-      receiverId: _parseToInt(json['receiver_id']),
+      senderId: json['sender_id'].toString(),
+      receiverId: json['receiver_id'].toString(),
       message: json['message']?.toString() ?? '',
       isRead: _parseToBool(json['is_read']),
       createdAt: json['created_at']?.toString() ?? '',

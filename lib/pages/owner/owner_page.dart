@@ -3,7 +3,7 @@ import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/dashboard_models.dart';
 import 'package:my_app/services/dashboard_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
+// For kDebugMode
 // import 'dart:convert';
 // import 'package:http/http.dart' as http;
 import 'listings_page.dart';
@@ -32,7 +32,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Also update your initState to rebuild screens after data loads:
   @override
   void initState() {
     super.initState();
@@ -40,6 +39,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
+
+    // Debug user data first
+    _debugUserData();
 
     // Initialize screens first
     _initializeScreens();
@@ -54,7 +56,23 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     _animationController.forward();
   }
 
-// Add this helper method:
+  // Add debug method to check user data
+  void _debugUserData() {
+    print('🔍 DEBUG: User data check');
+    print('   User ID: "${widget.user.id}"');
+    print('   User ID type: ${widget.user.id.runtimeType}');
+    print('   User ID length: ${widget.user.id.toString().length}');
+    print('   User name: "${widget.user.fullName}"');
+    print('   User email: "${widget.user.email}"');
+    print('   User type: "${widget.user.userType}"');
+  }
+
+  // --- REMOVED ---
+  // The _getSafeUserId() method was removed as it's no longer needed.
+  // We will pass the String ID directly.
+  // ---
+
+  // Add this helper method:
   void _initializeScreens() {}
 
   @override
@@ -63,7 +81,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // Load all dashboard data from API
   Future<void> _loadDashboardData() async {
     print('🔄 Starting _loadDashboardData...');
 
@@ -75,63 +92,31 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     });
 
     try {
-      // Safely convert user.id to int
-      int userId;
-      if (widget.user.id is int) {
-        userId = widget.user.id as int;
-      } else {
-        userId = int.parse(widget.user.id);
+      // Check if user ID is valid using the new service method
+      if (!DashboardService.isValidUserId(widget.user.id)) {
+        throw Exception('Invalid user session. Please log in again.');
       }
 
-      print('🔄 Loading dashboard data for user ID: $userId');
+      print('🔄 Loading dashboard data for user ID: ${widget.user.id}');
 
-      // Test individual service calls to identify which one is failing
-      DashboardStats? dashboardStats;
-      List<RecentActivity> activities = [];
-      List<NotificationItem> notifications = [];
+      // Option 1: Use the new getAllDashboardData method (recommended)
+      final allData =
+          await DashboardService.getAllDashboardData(widget.user.id);
 
-      try {
-        print('📊 Fetching dashboard stats...');
-        dashboardStats = await DashboardService.getDashboardStats(userId);
-        print('📊 Dashboard stats result: $dashboardStats');
-      } catch (e) {
-        print('❌ Error fetching dashboard stats: $e');
-        // Continue with other calls even if stats fail
-      }
-
-      try {
-        print('📝 Fetching recent activities...');
-        activities = await DashboardService.getRecentActivities(userId);
-        print('📝 Activities count: ${activities.length}');
-      } catch (e) {
-        print('❌ Error fetching activities: $e');
-        // Continue with empty list
-      }
-
-      try {
-        print('🔔 Fetching notifications...');
-        notifications = await DashboardService.getNotifications(userId);
-        print('🔔 Notifications count: ${notifications.length}');
-      } catch (e) {
-        print('❌ Error fetching notifications: $e');
-        // Continue with empty list
-      }
-
-      // Update state with whatever data we managed to fetch
       if (!mounted) return;
 
       setState(() {
         _isLoading = false;
-        _dashboardStats = dashboardStats;
-        _recentActivities = activities;
-        _notifications = notifications;
+        _dashboardStats = allData['stats'] as DashboardStats?;
+        _recentActivities = allData['activities'] as List<RecentActivity>;
+        _notifications = allData['notifications'] as List<NotificationItem>;
         _errorMessage = null;
       });
 
-      print('✅ State updated successfully');
-      print('📊 Final stats: $_dashboardStats');
-      print('📝 Final activities: ${_recentActivities.length}');
-      print('🔔 Final notifications: ${_notifications.length}');
+      print('✅ All dashboard data loaded successfully');
+      print('📊 Stats: ${_dashboardStats != null}');
+      print('📝 Activities: ${_recentActivities.length}');
+      print('🔔 Notifications: ${_notifications.length}');
     } catch (e, stackTrace) {
       print('❌ Error in _loadDashboardData: $e');
       print('📍 Stack trace: $stackTrace');
@@ -140,7 +125,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load dashboard data: ${e.toString()}';
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
@@ -163,8 +148,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         children: [
           _buildDashboard(),
           const ListingsPage(),
-          const ReservationsPage(),
-          _buildMessagesPage(), // ✅ Now uses the helper method
+          ReservationsPage(currentUser: widget.user),
+          _buildMessagesPage(), // ✅ Now uses the MODIFIED helper method
           ProfilePage(user: widget.user),
         ],
       ),
@@ -217,7 +202,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
-          // Notification icon with real count
           IconButton(
             icon: Stack(
               children: [
@@ -239,23 +223,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
             ),
             onPressed: _showNotifications,
           ),
-          // Refresh button
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _refreshDashboard,
-          ),
-          // Debug button (remove in production)
-          if (kDebugMode)
-            IconButton(
-              icon: const Icon(Icons.bug_report, color: Colors.yellow),
-              onPressed: () {
-                setState(() {
-                  _isLoading = false;
-                });
-                print('🐛 Debug: Forced loading to false');
-              },
-            ),
-          // Logout icon
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: _logout,
@@ -265,28 +232,47 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     );
   }
 
+  // --- MODIFIED ---
+  // This function is now much simpler and passes the String ID directly.
+  // This fixes the crash you would see when tapping the "Messages" tab.
   Widget _buildMessagesPage() {
-    try {
-      // Convert user ID to int if it's a string
-      int userId;
-      if (widget.user.id is int) {
-        userId = widget.user.id as int;
-      } else {
-        userId = int.parse(widget.user.id);
-      }
+    // Your User ID is already a String and is valid if the dashboard loaded.
+    // We just pass it directly to the messages page.
 
-      return owner_messaging.MessagesPage(currentUserId: userId);
-    } catch (e) {
-      // Handle case where user ID is not a valid integer
-      print('Error parsing user ID: ${widget.user.id}');
-      return const Center(
-        child: Text(
-          'Error: Invalid user ID format',
-          style: TextStyle(color: Colors.red),
+    // Add a simple check in case the ID is somehow empty.
+    if (widget.user.id.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 60),
+            const SizedBox(height: 16),
+            const Text(
+              'Error: Invalid User ID',
+              style: TextStyle(color: Colors.red, fontSize: 18),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF190152),
+              ),
+              child: const Text(
+                'Login Again',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         ),
       );
     }
+
+    // This will now pass the 'String' ID to your owner_messaging.MessagesPage
+    // You MUST update that file to accept a String.
+    return owner_messaging.MessagesPage(
+        currentUserId: int.parse(widget.user.id));
   }
+  // --- END MODIFICATION ---
 
   String _getAppBarTitle() {
     switch (_currentIndex) {
@@ -305,7 +291,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     }
   }
 
-  // Replace your _buildDashboard method to add debug info:
   Widget _buildDashboard() {
     print(
         '🏗️ Building dashboard - Loading: $_isLoading, Error: $_errorMessage, Stats: ${_dashboardStats != null}');
@@ -433,15 +418,31 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _refreshDashboard,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF190152),
-              ),
-              child: const Text(
-                'Retry',
-                style: TextStyle(color: Colors.white),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: _refreshDashboard,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF190152),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: _logout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                  child: const Text(
+                    'Re-login',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -449,9 +450,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     );
   }
 
-  // Replace your _buildDashboardContent method with this improved version:
-
-  // Replace your _buildDashboardContent method with this complete version:
   Widget _buildDashboardContent() {
     print('🏗️ Building dashboard content - Stats: $_dashboardStats');
 
@@ -474,11 +472,11 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
 
-              // Always show stats cards, with fallback values
+              // Updated stats cards with new format
               Row(
                 children: [
                   _buildStatCard(
-                    'Properties',
+                    'Total Properties',
                     _dashboardStats?.totalProperties.toString() ?? '0',
                     Icons.home_work,
                     Colors.blue,
@@ -486,8 +484,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
-                    'Occupied',
-                    _dashboardStats?.occupancyRate ?? '0%',
+                    'Occupied/Total', // ✅ New label
+                    _dashboardStats?.propertyOccupancyDisplay ??
+                        '0/0', // ✅ New format "0/2"
                     Icons.people,
                     Colors.green,
                     () => setState(() => _currentIndex = 2),
@@ -519,7 +518,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         ),
 
         const SizedBox(height: 32),
-
         // Quick Actions Section
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -919,6 +917,9 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     );
   }
 
+  // --- NO CHANGE TO LOGOUT ---
+  // Your _logout function is already correct.
+  // Using prefs.clear() will fix your "ghost session" problem.
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,

@@ -3,38 +3,43 @@ import 'package:flutter/material.dart';
 
 class DashboardStats {
   final int totalProperties;
-  final int totalRooms;
-  final int occupiedRooms;
+  final int occupiedProperties; // ✅ New field
+  final int notOccupiedProperties; // ✅ New field
+  final String propertyOccupancyDisplay; // ✅ New field for "0/2" format
+  final double occupancyPercentage; // ✅ New field for percentage
   final double monthlyIncome;
   final int unreadMessages;
 
   DashboardStats({
     required this.totalProperties,
-    required this.totalRooms,
-    required this.occupiedRooms,
+    required this.occupiedProperties,
+    required this.notOccupiedProperties,
+    required this.propertyOccupancyDisplay,
+    required this.occupancyPercentage,
     required this.monthlyIncome,
     required this.unreadMessages,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
-    print('🏗️ Creating DashboardStats from JSON: $json');
     return DashboardStats(
       totalProperties: json['total_properties'] ?? 0,
-      totalRooms: json['total_rooms'] ?? 0,
-      occupiedRooms: json['occupied_rooms'] ?? 0,
-      monthlyIncome: (json['monthly_income'] ?? 0).toDouble(),
+      occupiedProperties: json['occupied_properties'] ?? 0,
+      notOccupiedProperties: json['not_occupied_properties'] ?? 0,
+      propertyOccupancyDisplay: json['property_occupancy_display'] ?? '0/0',
+      occupancyPercentage: (json['occupancy_percentage'] ?? 0.0).toDouble(),
+      monthlyIncome: (json['monthly_income'] ?? 0.0).toDouble(),
       unreadMessages: json['unread_messages'] ?? 0,
     );
   }
 
-  String get occupancyRate =>
-      totalRooms > 0 ? '$occupiedRooms/$totalRooms' : '0/0';
+  // Helper getters for formatted display
   String get formattedIncome => 'RM ${monthlyIncome.toStringAsFixed(2)}';
 
-  @override
-  String toString() {
-    return 'DashboardStats(properties: $totalProperties, rooms: $totalRooms, occupied: $occupiedRooms, income: $monthlyIncome, messages: $unreadMessages)';
-  }
+  String get occupancyRate => '${occupancyPercentage.toStringAsFixed(1)}%';
+
+  // Helper to get individual counts if needed
+  String get occupancyDetails =>
+      '$occupiedProperties occupied, $notOccupiedProperties available';
 }
 
 class RecentActivity {

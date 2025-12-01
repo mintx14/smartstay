@@ -81,7 +81,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final Color cardColor = Colors.white;
 
   static const String baseUrl =
-      'http://10.0.2.2/smartstay'; // Update for your environment
+      'http://192.168.0.11/smartstay'; // Update for your environment
+  //'http://10.0.2.2/smartstay'; // Update for your environment
 
   @override
   void initState() {

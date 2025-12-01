@@ -65,15 +65,6 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
   }
 
   // Helper function to safely convert to int
-  int _toInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    if (value is String) {
-      return int.tryParse(value) ?? 0;
-    }
-    return 0;
-  }
 
   // Helper function to format currency
   String _formatCurrency(dynamic value) {
@@ -173,7 +164,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(text: 'Overview'),
+            // Tab(text: 'Overview'),
             Tab(text: 'Bank Accounts'),
             Tab(text: 'Transactions'),
           ],
@@ -184,129 +175,11 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildOverviewTab(),
+                //_buildOverviewTab(),
                 _buildBankAccountsTab(),
                 _buildTransactionsTab(),
               ],
             ),
-    );
-  }
-
-  Widget _buildOverviewTab() {
-    final currentMonth = paymentSummary['current_month'] ?? {};
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Income Summary Card
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF190152), Color(0xFF2D0B6E)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'This Month\'s Income',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _formatCurrency(currentMonth['net_income']),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildIncomeDetail(
-                        'Total Rental',
-                        _formatCurrency(currentMonth['total_rental']),
-                      ),
-                      _buildIncomeDetail(
-                        'Commission',
-                        '- ${_formatCurrency(currentMonth['commission'])}',
-                      ),
-                      _buildIncomeDetail(
-                        'Properties',
-                        '${_toInt(currentMonth['active_properties'])}',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Quick Stats
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Pending Transfers',
-                  '${_toInt(paymentSummary['pending_transfers'])}',
-                  Icons.schedule,
-                  Colors.orange,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'This Month',
-                  '${_toInt(currentMonth['transactions'])} payments',
-                  Icons.calendar_today,
-                  Colors.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Recent Transactions
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Recent Transactions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  _tabController.animateTo(2);
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...transactions.take(3).map((transaction) =>
-              _buildTransactionItem(transaction, compact: true)),
-        ],
-      ),
     );
   }
 
@@ -379,72 +252,6 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
         final transaction = transactions[index];
         return _buildTransactionItem(transaction);
       },
-    );
-  }
-
-  Widget _buildIncomeDetail(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white60,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

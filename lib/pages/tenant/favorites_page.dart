@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/config/api_config.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
@@ -168,6 +169,8 @@ class _FavoritesPageState extends State<FavoritesPage>
                     onFavoriteToggle: (updatedListing) {
                       _toggleFavorite(updatedListing);
                     },
+                    user: widget
+                        .user, // ADD THIS LINE - pass the user from widget
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
@@ -699,6 +702,10 @@ class _InlineImageSliderState extends State<InlineImageSlider>
       return _buildPlaceholder(isGridItem);
     }
 
+    // --- FIX START: Convert relative path to full URL ---
+    final fullUrl = ApiConfig.generateFullImageUrl(imageUrl);
+    // --- FIX END ---
+
     return ClipRRect(
       borderRadius: isGridItem
           ? BorderRadius.circular(12)
@@ -707,7 +714,7 @@ class _InlineImageSliderState extends State<InlineImageSlider>
               topRight: Radius.circular(20),
             ),
       child: Image.network(
-        imageUrl,
+        fullUrl, // <--- Use fullUrl instead of imageUrl
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
@@ -736,6 +743,8 @@ class _InlineImageSliderState extends State<InlineImageSlider>
           );
         },
         errorBuilder: (context, error, stackTrace) {
+          // Optional: Print error for debugging
+          // print("Error loading favorite image ($fullUrl): $error");
           return _buildPlaceholder(isGridItem);
         },
       ),

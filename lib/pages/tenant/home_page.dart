@@ -1,12 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:my_app/config/api_config.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
+//import 'package:my_app/services/search_service.dart';
+import 'package:my_app/services/property_search_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+
+import 'package:my_app/login.dart';
 // Import your screen classes
 import 'favorites_page.dart';
-import 'map_page.dart';
 import 'messages_screen.dart' as messaging;
 import 'profile_screen.dart';
 import 'property_details_page.dart';
@@ -25,7 +31,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final PropertyService _propertyService = PropertyService();
   bool _isLoading = true;
   List<Listing> _allListings = [];
-  final int _currentPage = 1;
+  int _currentPage = 1;
   String? _errorMessage;
   final List<String> _debugLog = [];
 
@@ -34,12 +40,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Search and filter variables
   final TextEditingController _searchController = TextEditingController();
-  final String _searchQuery = '';
+  String _searchQuery = '';
 
   // Animation controllers
   late AnimationController _animationController;
   late AnimationController _searchAnimationController;
   late AnimationController _heartAnimationController;
+
+  // Enhanced search variables
+  final PropertySearchService _searchService = PropertySearchService();
+  List<SearchLocation> _searchSuggestions = [];
+  List<PropertyListing> _searchResults = [];
+  SearchLocation? _selectedLocation;
+  bool _showSuggestions = false;
+  bool _isSearching = false;
+  bool _isLoadingProperties = false;
+  Timer? _searchDebounceTimer;
+  final FocusNode _searchFocusNode = FocusNode();
+  //int _currentPage = 1;
 
   @override
   void initState() {
@@ -47,6 +65,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _initializeAnimations();
     _loadFavoriteIds();
     _loadInitialData();
+    _initializeSearch();
+
+    // Add this listener
+    _searchController.addListener(() {
+      _onSearchChanged(_searchController.text);
+    });
   }
 
   void _initializeAnimations() {
@@ -66,14 +90,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  void _initializeSearch() {
+    _searchFocusNode.addListener(() {
+      if (_searchFocusNode.hasFocus) {
+        _loadPopularLocations();
+        setState(() {
+          _showSuggestions = true;
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _animationController.dispose();
     _searchAnimationController.dispose();
     _heartAnimationController.dispose();
+    _searchFocusNode.dispose();
+    _searchDebounceTimer?.cancel();
     super.dispose();
   }
+
+  // Method to convert PropertyListing to Listing
 
   // Load favorite IDs from SharedPreferences
   Future<void> _loadFavoriteIds() async {
@@ -251,87 +290,477 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final favoritesToPreserve =
           prefs.getStringList('favorite_listings') ?? [];
 
-      // Remove only user-related data, not favorites
+      // --- FIX 1: REMOVE ALL SESSION DATA ---
+      // These are the keys your LoginPage looks for!
+      await prefs.remove('isLoggedIn'); // <-- THE MOST IMPORTANT FIX
+      await prefs.remove('userData'); // <-- The key you save user data to
+
+      // Also remove the old keys just to be safe
       await prefs.remove('user_data');
       await prefs.remove('auth_token');
       await prefs.remove('user_id');
-      // Add any other user-specific keys you want to remove
 
       // Make sure favorites are still saved
       await prefs.setStringList('favorite_listings', favoritesToPreserve);
 
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      // Add a mounted check for safety after an await
+      if (!mounted) return;
+
+      // --- FIX 2: NAVIGATE USING MaterialPageRoute ---
+      // This matches how your LoginPage navigates to HomePage
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (Route<dynamic> route) => false,
+      );
     }
   }
 
-  // Widget _buildModernSearchBar() {
-  //   return SlideTransition(
-  //     position: _slideAnimation,
-  //     child: FadeTransition(
-  //       opacity: _fadeAnimation,
-  //       child: Container(
-  //         margin: const EdgeInsets.all(20),
-  //         decoration: BoxDecoration(
-  //           borderRadius: BorderRadius.circular(25),
-  //           boxShadow: [
-  //             BoxShadow(
-  //               color: Colors.black.withOpacity(0.1),
-  //               blurRadius: 20,
-  //               offset: const Offset(0, 8),
-  //             ),
-  //           ],
-  //         ),
-  //         child: TextField(
-  //           controller: _searchController,
-  //           decoration: InputDecoration(
-  //             hintText: 'Search your dream property...',
-  //             hintStyle: TextStyle(
-  //               color: Colors.grey[500],
-  //               fontSize: 16,
-  //             ),
-  //             prefixIcon: Container(
-  //               margin: const EdgeInsets.all(12),
-  //               decoration: BoxDecoration(
-  //                 color: const Color(0xFF667EEA).withOpacity(0.1),
-  //                 borderRadius: BorderRadius.circular(12),
-  //               ),
-  //               child: const Icon(
-  //                 Icons.search,
-  //                 color: Color(0xFF667EEA),
-  //                 size: 24,
-  //               ),
-  //             ),
-  //             suffixIcon: _searchController.text.isNotEmpty
-  //                 ? IconButton(
-  //                     icon: const Icon(Icons.clear, color: Colors.grey),
-  //                     onPressed: () {
-  //                       _searchController.clear();
-  //                       _performSearch();
-  //                     },
-  //                   )
-  //                 : null,
-  //             filled: true,
-  //             fillColor: Colors.white,
-  //             border: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(25),
-  //               borderSide: BorderSide.none,
-  //             ),
-  //             contentPadding: const EdgeInsets.symmetric(
-  //               horizontal: 20,
-  //               vertical: 16,
-  //             ),
-  //           ),
-  //           style: const TextStyle(fontSize: 16),
-  //           onSubmitted: (_) => _performSearch(),
-  //           onChanged: (value) {
-  //             setState(() {});
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
+  Future<void> _loadPopularLocations() async {
+    try {
+      final suggestions = await _searchService.searchLocationsWithCount(
+        query: '',
+        limit: 5,
+      );
+      if (mounted) {
+        setState(() {
+          _searchSuggestions = suggestions;
+        });
+      }
+    } catch (e) {
+      print('Error loading popular locations: $e');
+    }
+  }
 
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+
+    _searchDebounceTimer?.cancel();
+
+    if (_selectedLocation != null && _selectedLocation!.name != query) {
+      setState(() {
+        _selectedLocation = null;
+        _searchResults = [];
+      });
+    }
+
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (query.isNotEmpty) {
+        // For location search
+        _performLocationSearch(query);
+        // For immediate text filtering, update the display
+        setState(() {});
+      } else {
+        setState(() {
+          _searchSuggestions = [];
+          _isSearching = false;
+        });
+        _loadPopularLocations();
+      }
+    });
+  }
+
+  Future<void> _performLocationSearch(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final suggestions = await _searchService.searchLocationsWithCount(
+        query: query,
+        limit: 5,
+      );
+
+      if (mounted) {
+        setState(() {
+          _searchSuggestions = suggestions;
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      print('Search error: $e');
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectLocation(SearchLocation location) async {
+    _searchController.text = location.name;
+    setState(() {
+      _showSuggestions = false;
+      _selectedLocation = location;
+      _currentPage = 1;
+    });
+    _searchFocusNode.unfocus();
+
+    // Load properties for this location
+    await _loadPropertiesForLocation(location);
+  }
+
+  // Let's fix the _loadPropertiesForLocation method with debugging
+  Future<void> _loadPropertiesForLocation(SearchLocation location,
+      {int page = 1}) async {
+    // 🔍 Add debugging logs
+    print('🔍 Loading properties for location:');
+    print('   Location ID: ${location.id}');
+    print('   Location Name: ${location.name}');
+    print('   Expected Property Count: ${location.propertyCount}');
+    print('   Page: $page');
+
+    setState(() {
+      _isLoadingProperties = true;
+    });
+
+    try {
+      final response = await _searchService.searchPropertiesByLocation(
+        locationId: location.id,
+        locationName: location.name,
+        page: page,
+        limit: 10,
+      );
+
+      // 🔍 Debug the response
+      print('📊 Search Response:');
+      print('   Success: ${response.success}');
+      print('   Total Found: ${response.total}');
+      print('   Properties Count: ${response.properties.length}');
+      print('   Page: ${response.page}');
+      print('   Total Pages: ${response.totalPages}');
+
+      // 🔍 Check if there's a mismatch
+      if (location.propertyCount > 0 && response.properties.isEmpty) {
+        print('⚠️ MISMATCH DETECTED!');
+        print('   Expected: ${location.propertyCount} properties');
+        print('   Actual: ${response.properties.length} properties');
+        print(
+            '   This suggests the search APIs are using different filters/data');
+      }
+
+      if (mounted) {
+        setState(() {
+          if (page == 1) {
+            _searchResults = response.properties;
+          } else {
+            _searchResults.addAll(response.properties);
+          }
+          _currentPage = response.page;
+          _isLoadingProperties = false;
+        });
+
+        // Show appropriate message based on results
+        if (response.properties.isEmpty && page == 1) {
+          // 🔍 Enhanced error message for debugging
+          String message = 'No properties found in ${location.name}';
+          if (location.propertyCount > 0) {
+            message +=
+                ' (Expected ${location.propertyCount} - possible API mismatch)';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.orange,
+              duration:
+                  const Duration(seconds: 4), // Longer duration for debugging
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        } else if (page == 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Found ${response.total} properties in ${location.name}'),
+              backgroundColor: const Color(0xFF48BB78),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading properties: $e');
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isLoadingProperties = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading properties for ${location.name}: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // 4. Update _clearSearch to properly reset state
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _showSuggestions = false;
+      _searchSuggestions = [];
+      _searchResults = [];
+      _selectedLocation = null;
+      _searchQuery = ''; // Add this line
+    });
+    _searchFocusNode.unfocus();
+    _loadAllListings();
+  }
+
+  // Enhanced search bar widget
+  Widget _buildModernSearchBar() {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, -1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _searchAnimationController,
+        curve: Curves.easeOutBack,
+      )),
+      child: FadeTransition(
+        opacity: _searchAnimationController,
+        child: Container(
+          margin: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // Search Input
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Search locations (e.g., Taman Bukit Tambun)...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 16,
+                    ),
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF667EEA).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _isSearching
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF667EEA)),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.search,
+                              color: Color(0xFF667EEA),
+                              size: 24,
+                            ),
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.grey),
+                            onPressed: _clearSearch,
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF667EEA),
+                        width: 2,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 16),
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty && _searchSuggestions.isNotEmpty) {
+                      _selectLocation(_searchSuggestions.first);
+                    }
+                  },
+                ),
+              ),
+
+              // Selected location indicator
+              if (_selectedLocation != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667EEA).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        color: Color(0xFF667EEA),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Showing properties in ${_selectedLocation!.name}',
+                        style: const TextStyle(
+                          color: Color(0xFF667EEA),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Search Suggestions
+              if (_showSuggestions) _buildSearchSuggestions(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchSuggestions() {
+    if (_searchSuggestions.isEmpty && !_isSearching) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_searchController.text.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.trending_up, color: Colors.grey[600], size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Popular Locations',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: _searchSuggestions.length,
+            separatorBuilder: (context, index) => Divider(
+              height: 1,
+              color: Colors.grey[200],
+              indent: 16,
+              endIndent: 16,
+            ),
+            itemBuilder: (context, index) {
+              final suggestion = _searchSuggestions[index];
+              return ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667EEA).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    suggestion.name.startsWith('Taman')
+                        ? Icons.home_work
+                        : Icons.location_city,
+                    color: const Color(0xFF667EEA),
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  suggestion.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: suggestion.subtitle != null
+                    ? Text(
+                        suggestion.subtitle!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      )
+                    : null,
+                trailing: const Icon(
+                  Icons.north_west,
+                  color: Colors.grey,
+                  size: 16,
+                ),
+                onTap: () => _selectLocation(suggestion),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // Property card widget for search results
+
+  // Update _buildPropertyCard to show location match badge
   Widget _buildPropertyCard(Listing listing, int index) {
     final isFavorite = _favoriteIds.contains(listing.id.toString());
 
@@ -378,6 +807,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     listing: listing,
                     isFavorite: _favoriteIds.contains(listing.id.toString()),
                     onFavoriteToggle: _toggleFavorite,
+                    user: widget.user,
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
@@ -456,6 +886,48 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
+                      // Location match badge (only show if searching by location)
+                      if (_selectedLocation != null)
+                        Positioned(
+                          top: 12,
+                          left: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF667EEA).withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _selectedLocation!.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -647,6 +1119,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // Update the explore screen to show search results
   Widget _buildExploreScreen() {
     return Container(
       decoration: BoxDecoration(
@@ -660,34 +1133,172 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       ),
       child: RefreshIndicator(
-        onRefresh: () => _loadAllListings(),
+        onRefresh: () async {
+          if (_selectedLocation != null) {
+            await _loadPropertiesForLocation(_selectedLocation!);
+          } else {
+            await _loadAllListings();
+          }
+        },
         color: const Color(0xFF667EEA),
-        child: Column(
-          children: [
-            // Enhanced Search Bar
-            //_buildModernSearchBar(),
+        child: GestureDetector(
+          onTap: () {
+            if (_showSuggestions) {
+              setState(() {
+                _showSuggestions = false;
+              });
+              _searchFocusNode.unfocus();
+            }
+          },
+          child: Column(
+            children: [
+              // Enhanced Search Bar
+              _buildModernSearchBar(),
 
-            // Error Display
-            if (_errorMessage != null) _buildErrorDisplay(),
+              // Error Display
+              if (_errorMessage != null) _buildErrorDisplay(),
 
-            // Listings
-            Expanded(
-              child: _isLoading
-                  ? _buildLoadingState()
-                  : _allListings.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 20),
-                          itemCount: _allListings.length,
-                          itemBuilder: (context, index) {
-                            return _buildPropertyCard(
-                                _allListings[index], index);
-                          },
-                        ),
-            ),
-          ],
+              // Content Area
+              Expanded(
+                child: _buildContent(),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  // Replace your _buildContent method with this:
+  Widget _buildContent() {
+    if (_isLoadingProperties || _isLoading) {
+      return _buildLoadingState();
+    }
+
+    // Check for both location search AND text search
+    final bool inSearchMode =
+        _selectedLocation != null || _searchQuery.isNotEmpty;
+
+    List<Listing> displayListings;
+    if (_selectedLocation != null) {
+      // Show location-based search results
+      displayListings =
+          _searchResults.map((p) => _createListingFromProperty(p)).toList();
+    } else if (_searchQuery.isNotEmpty) {
+      // Show filtered results from all listings
+      displayListings = _allListings.where((listing) {
+        return listing.title
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            listing.address
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            listing.postcode.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    } else {
+      // Show all listings
+      displayListings = _allListings;
+    }
+
+    if (displayListings.isEmpty) {
+      return inSearchMode ? _buildNoResultsState() : _buildEmptyState();
+    }
+
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 20),
+      itemCount: displayListings.length,
+      itemBuilder: (context, index) {
+        return _buildPropertyCard(displayListings[index], index);
+      },
+    );
+  }
+
+  // 2. Add this helper method to create a Listing from PropertyListing
+  Listing _createListingFromProperty(PropertyListing property) {
+    // Use default images if none provided
+    final images = property.imageUrls.isNotEmpty
+        ? property.imageUrls
+        : [
+            'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+            'https://images.unsplash.com/photo-1560449752-8d7085b7b162?w=800',
+            'https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?w=800',
+          ];
+
+    return Listing(
+      id: property.id.toString(),
+      title: property.title,
+      address: property.address,
+      postcode: property.postcode,
+      description: property.description ?? '',
+      price: property.price,
+      deposit: property.deposit,
+
+      // FIX 1: Use 0 default since 'PropertyListing' does not have this field yet
+      depositMonths: 0,
+
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      areaSqft: property.areaSqft,
+      availableFrom:
+          DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
+      minimumTenure: property.minimumTenure,
+      status: property.status,
+
+      // FIX 2: Use current time since 'PropertyListing' does not have 'createdAt'
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+
+      imageUrls: images,
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No properties found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No properties available in ${_selectedLocation?.name}',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _clearSearch,
+            icon: const Icon(Icons.clear),
+            label: const Text('Clear Search'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF667EEA),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -833,24 +1444,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
         );
       case 2:
-        return MapPage(user: widget.user);
+        // Pass the String ID directly
+        return messaging.MessagesScreen(
+          currentUserId: widget.user.id,
+        );
+      // case 2:
+      //   // Convert string ID to int for MessagesScreen with error handling
+      //   try {
+      //     return messaging.MessagesScreen(
+      //       currentUserId: int.parse(widget.user.id),
+      //     );
+      //   } catch (e) {
+      //     // Handle case where user ID is not a valid integer
+      //     print('Error parsing user ID: ${widget.user.id}');
+      //     return const Center(
+      //       child: Text(
+      //         'Error: Invalid user ID format',
+      //         style: TextStyle(color: Colors.red),
+      //       ),
+      //     );
+      //   }
       case 3:
-        // Convert string ID to int for MessagesScreen with error handling
-        try {
-          return messaging.MessagesScreen(
-            currentUserId: int.parse(widget.user.id),
-          );
-        } catch (e) {
-          // Handle case where user ID is not a valid integer
-          print('Error parsing user ID: ${widget.user.id}');
-          return const Center(
-            child: Text(
-              'Error: Invalid user ID format',
-              style: TextStyle(color: Colors.red),
-            ),
-          );
-        }
-      case 4:
         return ProfileScreen(user: widget.user);
       default:
         return _buildExploreScreen();
@@ -961,11 +1575,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 activeIcon: Icon(Icons.favorite),
                 label: 'Favorites',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.map_outlined),
-                activeIcon: Icon(Icons.map),
-                label: 'Map',
-              ),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.map_outlined),
+              //   activeIcon: Icon(Icons.map),
+              //   label: 'Map',
+              // ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_outline),
                 activeIcon: Icon(Icons.chat_bubble),
@@ -1064,6 +1678,8 @@ class _InlineImageSliderState extends State<InlineImageSlider>
       return _buildPlaceholder(isGridItem);
     }
 
+    final String fullUrl = ApiConfig.generateFullImageUrl(imageUrl);
+
     return ClipRRect(
       borderRadius: isGridItem
           ? BorderRadius.circular(12)
@@ -1072,7 +1688,7 @@ class _InlineImageSliderState extends State<InlineImageSlider>
               topRight: Radius.circular(25),
             ),
       child: Image.network(
-        imageUrl,
+        fullUrl, // <--- Use the fixed fullUrl here
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
@@ -1101,6 +1717,8 @@ class _InlineImageSliderState extends State<InlineImageSlider>
           );
         },
         errorBuilder: (context, error, stackTrace) {
+          // Helpful debug print if image fails
+          print("❌ Image Error for $fullUrl: $error");
           return _buildPlaceholder(isGridItem);
         },
       ),

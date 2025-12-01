@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/database_service.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AddListingPage extends StatefulWidget {
   const AddListingPage({super.key});
@@ -21,6 +22,8 @@ class _AddListingPageState extends State<AddListingPage> {
   final _priceController = TextEditingController();
   final _bedroomsController = TextEditingController();
   final _bathroomsController = TextEditingController();
+  //final _depositController = TextEditingController();
+  int? _selectedDepositMonth;
   final _areaSqftController = TextEditingController();
   final _descriptionController = TextEditingController();
   DateTime _availableFrom = DateTime.now();
@@ -31,6 +34,9 @@ class _AddListingPageState extends State<AddListingPage> {
   final DatabaseService _databaseService = DatabaseService();
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+
+  File? _contractFile; // To store the selected PDF
+  String? _contractFileName; // To display the name
 
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
@@ -75,6 +81,20 @@ class _AddListingPageState extends State<AddListingPage> {
       setState(() {
         _selectedVideos.add(videoFile);
         _videoControllers[video.path] = controller;
+      });
+    }
+  }
+
+  Future<void> _pickContract() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'], // Restrict to PDF only
+    );
+
+    if (result != null) {
+      setState(() {
+        _contractFile = File(result.files.single.path!);
+        _contractFileName = result.files.single.name;
       });
     }
   }
@@ -203,6 +223,14 @@ class _AddListingPageState extends State<AddListingPage> {
           throw Exception("You must be logged in to add a listing");
         }
 
+        // --- INSERT CONTRACT UPLOAD CODE HERE (AFTER userId IS DEFINED) ---
+        String? contractUrl;
+        if (_contractFile != null) {
+          // Now 'userId' is defined and safe to use
+          contractUrl =
+              await _databaseService.uploadContract(_contractFile!, userId);
+        }
+
         // Upload images and videos
         List<String> allMediaUrls = [];
 
@@ -222,6 +250,13 @@ class _AddListingPageState extends State<AddListingPage> {
           allMediaUrls.addAll(videoUrls);
         }
 
+        final double monthlyRent =
+            double.tryParse(_priceController.text) ?? 0.0;
+
+        // Calculate the deposit based on selected months
+        // Default to 0 months if null
+        final double calculatedDeposit =
+            (_selectedDepositMonth ?? 0) * monthlyRent;
         // Create and save the listing with all media URLs in imageUrls field
         final listing = Listing(
           id: '',
@@ -229,8 +264,10 @@ class _AddListingPageState extends State<AddListingPage> {
           address: _addressController.text,
           postcode: _postcodeController.text,
           description: _descriptionController.text,
-          imageUrls: allMediaUrls, // All media URLs go here
-          price: double.parse(_priceController.text),
+          imageUrls: allMediaUrls,
+          price: monthlyRent,
+          deposit: calculatedDeposit,
+          depositMonths: _selectedDepositMonth ?? 0, // <--- ADD THIS LINE
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),
@@ -239,6 +276,7 @@ class _AddListingPageState extends State<AddListingPage> {
           status: 'Active',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          contractUrl: contractUrl,
         );
 
         await _databaseService.addListing(listing);
@@ -329,11 +367,13 @@ class _AddListingPageState extends State<AddListingPage> {
                       ],
                     ),
 
-                    // Property Features Card
+                    // Property Features Card - IMPROVED VERSION
+                    // Property Features Card - IMPROVED VERSION
                     _buildSectionCard(
                       title: 'Property Features',
                       icon: Icons.featured_play_list,
                       children: [
+                        // Row 1: Bedrooms and Bathrooms
                         Row(
                           children: [
                             Expanded(
@@ -354,31 +394,71 @@ class _AddListingPageState extends State<AddListingPage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildFeatureField(
-                                controller: _areaSqftController,
-                                label: 'Size (sqft)',
-                                icon: Icons.square_foot,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildModernTextField(
-                                controller: _priceController,
-                                label: 'Monthly Rent',
-                                prefixIcon: Icons.attach_money,
-                                prefixText: 'RM ',
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly
-                                ],
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Required' : null,
-                              ),
-                            ),
+
+                        // Row 2: Size
+                        _buildFeatureField(
+                          controller: _areaSqftController,
+                          label: 'Size (sqft)',
+                          icon: Icons.square_foot,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Row 3: Monthly Rent
+                        _buildModernTextField(
+                          controller: _priceController,
+                          label: 'Monthly Rent',
+                          prefixIcon: Icons.attach_money,
+                          prefixText: 'RM ',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
                           ],
+                          validator: (value) =>
+                              value!.isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Row 4: Deposit (full width to prevent overflow)
+                        DropdownButtonFormField<int>(
+                          value: _selectedDepositMonth,
+                          onChanged: (int? newValue) {
+                            setState(() {
+                              _selectedDepositMonth = newValue;
+                            });
+                          },
+                          items: List.generate(12, (index) {
+                            int month = index + 1;
+                            return DropdownMenuItem<int>(
+                              value: month,
+                              child: Text(
+                                '$month month${month > 1 ? 's' : ''}',
+                              ),
+                            );
+                          }).toList(),
+                          decoration: InputDecoration(
+                            labelText: 'Deposit',
+                            prefixIcon:
+                                const Icon(Icons.calendar_today_outlined),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          validator: (value) =>
+                              value == null ? 'Required' : null,
                         ),
                       ],
                     ),
@@ -464,6 +544,53 @@ class _AddListingPageState extends State<AddListingPage> {
                     ),
 
                     const SizedBox(height: 24),
+                    _buildSectionCard(
+                      title: 'Rent Contract',
+                      icon: Icons.attach_file,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[50],
+                          ),
+                          child: ListTile(
+                            leading: Icon(Icons.picture_as_pdf,
+                                color: Colors.red[400]),
+                            title: Text(
+                              _contractFileName ??
+                                  'Upload Rental Agreement (PDF)',
+                              style: TextStyle(
+                                color: _contractFileName != null
+                                    ? Colors.black
+                                    : Colors.grey[600],
+                                fontWeight: _contractFileName != null
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            trailing: _contractFileName != null
+                                ? IconButton(
+                                    icon: const Icon(Icons.close,
+                                        color: Colors.red),
+                                    onPressed: () {
+                                      setState(() {
+                                        _contractFile = null;
+                                        _contractFileName = null;
+                                      });
+                                    },
+                                  )
+                                : const Icon(Icons.upload_file),
+                            onTap: _pickContract,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Optional: Upload a standard contract for tenants to review.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
 
                     // Submit Button
                     ElevatedButton(

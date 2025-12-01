@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class MessagesPage extends StatefulWidget {
   final int currentUserId; // Tenant's user ID
@@ -26,15 +27,13 @@ class _MessagesPageState extends State<MessagesPage> {
   final Color cardColor = Colors.white;
   final Color selectedChatColor = Colors.indigo.withOpacity(0.1);
 
-  // API Configuration
-  static const String baseUrl =
-      'http://10.0.2.2/smartstay'; // Change to your server URL
+  // REMOVE THIS LINE - No longer needed
+  // static const String baseUrl = 'http://192.168.0.11/smartstay';
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
-    // Auto-refresh every 5 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _loadConversations();
     });
@@ -49,9 +48,10 @@ class _MessagesPageState extends State<MessagesPage> {
 
   Future<void> _loadConversations() async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
         Uri.parse(
-            '$baseUrl/get_conversations.php?user_id=${widget.currentUserId}'),
+            ApiConfig.getConversationsUrlWithUserId(widget.currentUserId)),
       );
 
       if (response.statusCode == 200) {
@@ -81,79 +81,28 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  Future<void> _showNewMessageDialog() async {
-    // Get list of owners to start conversation with
-    try {
-      final response = await http.get(
-        Uri.parse(
-            '$baseUrl/get_users.php?current_user_id=${widget.currentUserId}&user_type=Owner'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['users'] != null) {
-          List<User> users = (data['users'] as List)
-              .map((user) => User.fromJson(user))
-              .toList();
-
-          if (users.isEmpty) {
-            _showError('No property owners available to message');
-            return;
-          }
-
-          showDialog(
-            context: context,
-            builder: (context) => _NewMessageDialog(
-              users: users,
-              onUserSelected: (user) {
-                Navigator.of(context).pop();
-                _openChatWithUser(user);
-              },
-            ),
-          );
-        }
-      } else {
-        throw Exception('Failed to load users');
-      }
-    } catch (e) {
-      _showError('Error loading users: $e');
-    }
-  }
-
-  void _openChatWithUser(User user) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          currentUserId: widget.currentUserId,
-          otherUser: user,
-        ),
-      ),
-    ).then((_) => _loadConversations()); // Refresh when returning
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text('Messages'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_square),
-            onPressed: _showNewMessageDialog,
-            tooltip: 'New Message',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadConversations,
-            tooltip: 'Refresh',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.edit_square),
+        //     onPressed: _showNewMessageDialog,
+        //     tooltip: 'New Message',
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Icons.refresh),
+        //     onPressed: _loadConversations,
+        //     tooltip: 'Refresh',
+        //   ),
+        // ],
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
+          //_buildSearchBar(),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -169,31 +118,31 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search messages',
-          hintStyle: TextStyle(color: Colors.grey[400]),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        ),
-        onChanged: (value) {
-          setState(() {
-            // You can implement search functionality here
-          });
-        },
-      ),
-    );
-  }
+  // Widget _buildSearchBar() {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(16.0),
+  //     child: TextField(
+  //       controller: _searchController,
+  //       decoration: InputDecoration(
+  //         hintText: 'Search messages',
+  //         hintStyle: TextStyle(color: Colors.grey[400]),
+  //         prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+  //         border: OutlineInputBorder(
+  //           borderRadius: BorderRadius.circular(30.0),
+  //           borderSide: BorderSide.none,
+  //         ),
+  //         filled: true,
+  //         fillColor: Colors.grey[100],
+  //         contentPadding: const EdgeInsets.symmetric(vertical: 0),
+  //       ),
+  //       onChanged: (value) {
+  //         setState(() {
+  //           // You can implement search functionality here
+  //         });
+  //       },
+  //     ),
+  //   );
+  // }
 
   Widget _buildChatsList(BuildContext context) {
     return ListView.builder(
@@ -378,16 +327,16 @@ class _MessagesPageState extends State<MessagesPage> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _showNewMessageDialog,
-            icon: const Icon(Icons.add_comment),
-            label: const Text('Start New Chat'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-            ),
-          ),
+          //const SizedBox(height: 16),
+          // ElevatedButton.icon(
+          //   onPressed: _showNewMessageDialog,
+          //   icon: const Icon(Icons.add_comment),
+          //   label: const Text('Start New Chat'),
+          //   style: ElevatedButton.styleFrom(
+          //     backgroundColor: primaryColor,
+          //     foregroundColor: Colors.white,
+          //   ),
+          // ),
         ],
       ),
     );
@@ -404,53 +353,6 @@ class _MessagesPageState extends State<MessagesPage> {
       Colors.orange,
     ];
     return colors[index % colors.length];
-  }
-}
-
-class _NewMessageDialog extends StatelessWidget {
-  final List<User> users;
-  final Function(User) onUserSelected;
-
-  const _NewMessageDialog({
-    required this.users,
-    required this.onUserSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Start New Conversation'),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 300,
-        child: ListView.builder(
-          itemCount: users.length,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.indigo,
-                child: Text(
-                  user.fullName.isNotEmpty
-                      ? user.fullName[0].toUpperCase()
-                      : 'U',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              title: Text(user.fullName),
-              subtitle: Text('${user.userType} • ${user.email}'),
-              onTap: () => onUserSelected(user),
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-      ],
-    );
   }
 }
 
@@ -481,7 +383,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final Color backgroundColor = Colors.grey[50]!;
   final Color cardColor = Colors.white;
 
-  static const String baseUrl = 'http://10.0.2.2/smartstay';
+  // REMOVE THIS LINE - No longer needed
+  // static const String baseUrl = 'http://192.168.0.11/smartstay';
 
   @override
   void initState() {
@@ -508,9 +411,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse(
-            '$baseUrl/get_messages.php?user_id=${widget.currentUserId}&other_user_id=${widget.otherUser.id}'),
+        Uri.parse(ApiConfig.getMessagesUrlWithParams(
+            widget.currentUserId, widget.otherUser.id)),
       );
 
       print('Response status: ${response.statusCode}');
@@ -580,8 +484,9 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
 
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('$baseUrl/send_message.php'),
+        Uri.parse(ApiConfig.sendMessageUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'sender_id': widget.currentUserId,
@@ -676,23 +581,23 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.phone),
-            onPressed: () {},
-            tooltip: 'Call',
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam),
-            onPressed: () {},
-            tooltip: 'Video Call',
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-            tooltip: 'More Options',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.phone),
+        //     onPressed: () {},
+        //     tooltip: 'Call',
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Icons.videocam),
+        //     onPressed: () {},
+        //     tooltip: 'Video Call',
+        //   ),
+        //   IconButton(
+        //     icon: const Icon(Icons.more_vert),
+        //     onPressed: () {},
+        //     tooltip: 'More Options',
+        //   ),
+        // ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -877,16 +782,16 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
-            onPressed: () {},
-            tooltip: 'Emojis',
-          ),
-          IconButton(
-            icon: Icon(Icons.attach_file, color: Colors.grey[600]),
-            onPressed: () {},
-            tooltip: 'Attachments',
-          ),
+          // IconButton(
+          //   icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
+          //   onPressed: () {},
+          //   tooltip: 'Emojis',
+          // ),
+          // IconButton(
+          //   icon: Icon(Icons.attach_file, color: Colors.grey[600]),
+          //   onPressed: () {},
+          //   tooltip: 'Attachments',
+          // ),
           const SizedBox(width: 8.0),
           Expanded(
             child: TextField(

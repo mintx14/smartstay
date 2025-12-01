@@ -1,18 +1,20 @@
-// lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+// ADD THIS IMPORT
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class MessageService {
-  static const String baseUrl =
-      'http://10.0.2.2/smartstay'; // Change this to your server URL
+  // REMOVE THIS LINE - No longer needed
+  // static const String baseUrl = 'http://192.168.0.11/smartstay';
 
   // Get conversations for a user
   static Future<List<dynamic>> getConversations(
       int userId, String userType) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse(
-            '$baseUrl/messages.php?action=conversations&user_id=$userId&user_type=$userType'),
+        Uri.parse(ApiConfig.getMessagesUrlWithParams2('conversations',
+            params: {'user_id': userId.toString(), 'user_type': userType})),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -32,9 +34,10 @@ class MessageService {
   // Get messages for a conversation
   static Future<List<dynamic>> getMessages(int conversationId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse(
-            '$baseUrl/messages.php?action=messages&conversation_id=$conversationId'),
+        Uri.parse(ApiConfig.getMessagesUrlWithParams2('messages',
+            params: {'conversation_id': conversationId.toString()})),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -61,8 +64,9 @@ class MessageService {
     String messageType = 'text',
   }) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('$baseUrl/messages.php'),
+        Uri.parse(ApiConfig.messagesUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'action': 'send_message',
@@ -91,8 +95,9 @@ class MessageService {
   // Mark messages as read
   static Future<bool> markAsRead(int conversationId, int userId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('$baseUrl/messages.php'),
+        Uri.parse(ApiConfig.messagesUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'action': 'mark_read',
@@ -115,8 +120,9 @@ class MessageService {
   // Create conversation
   static Future<int?> createConversation(int ownerId, int studentId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.post(
-        Uri.parse('$baseUrl/messages.php'),
+        Uri.parse(ApiConfig.messagesUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'action': 'create_conversation',
@@ -141,8 +147,10 @@ class MessageService {
   // Get unread message count
   static Future<int> getUnreadCount(int userId) async {
     try {
+      // UPDATED: Use API config instead of hardcoded URL
       final response = await http.get(
-        Uri.parse('$baseUrl/messages.php?action=unread_count&user_id=$userId'),
+        Uri.parse(ApiConfig.getMessagesUrlWithParams2('unread_count',
+            params: {'user_id': userId.toString()})),
         headers: {'Content-Type': 'application/json'},
       );
 

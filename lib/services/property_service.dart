@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+// ADD THIS IMPORT
+import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 
 class PropertyService {
-  static const String _baseUrl =
-      'http://10.0.2.2/smartstay'; // Android emulator
-  String get baseUrl => _baseUrl;
+  // REMOVE THESE LINES - No longer needed
+  // static const String _baseUrl = 'http://192.168.0.11/smartstay';
+
+  // UPDATED: Use API config instead
+  String get baseUrl => ApiConfig.baseUrl;
 
   static const Duration _timeout = Duration(seconds: 30);
   static const int _maxRetries = 3;
@@ -55,7 +59,8 @@ class PropertyService {
         queryParams['bathrooms'] = bathrooms.toString();
       }
 
-      final uri = Uri.parse('$baseUrl/get_all_listings.php')
+      // UPDATED: Use API config instead of hardcoded URL
+      final uri = Uri.parse(ApiConfig.getAllListingsUrl)
           .replace(queryParameters: queryParams);
       final request = http.Request('GET', uri);
       request.headers.addAll(_getHeaders());
@@ -96,7 +101,8 @@ class PropertyService {
         'limit': limit.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/get_featured_listings.php')
+      // UPDATED: Use API config instead of hardcoded URL
+      final uri = Uri.parse(ApiConfig.getFeaturedListingsUrl)
           .replace(queryParameters: queryParams);
       final request = http.Request('GET', uri);
       request.headers.addAll(_getHeaders());
@@ -133,7 +139,8 @@ class PropertyService {
   // Get property details by ID
   Future<Map<String, dynamic>> getPropertyDetails(int propertyId) async {
     try {
-      final uri = Uri.parse('$baseUrl/get_property_details.php')
+      // UPDATED: Use API config instead of hardcoded URL
+      final uri = Uri.parse(ApiConfig.getPropertyDetailsUrl)
           .replace(queryParameters: {'id': propertyId.toString()});
       final request = http.Request('GET', uri);
       request.headers.addAll(_getHeaders());
@@ -167,7 +174,8 @@ class PropertyService {
     try {
       if (query.isEmpty || query.length < 2) return [];
 
-      final uri = Uri.parse('$baseUrl/get_search_suggestions.php')
+      // UPDATED: Use API config instead of hardcoded URL
+      final uri = Uri.parse(ApiConfig.getSearchSuggestionsUrl)
           .replace(queryParameters: {'query': query});
       final request = http.Request('GET', uri);
       request.headers.addAll(_getHeaders());
@@ -341,7 +349,8 @@ class PropertyService {
   // Get property statistics (optional - for dashboard)
   Future<Map<String, dynamic>> getPropertyStats() async {
     try {
-      final uri = Uri.parse('$baseUrl/get_property_stats.php');
+      // UPDATED: Use API config instead of hardcoded URL
+      final uri = Uri.parse(ApiConfig.getPropertyStatsUrl);
       final request = http.Request('GET', uri);
       request.headers.addAll(_getHeaders());
 

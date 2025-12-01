@@ -5,7 +5,6 @@ import 'package:my_app/widgets/profile_menu_item.dart';
 import 'package:my_app/pages/owner/personal_info_page.dart';
 import 'package:my_app/pages/owner/payment_methods_page.dart';
 import 'package:my_app/pages/owner/rental_history_page.dart';
-import 'package:my_app/pages/owner/help_support_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final User user;
@@ -101,6 +100,7 @@ class ProfilePage extends StatelessWidget {
                   },
                 ),
                 ProfileMenuItem(
+                  // <-- This is where you add the new Payment & Banking option
                   icon: Icons.payment_outlined,
                   title: 'Payment Methods',
                   onTap: () {
@@ -125,18 +125,18 @@ class ProfilePage extends StatelessWidget {
             ),
 
             // Support section
-            _buildSection(
-              title: 'Support',
-              items: [
-                ProfileMenuItem(
-                  icon: Icons.help_outline,
-                  title: 'Help & Support',
-                  onTap: () {
-                    _navigateToHelpSupport(context);
-                  },
-                ),
-              ],
-            ),
+            // _buildSection(
+            //   title: 'Support',
+            //   items: [
+            //     ProfileMenuItem(
+            //       icon: Icons.help_outline,
+            //       title: 'Help & Support',
+            //       onTap: () {
+            //         _navigateToHelpSupport(context);
+            //       },
+            //     ),
+            //   ],
+            // ),
 
             // Logout button
             Padding(
@@ -167,7 +167,7 @@ class ProfilePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 24),
               child: Text(
-                'Version 1.0.0',
+                'Version 1.0.1',
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ),
@@ -230,7 +230,7 @@ class ProfilePage extends StatelessWidget {
   void _navigateToPaymentMethods(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const PaymentMethodsPage(),
+        builder: (context) => PaymentMethodsPage(user: user),
       ),
     );
   }
@@ -240,15 +240,6 @@ class ProfilePage extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const RentalHistoryPage(),
-      ),
-    );
-  }
-
-  // Navigate to Help & Support page
-  void _navigateToHelpSupport(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const HelpSupportPage(),
       ),
     );
   }

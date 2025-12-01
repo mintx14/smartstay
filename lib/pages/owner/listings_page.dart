@@ -34,7 +34,7 @@ class _ListingsPageState extends State<ListingsPage>
   Map<String, int> _listingsCount = {};
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => false;
 
   @override
   void initState() {
@@ -260,12 +260,19 @@ class _ListingsPageState extends State<ListingsPage>
 
   Widget _buildPropertyCard(Listing listing) {
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
+      onTap: () async {
+        // Wait for the Details Page to return
+        final result = await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => PropertyDetailsPage(listing: listing),
           ),
         );
+
+        // If result is not null (meaning an edit happened), refresh the list
+        if (result != null && mounted) {
+          _loadListings(refresh: true);
+          _loadListingsCount();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -467,13 +474,19 @@ class _ListingsPageState extends State<ListingsPage>
               leading:
                   Icon(Icons.visibility, color: Theme.of(context).primaryColor),
               title: const Text('View Details'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.of(context).push(
+                final result = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => PropertyDetailsPage(listing: listing),
                   ),
                 );
+
+                // Refresh if data changed
+                if (result != null && mounted) {
+                  _loadListings(refresh: true);
+                  _loadListingsCount();
+                }
               },
             ),
 
@@ -543,7 +556,8 @@ class _ListingsPageState extends State<ListingsPage>
       );
 
       // If the property was updated, refresh the listings
-      if (result == true && mounted) {
+      // If result is not null (it could be 'true' OR a 'Listing' object now)
+      if (result != null && mounted) {
         _showSuccessMessage('Property updated successfully');
         await _loadListings(refresh: true);
         await _loadListingsCount();
