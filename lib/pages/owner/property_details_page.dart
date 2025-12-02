@@ -557,16 +557,16 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
         position: _slideAnimation,
         child: Container(
           margin: const EdgeInsets.only(bottom: 32),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 15,
                 spreadRadius: 0,
-                offset: const Offset(0, 2),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -576,25 +576,33 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               Row(
                 children: [
                   Container(
-                    width: 4,
-                    height: 24,
+                    width: 5,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: BorderRadius.circular(2),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Theme.of(context).primaryColor,
+                          Theme.of(context).primaryColor.withOpacity(0.7),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Text(
                     title,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               ...children,
             ],
           ),
@@ -604,50 +612,73 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   Widget _buildDetailRow(String label, String value, {IconData? icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (icon != null) ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (icon != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.15),
+                        Theme.of(context).primaryColor.withOpacity(0.08),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).primaryColor.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(width: 16),
+              ],
+              Expanded(
+                flex: 2,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
               ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: Theme.of(context).primaryColor,
+              Expanded(
+                flex: 3,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                  textAlign: TextAlign.end,
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-          ],
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            ],
           ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        Divider(
+          color: Colors.grey[200],
+          height: 1,
+          thickness: 1,
+        ),
+      ],
     );
   }
 
@@ -853,32 +884,47 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildInfoSection('Property Overview', [
+                      // First Row
                       Row(
                         children: [
                           Expanded(
                             child: _buildOverviewCard(
-                              Icons.bed,
+                              Icons.bed_rounded,
                               '${_currentListing.bedrooms}',
                               'Bedrooms',
-                              Colors.blue,
+                              const Color(0xFF4A90E2),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildOverviewCard(
-                              Icons.bathroom,
+                              Icons.bathroom_rounded,
                               '${_currentListing.bathrooms}',
                               'Bathrooms',
-                              Colors.green,
+                              const Color(0xFF50C878),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Second Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildOverviewCard(
+                              Icons.square_foot_rounded,
+                              '${_currentListing.areaSqft}',
+                              'sqft',
+                              const Color(0xFFFF8C42),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildOverviewCard(
-                              Icons.square_foot,
-                              '${_currentListing.areaSqft}',
-                              'sqft',
-                              Colors.orange,
+                              Icons.people_rounded,
+                              '${_currentListing.maxTenants}',
+                              'Max Tenants',
+                              const Color(0xFF9B59B6),
                             ),
                           ),
                         ],
@@ -908,29 +954,39 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                       _buildDetailRow(
                         'Bedrooms',
                         '${_currentListing.bedrooms}',
-                        icon: Icons.bed,
+                        icon: Icons.bed_rounded,
                       ),
                       _buildDetailRow(
                         'Bathrooms',
                         '${_currentListing.bathrooms}',
-                        icon: Icons.bathroom,
+                        icon: Icons.bathroom_rounded,
                       ),
                       _buildDetailRow(
-                        'Area',
+                        'Floor Area',
                         '${_currentListing.areaSqft} sqft',
-                        icon: Icons.square_foot,
+                        icon: Icons.square_foot_rounded,
+                      ),
+                      _buildDetailRow(
+                        'Max Tenants',
+                        '${_currentListing.maxTenants} ${_currentListing.maxTenants > 1 ? "people" : "person"}',
+                        icon: Icons.people_rounded,
                       ),
                       _buildDetailRow(
                         'Available From',
                         DateFormat(
                           'd MMMM y',
                         ).format(_currentListing.availableFrom),
-                        icon: Icons.calendar_today,
+                        icon: Icons.calendar_today_rounded,
                       ),
                       _buildDetailRow(
                         'Minimum Tenure',
                         '${_currentListing.minimumTenure} month',
-                        icon: Icons.timelapse,
+                        icon: Icons.timelapse_rounded,
+                      ),
+                      _buildDetailRow(
+                        'Deposit Required',
+                        '${_currentListing.depositMonths} ${_currentListing.depositMonths > 1 ? "months" : "month"} (RM ${(_currentListing.price * _currentListing.depositMonths).toStringAsFixed(2)})',
+                        icon: Icons.account_balance_wallet_rounded,
                       ),
                     ]),
                   ),
@@ -1051,37 +1107,73 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color,
+                  color.withOpacity(0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            child: Icon(icon, size: 24, color: color),
+            child: Icon(icon, size: 28, color: Colors.white),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: color,
+              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+              fontSize: 13,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

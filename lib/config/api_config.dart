@@ -20,7 +20,7 @@ class ApiConfig {
 
   // Complete base URL with debug logging
   static String get baseUrl {
-    final url = '$_baseUrl$_apiPath';
+    const url = '$_baseUrl$_apiPath';
     // Uncomment next line for debugging
     // print("🔍 Current Base URL: $url");
     return url;

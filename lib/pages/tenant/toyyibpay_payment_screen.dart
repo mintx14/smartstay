@@ -30,7 +30,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
   late Animation<double> _slideAnimation;
 
   bool _isProcessing = false;
-  String _selectedPaymentMethod = 'fpx';
+  final String _selectedPaymentMethod = 'fpx';
   bool _isMockMode = false; // Will be set based on API response
 
   @override

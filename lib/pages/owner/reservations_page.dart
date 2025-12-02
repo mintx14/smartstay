@@ -5,9 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:my_app/config/api_config.dart';
 import 'package:my_app/models/user_model.dart';
 
-// Updated Reservations Page for Property Owners
 class ReservationsPage extends StatefulWidget {
-  final User currentUser; // Add current user (owner)
+  final User currentUser;
 
   const ReservationsPage({
     super.key,
@@ -18,47 +17,34 @@ class ReservationsPage extends StatefulWidget {
   State<ReservationsPage> createState() => _ReservationsPageState();
 }
 
-class _ReservationsPageState extends State<ReservationsPage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
+class _ReservationsPageState extends State<ReservationsPage> {
+  // State variables
   List<Map<String, dynamic>> _pendingReservations = [];
   List<Map<String, dynamic>> _confirmedReservations = [];
   List<Map<String, dynamic>> _historyReservations = [];
   bool _isLoading = true;
+  String _selectedTab = 'Pending'; // 'Pending', 'Confirmed', 'History'
+
+  // Colors
+  final Color _primaryColor = const Color(0xFF190152);
+  final Color _successColor = const Color(0xFF27AE60);
+  final Color _warningColor = const Color(0xFFE67E22);
+  final Color _backgroundColor = const Color(0xFFF5F7FA);
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _loadReservations();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  // Add this debug version to your reservations_page.dart
-// Replace the _loadReservations method with this debug version
-
-  // Replace your _loadReservations method with this improved version:
-
   Future<void> _loadReservations() async {
-    print('\n🔍 === LOAD RESERVATIONS START ===');
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
     });
-    print('✅ Loading state set to true');
 
     try {
-      // FIX: Safe ID conversion
-      print('👤 User Debug Info:');
-      print('   - User ID raw: ${widget.currentUser.id}');
-      print('   - User ID type: ${widget.currentUser.id.runtimeType}');
-
-      // Convert ID safely
       int userId;
       if (widget.currentUser.id is int) {
         userId = widget.currentUser.id as int;
@@ -66,173 +52,58 @@ class _ReservationsPageState extends State<ReservationsPage>
         userId = int.parse(widget.currentUser.id);
       }
 
-      print('   - User ID converted: $userId (${userId.runtimeType})');
-      print('   - User type: ${widget.currentUser.userType}');
-      print('   - User full name: ${widget.currentUser.fullName}');
-
-      // Build URL with converted ID
       final url = ApiConfig.getOwnerBookings(userId);
-      print('🌐 API URL: $url');
-
-      // Make HTTP request
-      print('📡 Making HTTP request...');
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
-      print('📨 Response received:');
-      print('   - Status code: ${response.statusCode}');
-      print('   - Response body length: ${response.body.length}');
-      print('   - Raw response: ${response.body}');
-
       if (response.statusCode == 200) {
-        print('✅ HTTP 200 - Parsing JSON...');
-
         final data = json.decode(response.body);
-        print('📋 Parsed JSON structure:');
-        print('   - Keys: ${data.keys}');
-        print('   - Success field: ${data['success']}');
-        print('   - Bookings field exists: ${data['bookings'] != null}');
-        if (data['bookings'] != null) {
-          print('   - Bookings type: ${data['bookings'].runtimeType}');
-          print('   - Bookings length: ${data['bookings'].length}');
-        }
 
         if (data['success'] == true && data['bookings'] != null) {
-          print('✅ Valid response structure detected');
-
           final bookings = List<Map<String, dynamic>>.from(data['bookings']);
-          print('📚 Bookings array processed:');
-          print('   - Total bookings: ${bookings.length}');
 
-          // Debug each booking
-          for (int i = 0; i < bookings.length; i++) {
-            final booking = bookings[i];
-            print('   📖 Booking $i:');
-            print('      - ID: ${booking['id']}');
-            print(
-                '      - Status: "${booking['status']}" (${booking['status'].runtimeType})');
-            print('      - Owner ID: ${booking['owner_id']}');
-            print('      - Expected Owner ID: $userId');
-            print(
-                '      - Match: ${booking['owner_id'].toString() == userId.toString()}');
-          }
-
-          print('\n🔄 Starting filtering process...');
-
-          // Filter pending bookings
-          print('🟡 Filtering PENDING bookings...');
           final pending = bookings.where((b) {
-            final status = b['status'];
-            final statusStr = status?.toString().trim().toLowerCase() ?? '';
-            final isPending = statusStr == 'pending';
-            print(
-                '   - Booking ${b['id']}: status="$status" -> "$statusStr" -> isPending: $isPending');
-            return isPending;
+            final status = b['status']?.toString().trim().toLowerCase() ?? '';
+            return status == 'pending';
           }).toList();
 
-          // Filter confirmed bookings
-          print('🟢 Filtering CONFIRMED bookings...');
           final confirmed = bookings.where((b) {
-            final status = b['status'];
-            final statusStr = status?.toString().trim().toLowerCase() ?? '';
-            final isConfirmed = statusStr == 'confirmed';
-            print(
-                '   - Booking ${b['id']}: status="$status" -> "$statusStr" -> isConfirmed: $isConfirmed');
-            return isConfirmed;
+            final status = b['status']?.toString().trim().toLowerCase() ?? '';
+            return status == 'confirmed';
           }).toList();
 
-          // Filter history bookings
-          print('🔴 Filtering HISTORY bookings...');
           final history = bookings.where((b) {
-            final status = b['status'];
-            final statusStr = status?.toString().trim().toLowerCase() ?? '';
-            final isHistory = statusStr == 'rejected' ||
-                statusStr == 'completed' ||
-                statusStr == 'cancelled';
-            print(
-                '   - Booking ${b['id']}: status="$status" -> "$statusStr" -> isHistory: $isHistory');
-            return isHistory;
+            final status = b['status']?.toString().trim().toLowerCase() ?? '';
+            return ['rejected', 'completed', 'cancelled'].contains(status);
           }).toList();
 
-          print('\n📊 FILTERING RESULTS:');
-          print('   🟡 Pending: ${pending.length} bookings');
-          print('   🟢 Confirmed: ${confirmed.length} bookings');
-          print('   🔴 History: ${history.length} bookings');
-
-          // Print booking IDs in each category
-          print('\n📋 Booking assignments:');
-          print('   🟡 Pending IDs: ${pending.map((b) => b['id']).toList()}');
-          print(
-              '   🟢 Confirmed IDs: ${confirmed.map((b) => b['id']).toList()}');
-          print('   🔴 History IDs: ${history.map((b) => b['id']).toList()}');
-
-          print('\n🔄 Updating state...');
-          setState(() {
-            _pendingReservations = pending;
-            _confirmedReservations = confirmed;
-            _historyReservations = history;
-            _isLoading = false;
-          });
-
-          print('✅ State updated successfully!');
-          print('   📊 Final state:');
-          print(
-              '      🟡 _pendingReservations.length: ${_pendingReservations.length}');
-          print(
-              '      🟢 _confirmedReservations.length: ${_confirmedReservations.length}');
-          print(
-              '      🔴 _historyReservations.length: ${_historyReservations.length}');
-          print('      ⏳ _isLoading: $_isLoading');
+          if (mounted) {
+            setState(() {
+              _pendingReservations = pending;
+              _confirmedReservations = confirmed;
+              _historyReservations = history;
+              _isLoading = false;
+            });
+          }
         } else {
-          print('❌ Invalid response structure');
-          print('   - success field: ${data['success']}');
-          print('   - bookings field: ${data['bookings']}');
-          print('   - Setting empty state...');
-
-          setState(() {
-            _pendingReservations = [];
-            _confirmedReservations = [];
-            _historyReservations = [];
-            _isLoading = false;
-          });
-          print('✅ Empty state set');
+          _setEmptyState();
         }
       } else {
-        print('❌ HTTP Error: ${response.statusCode}');
-        print('   Response body: ${response.body}');
-
-        setState(() {
-          _pendingReservations = [];
-          _confirmedReservations = [];
-          _historyReservations = [];
-          _isLoading = false;
-        });
-
+        _setEmptyState();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Server error: ${response.statusCode}'),
-              backgroundColor: Colors.orange,
+              backgroundColor: _warningColor,
             ),
           );
         }
       }
-    } catch (e, stackTrace) {
-      print('❌ EXCEPTION in _loadReservations:');
-      print('   Error: $e');
-      print('   Stack trace: $stackTrace');
-
-      setState(() {
-        _pendingReservations = [];
-        _confirmedReservations = [];
-        _historyReservations = [];
-        _isLoading = false;
-      });
-
+    } catch (e) {
+      print('Error loading reservations: $e');
+      _setEmptyState();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -242,392 +113,596 @@ class _ReservationsPageState extends State<ReservationsPage>
         );
       }
     }
-
-    print('🔍 === LOAD RESERVATIONS END ===\n');
   }
 
-// Also add this test method to call _loadReservations manually:
+  void _setEmptyState() {
+    if (mounted) {
+      setState(() {
+        _pendingReservations = [];
+        _confirmedReservations = [];
+        _historyReservations = [];
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _updateBookingStatus(String bookingId, String status) async {
     try {
       final response = await http.put(
         Uri.parse(ApiConfig.updateBookingStatus(bookingId, status)),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              status == 'accept'
-                  ? 'Booking accepted successfully'
-                  : 'Booking declined',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                status == 'accept'
+                    ? 'Booking accepted successfully'
+                    : 'Booking declined',
+              ),
+              backgroundColor:
+                  status == 'accept' ? _successColor : _warningColor,
             ),
-            backgroundColor: status == 'accept' ? Colors.green : Colors.orange,
-          ),
-        );
-        _loadReservations(); // Reload reservations
+          );
+          _loadReservations();
+        }
       } else {
-        throw Exception('Failed to update booking status: ${response.body}');
+        throw Exception('Failed to update booking status');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  // Update your build method to include TWO debug buttons:
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
+    return Scaffold(
+      backgroundColor: _backgroundColor,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF190152),
+                Color(0xFF2D1B69),
               ],
             ),
-            child: TabBar(
-              controller: _tabController,
-              tabs: [
-                Tab(text: 'Pending (${_pendingReservations.length})'),
-                Tab(text: 'Confirmed (${_confirmedReservations.length})'),
-                Tab(text: 'History (${_historyReservations.length})'),
-              ],
-              labelColor: const Color(0xFF667EEA),
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: const Color(0xFF667EEA),
-              indicatorWeight: 3,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Bookings',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Manage your booking requests',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        body: _isLoading
-            ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+      ),
+      body: Column(
+        children: [
+          _buildCustomTabBar(),
+          Expanded(
+            child: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
                     ),
-                    SizedBox(height: 16),
-                    Text('Loading reservations...'),
-                  ],
-                ),
-              )
-            : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildReservationsList(_pendingReservations, 'Pending'),
-                  _buildReservationsList(_confirmedReservations, 'Confirmed'),
-                  _buildReservationsList(_historyReservations, 'History'),
-                ],
-              ),
+                  )
+                : _buildContent(),
+          ),
+        ],
       ),
     );
   }
 
-  // Also, update your _buildReservationsList method to add debug info:
-  Widget _buildReservationsList(
-      List<Map<String, dynamic>> reservations, String status) {
-    print(
-        '=== Building reservations list for $status: ${reservations.length} items ===');
+  Widget _buildCustomTabBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildTabItem('Pending', _pendingReservations.length),
+          const SizedBox(width: 8),
+          _buildTabItem('Confirmed', _confirmedReservations.length),
+          const SizedBox(width: 8),
+          _buildTabItem('History', _historyReservations.length),
+        ],
+      ),
+    );
+  }
 
-    // Debug: Print the actual reservations being displayed
-    for (int i = 0; i < reservations.length; i++) {
-      final reservation = reservations[i];
-      print(
-          '  $status[$i]: Booking ID ${reservation['id']} - Status: "${reservation['status']}"');
+  Widget _buildTabItem(String label, int count) {
+    final isSelected = _selectedTab == label;
+
+    Color getBgColor() {
+      if (!isSelected) return Colors.grey[100]!;
+      switch (label) {
+        case 'Pending':
+          return _warningColor;
+        case 'Confirmed':
+          return _successColor;
+        default:
+          return _primaryColor;
+      }
     }
 
-    if (reservations.isEmpty) {
-      print('Showing empty state for $status');
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              status == 'Pending'
-                  ? Icons.hourglass_empty
-                  : status == 'Confirmed'
-                      ? Icons.check_circle_outline
-                      : Icons.history,
-              size: 64,
-              color: Colors.grey[300],
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedTab = label;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? getBgColor() : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? getBgColor() : Colors.grey[300]!,
+              width: 1,
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No ${status.toLowerCase()} reservations',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: getBgColor().withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                count.toString(),
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            // Text(
-            //   'Expected: ${status == 'Pending' ? '1' : status == 'History' ? '4' : '0'} bookings based on API data',
-            //   style: TextStyle(
-            //     fontSize: 12,
-            //     color: Colors.red[600],
-            //     fontStyle: FontStyle.italic,
-            //   ),
-            // ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white.withOpacity(0.9)
+                      : Colors.grey[600],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    List<Map<String, dynamic>> currentList;
+    switch (_selectedTab) {
+      case 'Pending':
+        currentList = _pendingReservations;
+        break;
+      case 'Confirmed':
+        currentList = _confirmedReservations;
+        break;
+      case 'History':
+        currentList = _historyReservations;
+        break;
+      default:
+        currentList = [];
     }
 
-    print('Showing ${reservations.length} cards for $status');
-
-    Color statusColor = status == 'Pending'
-        ? Colors.orange
-        : (status == 'Confirmed' ? Colors.green : Colors.grey);
+    if (currentList.isEmpty) {
+      return _buildEmptyState();
+    }
 
     return RefreshIndicator(
       onRefresh: _loadReservations,
+      color: _primaryColor,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: reservations.length,
+        itemCount: currentList.length,
         itemBuilder: (context, index) {
-          final reservation = reservations[index];
-          print(
-              'Building card $index for booking ${reservation['id']} in $status tab');
-
-          // Keep your existing card building code here...
-          // (I'm only showing the debug additions, rest stays the same)
-
-          final tenant = reservation['tenant'] ?? {};
-          final property = reservation['property'] ?? {};
-          final checkInDate = DateTime.parse(reservation['check_in_date']);
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Booking #${reservation['id']}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${reservation['status']}'
-                              .toUpperCase(), // Show actual status from data
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Tenant Information
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: const Color(0xFF667EEA),
-                          child: Text(
-                            tenant['full_name']
-                                    ?.substring(0, 1)
-                                    .toUpperCase() ??
-                                'T',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                tenant['full_name'] ?? 'Tenant Name',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                tenant['email'] ?? 'tenant@example.com',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 13,
-                                ),
-                              ),
-                              if (tenant['phone'] != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  tenant['phone'],
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Property Information
-                  Row(
-                    children: [
-                      Icon(Icons.home, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          property['title'] ?? 'Property Name',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Booking Details
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildDetailRow('Check-In',
-                            DateFormat('MMM d, yyyy').format(checkInDate)),
-                        const SizedBox(height: 8),
-                        _buildDetailRow('Duration',
-                            '${reservation['duration_months']} months'),
-                        const SizedBox(height: 8),
-                        _buildDetailRow('Monthly Rent',
-                            'RM ${reservation['monthly_rent']}'),
-                        const SizedBox(height: 8),
-                        _buildDetailRow(
-                            'Total Amount', 'RM ${reservation['total_amount']}',
-                            isTotal: true),
-                      ],
-                    ),
-                  ),
-
-                  // Keep your existing emergency contact and message sections...
-
-                  const SizedBox(height: 16),
-
-                  // Action Buttons
-                  if (status == 'Pending')
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            _showDeclineDialog(reservation['id'].toString());
-                          },
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Decline'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            _showAcceptDialog(reservation['id'].toString());
-                          },
-                          icon: const Icon(Icons.check, size: 18),
-                          label: const Text('Accept'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          );
+          return _buildReservationCard(currentList[index]);
         },
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 13,
+  Widget _buildEmptyState() {
+    IconData icon;
+    String message;
+    String subMessage;
+
+    switch (_selectedTab) {
+      case 'Pending':
+        icon = Icons.hourglass_empty_rounded;
+        message = 'No Pending Requests';
+        subMessage = 'New booking requests will appear here.';
+        break;
+      case 'Confirmed':
+        icon = Icons.check_circle_outline_rounded;
+        message = 'No Confirmed Bookings';
+        subMessage = 'Approved bookings will show up here.';
+        break;
+      default:
+        icon = Icons.history_rounded;
+        message = 'No Booking History';
+        subMessage = 'Past and cancelled bookings will be listed here.';
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 64, color: Colors.grey[300]),
           ),
+          const SizedBox(height: 24),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subMessage,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReservationCard(Map<String, dynamic> reservation) {
+    final tenant = reservation['tenant'] ?? {};
+    final property = reservation['property'] ?? {};
+    final checkInDate = DateTime.parse(reservation['check_in_date']);
+    final status = reservation['status']?.toString().toLowerCase() ?? '';
+
+    Color statusColor;
+    IconData statusIcon;
+
+    switch (status) {
+      case 'pending':
+        statusColor = _warningColor;
+        statusIcon = Icons.hourglass_top_rounded;
+        break;
+      case 'confirmed':
+        statusColor = _successColor;
+        statusIcon = Icons.check_circle_rounded;
+        break;
+      case 'rejected':
+      case 'cancelled':
+        statusColor = Colors.red;
+        statusIcon = Icons.cancel_rounded;
+        break;
+      case 'completed':
+        statusColor = Colors.blue;
+        statusIcon = Icons.task_alt_rounded;
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusIcon = Icons.help_outline_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Property Info & Status
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Property Icon/Image Placeholder
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: _primaryColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.home_work_rounded, color: _primaryColor),
+                ),
+                const SizedBox(width: 12),
+                // Title and ID
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        property['title'] ?? 'Property Name',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Booking #${reservation['id']}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Status Badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(statusIcon, size: 14, color: statusColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        status.toUpperCase(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1),
+
+          // Body: Tenant & Details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Tenant Info
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: _primaryColor.withOpacity(0.1),
+                      child: Text(
+                        tenant['full_name']?.substring(0, 1).toUpperCase() ??
+                            'T',
+                        style: TextStyle(
+                          color: _primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tenant['full_name'] ?? 'Tenant Name',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            tenant['email'] ?? '',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Booking Details Grid
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildInfoColumn(
+                        'Check In',
+                        DateFormat('MMM d, yyyy').format(checkInDate),
+                        Icons.calendar_today_rounded,
+                      ),
+                      Container(width: 1, height: 30, color: Colors.grey[300]),
+                      _buildInfoColumn(
+                        'Duration',
+                        '${reservation['duration_months']} Months',
+                        Icons.timer_outlined,
+                      ),
+                      Container(width: 1, height: 30, color: Colors.grey[300]),
+                      _buildInfoColumn(
+                        'Total',
+                        'RM ${reservation['total_amount']}',
+                        Icons.payments_outlined,
+                        isHighlight: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Footer: Actions (Only for Pending)
+          if (status == 'pending') ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          _showDeclineDialog(reservation['id'].toString()),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: BorderSide(color: Colors.red.withOpacity(0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Decline'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          _showAcceptDialog(reservation['id'].toString()),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _successColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Accept'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoColumn(String label, String value, IconData icon,
+      {bool isHighlight = false}) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            fontSize: isTotal ? 15 : 13,
-            color: isTotal ? const Color(0xFF667EEA) : Colors.black87,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: isHighlight ? _primaryColor : const Color(0xFF1A1A1A),
           ),
         ),
       ],
@@ -638,50 +713,40 @@ class _ReservationsPageState extends State<ReservationsPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: _successColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.check_circle,
-                color: Colors.green,
-                size: 24,
-              ),
+              child: Icon(Icons.check_circle, color: _successColor, size: 24),
             ),
             const SizedBox(width: 12),
             const Text('Accept Booking'),
           ],
         ),
         content: const Text(
-          'Are you sure you want to accept this booking request? The tenant will be notified and can proceed with payment.',
+          'Are you sure you want to accept this booking? The tenant will be notified immediately.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pop(context);
               _updateBookingStatus(bookingId, 'accept');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: _successColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text(
-              'Accept',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Accept', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -692,9 +757,7 @@ class _ReservationsPageState extends State<ReservationsPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
@@ -703,39 +766,31 @@ class _ReservationsPageState extends State<ReservationsPage>
                 color: Colors.red.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.cancel,
-                color: Colors.red,
-                size: 24,
-              ),
+              child: const Icon(Icons.cancel, color: Colors.red, size: 24),
             ),
             const SizedBox(width: 12),
             const Text('Decline Booking'),
           ],
         ),
         content: const Text(
-          'Are you sure you want to decline this booking request? The tenant will be notified.',
+          'Are you sure you want to decline this booking? This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pop(context);
               _updateBookingStatus(bookingId, 'reject');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text(
-              'Decline',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Decline', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

@@ -22,6 +22,8 @@ class _AddListingPageState extends State<AddListingPage> {
   final _priceController = TextEditingController();
   final _bedroomsController = TextEditingController();
   final _bathroomsController = TextEditingController();
+  final _maxTenantsController =
+      TextEditingController(); // <--- NEW: Max tenants controller
   //final _depositController = TextEditingController();
   int? _selectedDepositMonth;
   final _areaSqftController = TextEditingController();
@@ -102,72 +104,80 @@ class _AddListingPageState extends State<AddListingPage> {
   void _showMediaOptions() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Allow full height control
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const Text(
-              'Add Media',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom, // Keyboard padding
+        ),
+        child: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildMediaOption(
-                  icon: Icons.photo_library,
-                  label: 'Gallery Photos',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImages();
-                  },
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                _buildMediaOption(
-                  icon: Icons.camera_alt,
-                  label: 'Take Photo',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _captureImage();
-                  },
+                const Text(
+                  'Add Media',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildMediaOption(
+                      icon: Icons.photo_library,
+                      label: 'Gallery Photos',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImages();
+                      },
+                    ),
+                    _buildMediaOption(
+                      icon: Icons.camera_alt,
+                      label: 'Take Photo',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _captureImage();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildMediaOption(
+                      icon: Icons.video_library,
+                      label: 'Gallery Videos',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickVideos();
+                      },
+                    ),
+                    _buildMediaOption(
+                      icon: Icons.videocam,
+                      label: 'Record Video',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _captureVideo();
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildMediaOption(
-                  icon: Icons.video_library,
-                  label: 'Gallery Videos',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickVideos();
-                  },
-                ),
-                _buildMediaOption(
-                  icon: Icons.videocam,
-                  label: 'Record Video',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _captureVideo();
-                  },
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -271,6 +281,8 @@ class _AddListingPageState extends State<AddListingPage> {
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),
+          maxTenants: int.parse(
+              _maxTenantsController.text), // <--- NEW: Include max tenants
           availableFrom: _availableFrom,
           minimumTenure: _minimumTenure,
           status: 'Active',
@@ -310,312 +322,476 @@ class _AddListingPageState extends State<AddListingPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Add Property Listing'),
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey[50]!,
+            Colors.white,
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Property Details Card
-                    _buildSectionCard(
-                      title: 'Property Details',
-                      icon: Icons.home,
-                      children: [
-                        _buildModernTextField(
-                          controller: _propertyNameController,
-                          label: 'Property Name',
-                          hint: 'e.g., Cozy Apartment, Modern Townhouse',
-                          prefixIcon: Icons.home_work,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildModernTextField(
-                          controller: _addressController,
-                          label: 'Address',
-                          hint: 'Street address, unit number, etc.',
-                          prefixIcon: Icons.location_on,
-                          maxLines: 2,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildModernTextField(
-                          controller: _postcodeController,
-                          label: 'Postcode',
-                          hint: 'Enter postcode',
-                          prefixIcon: Icons.pin_drop,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                      ],
-                    ),
-
-                    // Property Features Card - IMPROVED VERSION
-                    // Property Features Card - IMPROVED VERSION
-                    _buildSectionCard(
-                      title: 'Property Features',
-                      icon: Icons.featured_play_list,
-                      children: [
-                        // Row 1: Bedrooms and Bathrooms
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildFeatureField(
-                                controller: _bedroomsController,
-                                label: 'Bedrooms',
-                                icon: Icons.bed,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildFeatureField(
-                                controller: _bathroomsController,
-                                label: 'Bathrooms',
-                                icon: Icons.bathroom,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Row 2: Size
-                        _buildFeatureField(
-                          controller: _areaSqftController,
-                          label: 'Size (sqft)',
-                          icon: Icons.square_foot,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Row 3: Monthly Rent
-                        _buildModernTextField(
-                          controller: _priceController,
-                          label: 'Monthly Rent',
-                          prefixIcon: Icons.attach_money,
-                          prefixText: 'RM ',
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Row 4: Deposit (full width to prevent overflow)
-                        DropdownButtonFormField<int>(
-                          value: _selectedDepositMonth,
-                          onChanged: (int? newValue) {
-                            setState(() {
-                              _selectedDepositMonth = newValue;
-                            });
-                          },
-                          items: List.generate(12, (index) {
-                            int month = index + 1;
-                            return DropdownMenuItem<int>(
-                              value: month,
-                              child: Text(
-                                '$month month${month > 1 ? 's' : ''}',
-                              ),
-                            );
-                          }).toList(),
-                          decoration: InputDecoration(
-                            labelText: 'Deposit',
-                            prefixIcon:
-                                const Icon(Icons.calendar_today_outlined),
-                            filled: true,
-                            fillColor: Colors.grey[50],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              ),
-                            ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            'Add Property Listing',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              letterSpacing: 0.5,
+            ),
+          ),
+          centerTitle: true,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context)
+                      .primaryColor
+                      .withBlue(Theme.of(context).primaryColor.blue + 20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          leading: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  const Icon(Icons.arrow_back, size: 20, color: Colors.white),
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        extendBodyBehindAppBar: false,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Property Details Card
+                      _buildSectionCard(
+                        title: 'Property Details',
+                        icon: Icons.home_rounded,
+                        children: [
+                          _buildModernTextField(
+                            controller: _propertyNameController,
+                            label: 'Property Name',
+                            hint: 'e.g. Sunset Villa, Cozy Apartment',
+                            prefixIcon: Icons.home_work_outlined,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
                           ),
-                          validator: (value) =>
-                              value == null ? 'Required' : null,
-                        ),
-                      ],
-                    ),
-
-                    // Description Card
-                    _buildSectionCard(
-                      title: 'Property Description',
-                      icon: Icons.description,
-                      children: [
-                        _buildModernTextField(
-                          controller: _descriptionController,
-                          label: 'Description',
-                          hint:
-                              'Describe the property, features, amenities, nearby facilities, etc.',
-                          maxLines: 5,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                      ],
-                    ),
-
-                    // Availability Card
-                    _buildSectionCard(
-                      title: 'Availability',
-                      icon: Icons.calendar_today,
-                      children: [
-                        _buildDatePicker(),
-                        const SizedBox(height: 16),
-                        _buildModernDropdown(),
-                      ],
-                    ),
-
-                    // Media Upload Card
-                    _buildSectionCard(
-                      title: 'Property Media',
-                      icon: Icons.photo_library,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.grey[50],
+                          const SizedBox(height: 20),
+                          _buildModernTextField(
+                            controller: _addressController,
+                            label: 'Address',
+                            hint: 'Full street address',
+                            prefixIcon: Icons.location_on_outlined,
+                            maxLines: 2,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
                           ),
-                          child: InkWell(
+                          const SizedBox(height: 20),
+                          _buildModernTextField(
+                            controller: _postcodeController,
+                            label: 'Postcode',
+                            hint: 'e.g. 50480',
+                            prefixIcon: Icons.map_outlined,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                        ],
+                      ),
+
+                      // Property Features Card
+                      _buildSectionCard(
+                        title: 'Property Features',
+                        icon: Icons.grid_view_rounded,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildFeatureField(
+                                  controller: _bedroomsController,
+                                  label: 'Bedrooms',
+                                  icon: Icons.bed_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildFeatureField(
+                                  controller: _bathroomsController,
+                                  label: 'Bathrooms',
+                                  icon: Icons.bathtub_outlined,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildFeatureField(
+                                  controller: _areaSqftController,
+                                  label: 'Size (sqft)',
+                                  icon: Icons.square_foot_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildFeatureField(
+                                  controller: _maxTenantsController,
+                                  label: 'Max Tenants',
+                                  icon: Icons.people_outline_rounded,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _buildModernTextField(
+                            controller: _priceController,
+                            label: 'Monthly Rent',
+                            prefixIcon: Icons.attach_money_rounded,
+                            prefixText: 'RM ',
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Deposit',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: _selectedDepositMonth,
+                                    isExpanded: true,
+                                    hint: Text(
+                                      'Select deposit months',
+                                      style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 14),
+                                    ),
+                                    icon: Icon(Icons.arrow_drop_down,
+                                        color: Colors.grey[600]),
+                                    items: List.generate(12, (index) {
+                                      int month = index + 1;
+                                      return DropdownMenuItem<int>(
+                                        value: month,
+                                        child: Text(
+                                          '$month month${month > 1 ? 's' : ''}',
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (int? newValue) {
+                                      setState(() {
+                                        _selectedDepositMonth = newValue;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      // Description Card
+                      _buildSectionCard(
+                        title: 'Description',
+                        icon: Icons.description_outlined,
+                        children: [
+                          _buildModernTextField(
+                            controller: _descriptionController,
+                            label: 'Property Description',
+                            hint:
+                                'Tell potential tenants what makes your property special...',
+                            maxLines: 6,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                        ],
+                      ),
+
+                      // Availability Card
+                      _buildSectionCard(
+                        title: 'Availability',
+                        icon: Icons.event_available_rounded,
+                        children: [
+                          _buildDatePicker(),
+                          const SizedBox(height: 20),
+                          _buildModernDropdown(),
+                        ],
+                      ),
+
+                      // Media Upload Card
+                      _buildSectionCard(
+                        title: 'Photos & Videos',
+                        icon: Icons.perm_media_outlined,
+                        children: [
+                          InkWell(
                             onTap: _showMediaOptions,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 32),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.05),
+                                    Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.02),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.2),
+                                  width: 2,
+                                  strokeAlign: BorderSide.strokeAlignInside,
+                                ),
+                              ),
                               child: Column(
                                 children: [
-                                  Icon(
-                                    Icons.add_photo_alternate,
-                                    size: 48,
-                                    color: Theme.of(context).primaryColor,
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.add_photo_alternate_rounded,
+                                      size: 40,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Add Photos & Videos',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Tap to add photos or videos',
+                                    'Minimum 4 media files required',
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Minimum 4 files required',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500],
+                                      fontSize: 13,
+                                      color: Colors.grey[600],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                        if (_selectedImages.isNotEmpty ||
-                            _selectedVideos.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          _buildMediaPreview(),
+                          if (_selectedImages.isNotEmpty ||
+                              _selectedVideos.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            _buildMediaPreview(),
+                          ],
                         ],
-                      ],
-                    ),
+                      ),
 
-                    const SizedBox(height: 24),
-                    _buildSectionCard(
-                      title: 'Rent Contract',
-                      icon: Icons.attach_file,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.grey[50],
-                          ),
-                          child: ListTile(
-                            leading: Icon(Icons.picture_as_pdf,
-                                color: Colors.red[400]),
-                            title: Text(
-                              _contractFileName ??
-                                  'Upload Rental Agreement (PDF)',
-                              style: TextStyle(
+                      // Contract Card
+                      _buildSectionCard(
+                        title: 'Rental Agreement',
+                        icon: Icons.assignment_outlined,
+                        children: [
+                          InkWell(
+                            onTap: _pickContract,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
                                 color: _contractFileName != null
-                                    ? Colors.black
-                                    : Colors.grey[600],
-                                fontWeight: _contractFileName != null
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                                    ? Colors.green.withOpacity(0.05)
+                                    : Colors.grey[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _contractFileName != null
+                                      ? Colors.green.withOpacity(0.3)
+                                      : Colors.grey[200]!,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: _contractFileName != null
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.red.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.picture_as_pdf_rounded,
+                                      color: _contractFileName != null
+                                          ? Colors.green
+                                          : Colors.red[400],
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _contractFileName ??
+                                              'Upload Agreement (PDF)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: _contractFileName != null
+                                                ? Colors.black87
+                                                : Colors.grey[700],
+                                            fontSize: 15,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (_contractFileName == null)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 4),
+                                            child: Text(
+                                              'Optional',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_contractFileName != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded,
+                                          color: Colors.grey),
+                                      onPressed: () {
+                                        setState(() {
+                                          _contractFile = null;
+                                          _contractFileName = null;
+                                        });
+                                      },
+                                    )
+                                  else
+                                    Icon(Icons.upload_file_rounded,
+                                        color: Colors.grey[400]),
+                                ],
                               ),
                             ),
-                            trailing: _contractFileName != null
-                                ? IconButton(
-                                    icon: const Icon(Icons.close,
-                                        color: Colors.red),
-                                    onPressed: () {
-                                      setState(() {
-                                        _contractFile = null;
-                                        _contractFileName = null;
-                                      });
-                                    },
-                                  )
-                                : const Icon(Icons.upload_file),
-                            onTap: _pickContract,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Submit Button
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).primaryColor,
+                              Theme.of(context).primaryColor.withBlue(
+                                  Theme.of(context).primaryColor.blue + 20),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Optional: Upload a standard contract for tenants to review.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-
-                    // Submit Button
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: const Text(
-                        'Save Property Listing',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        child: ElevatedButton(
+                          onPressed: _submitForm,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Publish Listing',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 50),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -625,48 +801,61 @@ class _AddListingPageState extends State<AddListingPage> {
     required List<Widget> children,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: Colors.white, width: 2),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.15),
+                        Theme.of(context).primaryColor.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      width: 1,
+                    ),
                   ),
                   child: Icon(
                     icon,
                     color: Theme.of(context).primaryColor,
-                    size: 20,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             ...children,
           ],
         ),
@@ -685,37 +874,68 @@ class _AddListingPageState extends State<AddListingPage> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-        prefixText: prefixText,
-        filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            validator: validator,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              prefixIcon: prefixIcon != null
+                  ? Icon(prefixIcon, color: Colors.grey[400], size: 20)
+                  : null,
+              prefixText: prefixText,
+              filled: true,
+              fillColor: Colors.grey[50],
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey[200]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                    color: Theme.of(context).primaryColor, width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red[400]!),
+              ),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              BorderSide(color: Theme.of(context).primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-      ),
+      ],
     );
   }
 
@@ -725,49 +945,43 @@ class _AddListingPageState extends State<AddListingPage> {
     required IconData icon,
   }) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 20, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ],
+          Icon(icon, size: 24, color: Colors.grey[400]),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextFormField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '0',
-              ),
-              validator: (value) => value!.isEmpty ? 'Required' : null,
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
             ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: '0',
+              hintStyle: TextStyle(color: Colors.black12),
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) => value!.isEmpty ? '' : null,
           ),
         ],
       ),
@@ -775,68 +989,114 @@ class _AddListingPageState extends State<AddListingPage> {
   }
 
   Widget _buildDatePicker() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-      ),
-      child: ListTile(
-        leading:
-            Icon(Icons.calendar_today, color: Theme.of(context).primaryColor),
-        title: const Text('Available From'),
-        subtitle: Text(
-          '${_availableFrom.day}/${_availableFrom.month}/${_availableFrom.year}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Available From',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
-        trailing: const Icon(Icons.edit_calendar),
-        onTap: () async {
-          final date = await showDatePicker(
-            context: context,
-            initialDate: _availableFrom,
-            firstDate: DateTime.now(),
-            lastDate: DateTime.now().add(const Duration(days: 365)),
-          );
-          if (date != null) {
-            setState(() {
-              _availableFrom = date;
-            });
-          }
-        },
-      ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _availableFrom,
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: ColorScheme.light(
+                      primary: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (date != null) {
+              setState(() {
+                _availableFrom = date;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_rounded,
+                    size: 20, color: Colors.grey[600]),
+                const SizedBox(width: 12),
+                Text(
+                  '${_availableFrom.day}/${_availableFrom.month}/${_availableFrom.year}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildModernDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-      ),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: 'Minimum Tenure',
-          border: InputBorder.none,
-          prefixIcon:
-              Icon(Icons.access_time, color: Theme.of(context).primaryColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Minimum Tenure',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
-        value: _minimumTenure,
-        items: const [
-          DropdownMenuItem(value: '3 months', child: Text('3 months')),
-          DropdownMenuItem(value: '6 months', child: Text('6 months')),
-          DropdownMenuItem(value: '12 months', child: Text('12 months')),
-          DropdownMenuItem(value: '24 months', child: Text('24 months')),
-        ],
-        onChanged: (value) {
-          if (value != null) {
-            setState(() {
-              _minimumTenure = value;
-            });
-          }
-        },
-      ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _minimumTenure,
+              isExpanded: true,
+              icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+              items: const [
+                DropdownMenuItem(value: '3 months', child: Text('3 months')),
+                DropdownMenuItem(value: '6 months', child: Text('6 months')),
+                DropdownMenuItem(value: '12 months', child: Text('12 months')),
+                DropdownMenuItem(value: '24 months', child: Text('24 months')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _minimumTenure = value;
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -845,16 +1105,23 @@ class _AddListingPageState extends State<AddListingPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_selectedImages.isNotEmpty) ...[
-          Text(
-            'Photos (${_selectedImages.length})',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Photos (${_selectedImages.length})',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
           SizedBox(
-            height: 120,
-            child: ListView.builder(
+            height: 100,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _selectedImages.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 return _buildMediaThumbnail(
                   file: _selectedImages[index],
@@ -870,17 +1137,24 @@ class _AddListingPageState extends State<AddListingPage> {
           ),
         ],
         if (_selectedVideos.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Videos (${_selectedVideos.length})',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          SizedBox(height: _selectedImages.isNotEmpty ? 20 : 0),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Videos (${_selectedVideos.length})',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
           SizedBox(
-            height: 120,
-            child: ListView.builder(
+            height: 100,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _selectedVideos.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 return _buildMediaThumbnail(
                   file: _selectedVideos[index],
@@ -907,77 +1181,89 @@ class _AddListingPageState extends State<AddListingPage> {
     required bool isVideo,
     required VoidCallback onRemove,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 120,
-              height: 120,
-              color: Colors.grey[200],
-              child: isVideo
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (_videoControllers[file.path] != null &&
-                            _videoControllers[file.path]!.value.isInitialized)
-                          FittedBox(
-                            fit: BoxFit.cover,
-                            child: SizedBox(
-                              width: _videoControllers[file.path]!
-                                  .value
-                                  .size
-                                  .width,
-                              height: _videoControllers[file.path]!
-                                  .value
-                                  .size
-                                  .height,
-                              child: VideoPlayer(_videoControllers[file.path]!),
-                            ),
-                          )
-                        else
-                          const Center(child: CircularProgressIndicator()),
-                        Container(
-                          color: Colors.black.withOpacity(0.3),
-                          child: const Center(
-                            child: Icon(
-                              Icons.play_circle_filled,
-                              color: Colors.white,
-                              size: 40,
-                            ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+            color: Colors.grey[100],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: isVideo
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (_videoControllers[file.path] != null &&
+                          _videoControllers[file.path]!.value.isInitialized)
+                        FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width:
+                                _videoControllers[file.path]!.value.size.width,
+                            height:
+                                _videoControllers[file.path]!.value.size.height,
+                            child: VideoPlayer(_videoControllers[file.path]!),
+                          ),
+                        )
+                      else
+                        const Center(child: CircularProgressIndicator()),
+                      Container(
+                        color: Colors.black.withOpacity(0.3),
+                        child: const Center(
+                          child: Icon(
+                            Icons.play_circle_fill_rounded,
+                            color: Colors.white,
+                            size: 32,
                           ),
                         ),
-                      ],
-                    )
-                  : Image.file(
-                      file,
-                      fit: BoxFit.cover,
-                    ),
-            ),
+                      ),
+                    ],
+                  )
+                : Image.file(
+                    file,
+                    fit: BoxFit.cover,
+                  ),
           ),
-          Positioned(
-            top: 5,
-            right: 5,
-            child: GestureDetector(
-              onTap: onRemove,
+        ),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.8),
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                padding: const EdgeInsets.all(4),
                 child: const Icon(
                   Icons.close,
                   color: Colors.white,
-                  size: 16,
+                  size: 12,
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -990,6 +1276,7 @@ class _AddListingPageState extends State<AddListingPage> {
     _bedroomsController.dispose();
     _bathroomsController.dispose();
     _areaSqftController.dispose();
+    _maxTenantsController.dispose(); // <--- NEW: Dispose max tenants controller
     _descriptionController.dispose();
 
     // Dispose video controllers

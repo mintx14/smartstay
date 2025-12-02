@@ -193,6 +193,7 @@ class DatabaseService {
         'bedrooms': listing.bedrooms,
         'bathrooms': listing.bathrooms,
         'area_sqft': listing.areaSqft,
+        'max_tenants': listing.maxTenants, // <--- NEW: Include max_tenants
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,
         'image_urls': listing.imageUrls,
@@ -356,6 +357,7 @@ class DatabaseService {
         'bedrooms': listing.bedrooms,
         'bathrooms': listing.bathrooms,
         'area_sqft': listing.areaSqft,
+        'max_tenants': listing.maxTenants, // <--- NEW: Include max_tenants
         'description': listing.description,
         'available_from': listing.availableFrom.toIso8601String().split('T')[0],
         'minimum_tenure': listing.minimumTenure,

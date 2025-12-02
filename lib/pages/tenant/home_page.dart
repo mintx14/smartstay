@@ -1240,6 +1240,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
       areaSqft: property.areaSqft,
+      maxTenants: 1, // <--- NEW: Default to 1 until PropertyListing model is updated
       availableFrom:
           DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
       minimumTenure: property.minimumTenure,

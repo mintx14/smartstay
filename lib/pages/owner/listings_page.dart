@@ -186,123 +186,94 @@ class _ListingsPageState extends State<ListingsPage>
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _filterOptions.map((filter) {
-            final isSelected = _selectedFilter == filter;
-            final count = _getFilterCount(filter);
+      child: Row(
+        children: _filterOptions.map((filter) {
+          final isSelected = _selectedFilter == filter;
 
-            Color getFilterColor() {
-              if (!isSelected) return Colors.transparent;
-              switch (filter) {
-                case 'All':
-                  return const Color(0xFF190152);
-                case 'Active':
-                  return const Color(0xFF27AE60);
-                case 'Inactive':
-                  return const Color(0xFFE67E22);
-                default:
-                  return const Color(0xFF190152);
-              }
+          IconData getFilterIcon() {
+            switch (filter) {
+              case 'All':
+                return Icons.apps_rounded;
+              case 'Active':
+                return Icons.check_circle;
+              case 'Inactive':
+                return Icons.pause_circle;
+              default:
+                return Icons.list;
             }
+          }
 
-            Color getBorderColor() {
-              if (isSelected) return Colors.transparent;
-              return Colors.grey[300]!;
+          Color getFilterColor() {
+            switch (filter) {
+              case 'All':
+                return const Color(0xFF190152);
+              case 'Active':
+                return const Color(0xFF27AE60);
+              case 'Inactive':
+                return const Color(0xFFE67E22);
+              default:
+                return const Color(0xFF190152);
             }
+          }
 
-            return Padding(
-              padding: const EdgeInsets.only(right: 10),
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () => _onFilterChanged(filter),
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                      horizontal: 12,
+                      vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: getFilterColor(),
-                      borderRadius: BorderRadius.circular(25),
+                      color: isSelected ? getFilterColor() : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: getBorderColor(),
-                        width: 1.5,
+                        color:
+                            isSelected ? getFilterColor() : Colors.grey[200]!,
+                        width: isSelected ? 1.5 : 1,
                       ),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: getFilterColor().withOpacity(0.3),
+                                color: getFilterColor().withOpacity(0.2),
                                 blurRadius: 8,
-                                offset: const Offset(0, 4),
+                                offset: const Offset(0, 2),
                               ),
                             ]
-                          : [],
+                          : null,
                     ),
-                    child: Row(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (isSelected && filter == 'Active')
-                          const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: Icon(
-                              Icons.check_circle,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        if (isSelected && filter == 'Inactive')
-                          const Padding(
-                            padding: EdgeInsets.only(right: 6),
-                            child: Icon(
-                              Icons.pause_circle,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
+                        Icon(
+                          getFilterIcon(),
+                          size: 20,
+                          color: isSelected ? Colors.white : getFilterColor(),
+                        ),
+                        const SizedBox(height: 6),
                         Text(
                           filter,
                           style: TextStyle(
                             color: isSelected ? Colors.white : Colors.grey[700],
                             fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w600,
-                            fontSize: 14,
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                            fontSize: 12,
                           ),
                         ),
-                        if (count > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.white.withOpacity(0.25)
-                                  : const Color(0xFFF0F0F0),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              count.toString(),
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.grey[700],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -369,74 +340,39 @@ class _ListingsPageState extends State<ListingsPage>
                       topLeft: Radius.circular(16),
                       topRight: Radius.circular(16),
                     ),
-                    child: (listing.imageUrls.isNotEmpty &&
-                            listing.imageUrls[0].isNotEmpty)
-                        ? Image.network(
-                            listing.imageUrls[0],
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildImagePlaceholder();
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes !=
-                                          null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
+                    child: listing.imageUrls.isNotEmpty
+                        ? PageView.builder(
+                            itemCount: listing.imageUrls.length,
+                            itemBuilder: (context, index) {
+                              if (listing.imageUrls[index].isEmpty) {
+                                return _buildImagePlaceholder();
+                              }
+                              return Image.network(
+                                listing.imageUrls[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildImagePlaceholder();
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  );
+                                },
                               );
                             },
                           )
                         : _buildImagePlaceholder(),
-                  ),
-                ),
-                // Status badge
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: listing.isActive
-                          ? const Color(0xFF27AE60)
-                          : const Color(0xFFE67E22),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (listing.isActive
-                                  ? const Color(0xFF27AE60)
-                                  : const Color(0xFFE67E22))
-                              .withOpacity(0.4),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          listing.isActive
-                              ? Icons.check_circle
-                              : Icons.pause_circle,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          listing.isActive ? 'Active' : 'Inactive',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 // Image count badge if multiple images
@@ -481,19 +417,58 @@ class _ListingsPageState extends State<ListingsPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  Text(
-                    listing.title,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: listing.isActive
-                          ? const Color(0xFF1A1A1A)
-                          : Colors.grey[500],
-                      height: 1.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  // Title with status badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          listing.title,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: listing.isActive
+                                ? const Color(0xFF1A1A1A)
+                                : Colors.grey[500],
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Status badge next to title
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: listing.isActive
+                              ? const Color(0xFF27AE60)
+                              : const Color(0xFFE67E22),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              listing.isActive
+                                  ? Icons.check_circle
+                                  : Icons.pause_circle,
+                              size: 11,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              listing.isActive ? 'Active' : 'Inactive',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
 
@@ -657,95 +632,101 @@ class _ListingsPageState extends State<ListingsPage>
   void _showMoreOptions(Listing listing) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // View Details
-            ListTile(
-              leading:
-                  Icon(Icons.visibility, color: Theme.of(context).primaryColor),
-              title: const Text('View Details'),
-              onTap: () async {
-                Navigator.pop(context);
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PropertyDetailsPage(listing: listing),
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                );
+                ),
 
-                // Refresh if data changed
-                if (result != null && mounted) {
-                  _loadListings(refresh: true);
-                  _loadListingsCount();
-                }
-              },
+                // View Details
+                ListTile(
+                  leading: Icon(Icons.visibility,
+                      color: Theme.of(context).primaryColor),
+                  title: const Text('View Details'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final result = await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PropertyDetailsPage(listing: listing),
+                      ),
+                    );
+
+                    // Refresh if data changed
+                    if (result != null && mounted) {
+                      _loadListings(refresh: true);
+                      _loadListingsCount();
+                    }
+                  },
+                ),
+
+                // Edit
+                ListTile(
+                  leading: Icon(Icons.edit, color: Colors.blue[600]),
+                  title: const Text('Edit Property'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _editListing(listing);
+                  },
+                ),
+
+                // Activation/Deactivation toggle
+                if (listing.isActive) ...[
+                  ListTile(
+                    leading: Icon(Icons.pause_circle_outline,
+                        color: Colors.orange[600]),
+                    title: const Text('Deactivate Property'),
+                    subtitle: const Text('Hide from search results'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showDeactivateConfirmation(listing);
+                    },
+                  ),
+                ] else if (listing.isInactive) ...[
+                  ListTile(
+                    leading: Icon(Icons.play_circle_outline,
+                        color: Colors.green[600]),
+                    title: const Text('Activate Property'),
+                    subtitle: const Text('Show in search results'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _updateListingStatus(listing, 'active');
+                    },
+                  ),
+                ],
+
+                const Divider(),
+
+                // Delete
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('Delete Property',
+                      style: TextStyle(color: Colors.red)),
+                  subtitle: const Text('Permanently remove this property'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteConfirmation(listing);
+                  },
+                ),
+              ],
             ),
-
-            // Edit
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.blue[600]),
-              title: const Text('Edit Property'),
-              onTap: () {
-                Navigator.pop(context);
-                _editListing(listing);
-              },
-            ),
-
-            // Activation/Deactivation toggle
-            if (listing.isActive) ...[
-              ListTile(
-                leading:
-                    Icon(Icons.pause_circle_outline, color: Colors.orange[600]),
-                title: const Text('Deactivate Property'),
-                subtitle: const Text('Hide from search results'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showDeactivateConfirmation(listing);
-                },
-              ),
-            ] else if (listing.isInactive) ...[
-              ListTile(
-                leading:
-                    Icon(Icons.play_circle_outline, color: Colors.green[600]),
-                title: const Text('Activate Property'),
-                subtitle: const Text('Show in search results'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _updateListingStatus(listing, 'active');
-                },
-              ),
-            ],
-
-            const Divider(),
-
-            // Delete
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Delete Property',
-                  style: TextStyle(color: Colors.red)),
-              subtitle: const Text('Permanently remove this property'),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteConfirmation(listing);
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1104,7 +1085,8 @@ class _ListingsPageState extends State<ListingsPage>
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
-                            side: const BorderSide(color: Colors.white, width: 1.5),
+                            side: const BorderSide(
+                                color: Colors.white, width: 1.5),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -1141,7 +1123,8 @@ class _ListingsPageState extends State<ListingsPage>
               },
               color: const Color(0xFF190152),
               child: _isLoading && _filteredListings.isEmpty
-                  ? const Center(child: CircularProgressIndicator(
+                  ? const Center(
+                      child: CircularProgressIndicator(
                       color: Color(0xFF190152),
                     ))
                   : _filteredListings.isEmpty

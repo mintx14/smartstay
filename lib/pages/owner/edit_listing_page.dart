@@ -25,6 +25,8 @@ class _EditListingPageState extends State<EditListingPage> {
   late TextEditingController _bedroomsController;
   late TextEditingController _bathroomsController;
   late TextEditingController _areaSqftController;
+  late TextEditingController
+      _maxTenantsController; // <--- NEW: Max tenants controller
   late TextEditingController _descriptionController;
   late DateTime _availableFrom;
   late String _minimumTenure;
@@ -68,6 +70,8 @@ class _EditListingPageState extends State<EditListingPage> {
         TextEditingController(text: widget.listing.bathrooms.toString());
     _areaSqftController =
         TextEditingController(text: widget.listing.areaSqft.toString());
+    _maxTenantsController = // <--- NEW: Initialize max tenants controller
+        TextEditingController(text: widget.listing.maxTenants.toString());
     _descriptionController =
         TextEditingController(text: widget.listing.description);
     _availableFrom = widget.listing.availableFrom;
@@ -180,59 +184,67 @@ class _EditListingPageState extends State<EditListingPage> {
   void _showMediaOptions() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Allow full height control
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ... (Same styling as before)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom, // Keyboard padding
+        ),
+        child: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildMediaOption(
-                  icon: Icons.photo_library,
-                  label: 'Gallery Photos',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImages();
-                  },
+                // ... (Same styling as before)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildMediaOption(
+                      icon: Icons.photo_library,
+                      label: 'Gallery Photos',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImages();
+                      },
+                    ),
+                    _buildMediaOption(
+                      icon: Icons.camera_alt,
+                      label: 'Take Photo',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _captureImage();
+                      },
+                    ),
+                  ],
                 ),
-                _buildMediaOption(
-                  icon: Icons.camera_alt,
-                  label: 'Take Photo',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _captureImage();
-                  },
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildMediaOption(
+                      icon: Icons.video_library,
+                      label: 'Gallery Videos',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickVideos();
+                      },
+                    ),
+                    _buildMediaOption(
+                      icon: Icons.videocam,
+                      label: 'Record Video',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _captureVideo();
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildMediaOption(
-                  icon: Icons.video_library,
-                  label: 'Gallery Videos',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickVideos();
-                  },
-                ),
-                _buildMediaOption(
-                  icon: Icons.videocam,
-                  label: 'Record Video',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _captureVideo();
-                  },
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -351,6 +363,8 @@ class _EditListingPageState extends State<EditListingPage> {
           bedrooms: int.parse(_bedroomsController.text),
           bathrooms: int.parse(_bathroomsController.text),
           areaSqft: int.parse(_areaSqftController.text),
+          maxTenants: int.parse(
+              _maxTenantsController.text), // <--- NEW: Include max tenants
           availableFrom: _availableFrom,
           minimumTenure: _minimumTenure,
           status: widget.listing.status,
@@ -385,70 +399,114 @@ class _EditListingPageState extends State<EditListingPage> {
 
   // 6. Widget to build the Contract Card
   Widget _buildContractCard() {
-    // Determine what to display
     String displayText = 'Upload Rental Agreement (PDF)';
-    IconData icon = Icons.upload_file;
-    Color iconColor = Colors.grey;
+    IconData icon = Icons.picture_as_pdf_rounded;
+    Color? iconBgColor;
+    Color? containerBgColor;
+    Color? borderColor;
     bool showDelete = false;
     bool isBold = false;
 
     if (_newContractFile != null) {
-      displayText = "New: $_newContractFileName";
-      icon = Icons.picture_as_pdf;
-      iconColor = Colors.blue;
+      displayText = _newContractFileName!;
+      iconBgColor = Colors.green.withOpacity(0.1);
+      containerBgColor = Colors.green.withOpacity(0.05);
+      borderColor = Colors.green.withOpacity(0.3);
       showDelete = true;
       isBold = true;
     } else if (_existingContractUrl != null && !_deleteContract) {
-      displayText = "Current Contract (PDF)";
-      icon = Icons.check_circle;
-      iconColor = Colors.green;
+      displayText = 'Current Contract (PDF)';
+      iconBgColor = Colors.green.withOpacity(0.1);
+      containerBgColor = Colors.green.withOpacity(0.05);
+      borderColor = Colors.green.withOpacity(0.3);
       showDelete = true;
       isBold = true;
+    } else {
+      iconBgColor = Colors.red.withOpacity(0.1);
+      containerBgColor = Colors.grey[50];
+      borderColor = Colors.grey[200];
     }
 
     return _buildSectionCard(
-      title: 'Rent Contract',
-      icon: Icons.attach_file,
+      title: 'Rental Agreement',
+      icon: Icons.assignment_outlined,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey[50],
-          ),
-          child: ListTile(
-            leading: Icon(icon, color: iconColor),
-            title: Text(
-              displayText,
-              style: TextStyle(
-                color: isBold ? Colors.black : Colors.grey[600],
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              ),
+        InkWell(
+          onTap: _pickContract,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: containerBgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor!),
             ),
-            trailing: showDelete
-                ? IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: _newContractFile != null ||
+                            (_existingContractUrl != null && !_deleteContract)
+                        ? Colors.green
+                        : Colors.red[400],
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayText,
+                        style: TextStyle(
+                          fontWeight:
+                              isBold ? FontWeight.w600 : FontWeight.w500,
+                          color: isBold ? Colors.black87 : Colors.grey[700],
+                          fontSize: 15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (!isBold)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Optional',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (showDelete)
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.grey),
                     onPressed: () {
                       setState(() {
-                        // If we were uploading a new file, just clear that
                         if (_newContractFile != null) {
                           _newContractFile = null;
                           _newContractFileName = null;
                         } else {
-                          // Otherwise, mark existing as deleted
                           _deleteContract = true;
                         }
                       });
                     },
                   )
-                : const Icon(Icons.upload_file),
-            onTap: _pickContract,
+                else
+                  Icon(Icons.upload_file_rounded, color: Colors.grey[400]),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Optional: Upload a standard contract for tenants to review.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ],
     );
@@ -456,209 +514,363 @@ class _EditListingPageState extends State<EditListingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Edit Property Listing'),
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey[50]!,
+            Colors.white,
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // ... [Previous Cards: Property Details, Features, Description, Availability] ...
-                    _buildSectionCard(
-                      title: 'Property Details',
-                      icon: Icons.home,
-                      children: [
-                        _buildModernTextField(
-                          controller: _propertyNameController,
-                          label: 'Property Name',
-                          prefixIcon: Icons.home_work,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildModernTextField(
-                          controller: _addressController,
-                          label: 'Address',
-                          prefixIcon: Icons.location_on,
-                          maxLines: 2,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildModernTextField(
-                          controller: _postcodeController,
-                          label: 'Postcode',
-                          prefixIcon: Icons.pin_drop,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                      ],
-                    ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            'Edit Property Listing',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              letterSpacing: 0.5,
+            ),
+          ),
+          centerTitle: true,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context)
+                      .primaryColor
+                      .withBlue(Theme.of(context).primaryColor.blue + 20),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          leading: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  const Icon(Icons.arrow_back, size: 20, color: Colors.white),
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        extendBodyBehindAppBar: false,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Property Details Card
+                      _buildSectionCard(
+                        title: 'Property Details',
+                        icon: Icons.home_rounded,
+                        children: [
+                          _buildModernTextField(
+                            controller: _propertyNameController,
+                            label: 'Property Name',
+                            hint: 'e.g. Sunset Villa, Cozy Apartment',
+                            prefixIcon: Icons.home_work_outlined,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildModernTextField(
+                            controller: _addressController,
+                            label: 'Address',
+                            hint: 'Full street address',
+                            prefixIcon: Icons.location_on_outlined,
+                            maxLines: 2,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildModernTextField(
+                            controller: _postcodeController,
+                            label: 'Postcode',
+                            hint: 'e.g. 50480',
+                            prefixIcon: Icons.map_outlined,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                        ],
+                      ),
 
-                    _buildSectionCard(
-                      title: 'Property Features',
-                      icon: Icons.featured_play_list,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
+                      // Property Features Card
+                      _buildSectionCard(
+                        title: 'Property Features',
+                        icon: Icons.grid_view_rounded,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
                                 child: _buildFeatureField(
-                                    controller: _bedroomsController,
-                                    label: 'Bedrooms',
-                                    icon: Icons.bed)),
-                            const SizedBox(width: 16),
-                            Expanded(
+                                  controller: _bedroomsController,
+                                  label: 'Bedrooms',
+                                  icon: Icons.bed_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
                                 child: _buildFeatureField(
-                                    controller: _bathroomsController,
-                                    label: 'Bathrooms',
-                                    icon: Icons.bathroom)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeatureField(
-                            controller: _areaSqftController,
-                            label: 'Size (sqft)',
-                            icon: Icons.square_foot),
-                        const SizedBox(height: 16),
-                        _buildModernTextField(
-                          controller: _priceController,
-                          label: 'Monthly Rent',
-                          prefixIcon: Icons.attach_money,
-                          prefixText: 'RM ',
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDepositField(),
-                      ],
-                    ),
-
-                    _buildSectionCard(
-                      title: 'Property Description',
-                      icon: Icons.description,
-                      children: [
-                        _buildModernTextField(
-                          controller: _descriptionController,
-                          label: 'Description',
-                          maxLines: 5,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Required' : null,
-                        ),
-                      ],
-                    ),
-
-                    _buildSectionCard(
-                      title: 'Availability',
-                      icon: Icons.calendar_today,
-                      children: [
-                        _buildDatePicker(),
-                        const SizedBox(height: 16),
-                        _buildModernDropdown(),
-                      ],
-                    ),
-
-                    _buildSectionCard(
-                      title: 'Property Media',
-                      icon: Icons.photo_library,
-                      children: [
-                        if (_existingMediaUrls.isNotEmpty) ...[
-                          const Text('Existing Media',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 120,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _existingMediaUrls.length,
-                              itemBuilder: (context, index) {
-                                return _buildExistingMediaThumbnail(
-                                  url: _existingMediaUrls[index],
-                                  onRemove: () => _removeExistingMedia(
-                                      _existingMediaUrls[index]),
-                                );
-                              },
-                            ),
+                                  controller: _bathroomsController,
+                                  label: 'Bathrooms',
+                                  icon: Icons.bathtub_outlined,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
-                        ],
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.grey[50],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildFeatureField(
+                                  controller: _areaSqftController,
+                                  label: 'Size (sqft)',
+                                  icon: Icons.square_foot_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildFeatureField(
+                                  controller: _maxTenantsController,
+                                  label: 'Max Tenants',
+                                  icon: Icons.people_outline_rounded,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: InkWell(
+                          const SizedBox(height: 24),
+                          _buildModernTextField(
+                            controller: _priceController,
+                            label: 'Monthly Rent',
+                            prefixIcon: Icons.attach_money_rounded,
+                            prefixText: 'RM ',
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildDepositField(),
+                        ],
+                      ),
+
+                      // Description Card
+                      _buildSectionCard(
+                        title: 'Description',
+                        icon: Icons.description_outlined,
+                        children: [
+                          _buildModernTextField(
+                            controller: _descriptionController,
+                            label: 'Property Description',
+                            hint:
+                                'Tell potential tenants what makes your property special...',
+                            maxLines: 6,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Required' : null,
+                          ),
+                        ],
+                      ),
+
+                      // Availability Card
+                      _buildSectionCard(
+                        title: 'Availability',
+                        icon: Icons.event_available_rounded,
+                        children: [
+                          _buildDatePicker(),
+                          const SizedBox(height: 20),
+                          _buildModernDropdown(),
+                        ],
+                      ),
+
+                      // Media Upload Card
+                      _buildSectionCard(
+                        title: 'Photos & Videos',
+                        icon: Icons.perm_media_outlined,
+                        children: [
+                          if (_existingMediaUrls.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                'Existing Media (${_existingMediaUrls.length})',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 100,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _existingMediaUrls.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(width: 12),
+                                itemBuilder: (context, index) {
+                                  return _buildExistingMediaThumbnail(
+                                    url: _existingMediaUrls[index],
+                                    onRemove: () => _removeExistingMedia(
+                                        _existingMediaUrls[index]),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          InkWell(
                             onTap: _showMediaOptions,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 32),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.05),
+                                    Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.02),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.2),
+                                  width: 2,
+                                  strokeAlign: BorderSide.strokeAlignInside,
+                                ),
+                              ),
                               child: Column(
                                 children: [
-                                  Icon(Icons.add_photo_alternate,
-                                      size: 48,
-                                      color: Theme.of(context).primaryColor),
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.add_photo_alternate_rounded,
+                                      size: 40,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Add More Photos & Videos',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
-                                  Text('Add more photos or videos',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.grey[700])),
+                                  Text(
+                                    'Keep at least 4 media files',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                        if (_newImages.isNotEmpty || _newVideos.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          _buildNewMediaPreview(),
+                          if (_newImages.isNotEmpty ||
+                              _newVideos.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            _buildNewMediaPreview(),
+                          ],
                         ],
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // 7. ADD THE CONTRACT CARD HERE
-                    _buildContractCard(),
-
-                    const SizedBox(height: 24),
-
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        elevation: 2,
                       ),
-                      child: const Text('Update Property Listing',
-                          style: TextStyle(
+
+                      // Contract Card
+                      _buildContractCard(),
+
+                      const SizedBox(height: 20),
+
+                      // Submit Button
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).primaryColor,
+                              Theme.of(context).primaryColor.withBlue(
+                                  Theme.of(context).primaryColor.blue + 20),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _submitForm,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Update Property Listing',
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white)),
-                    ),
-                  ],
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -670,75 +882,51 @@ class _EditListingPageState extends State<EditListingPage> {
 
   // Copy these helpers back from your original file if you are copy-pasting this whole block.
   Widget _buildDepositField() {
-    final double currentRent = double.tryParse(_priceController.text) ?? 0.0;
-    final double calculatedDeposit = (_selectedDepositMonth ?? 0) * currentRent;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<int>(
-          value: _selectedDepositMonth,
-          onChanged: (int? newValue) {
-            setState(() {
-              _selectedDepositMonth = newValue;
-            });
-          },
-          items: List.generate(12, (index) {
-            int month = index + 1;
-            return DropdownMenuItem<int>(
-              value: month,
-              child: Text(
-                '$month month${month > 1 ? 's' : ''}',
-              ),
-            );
-          }).toList(),
-          decoration: InputDecoration(
-            labelText: 'Deposit (in months)',
-            prefixIcon: const Icon(Icons.calendar_today_outlined),
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).primaryColor,
-                width: 2,
-              ),
-            ),
+        Text(
+          'Deposit',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
           ),
-          validator: (value) => value == null ? 'Required' : null,
         ),
-        if (_selectedDepositMonth != null && currentRent > 0) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
-                const SizedBox(width: 8),
-                Text(
-                  'Total Deposit: RM ${calculatedDeposit.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Colors.blue.shade700,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _selectedDepositMonth,
+              isExpanded: true,
+              hint: Text(
+                'Select deposit months',
+                style: TextStyle(color: Colors.grey[400], fontSize: 14),
+              ),
+              icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+              items: List.generate(12, (index) {
+                int month = index + 1;
+                return DropdownMenuItem<int>(
+                  value: month,
+                  child: Text(
+                    '$month month${month > 1 ? 's' : ''}',
                   ),
-                ),
-              ],
+                );
+              }).toList(),
+              onChanged: (int? newValue) {
+                setState(() {
+                  _selectedDepositMonth = newValue;
+                });
+              },
             ),
           ),
-        ],
+        ),
       ],
     );
   }
@@ -749,48 +937,61 @@ class _EditListingPageState extends State<EditListingPage> {
     required List<Widget> children,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: Colors.white, width: 2),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.15),
+                        Theme.of(context).primaryColor.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      width: 1,
+                    ),
                   ),
                   child: Icon(
                     icon,
                     color: Theme.of(context).primaryColor,
-                    size: 20,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             ...children,
           ],
         ),
@@ -809,37 +1010,68 @@ class _EditListingPageState extends State<EditListingPage> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-        prefixText: prefixText,
-        filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            validator: validator,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              prefixIcon: prefixIcon != null
+                  ? Icon(prefixIcon, color: Colors.grey[400], size: 20)
+                  : null,
+              prefixText: prefixText,
+              filled: true,
+              fillColor: Colors.grey[50],
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey[200]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                    color: Theme.of(context).primaryColor, width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red[400]!),
+              ),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              BorderSide(color: Theme.of(context).primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-      ),
+      ],
     );
   }
 
@@ -849,49 +1081,43 @@ class _EditListingPageState extends State<EditListingPage> {
     required IconData icon,
   }) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 20, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ],
+          Icon(icon, size: 24, color: Colors.grey[400]),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextFormField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '0',
-              ),
-              validator: (value) => value!.isEmpty ? 'Required' : null,
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
             ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: '0',
+              hintStyle: TextStyle(color: Colors.black12),
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            validator: (value) => value!.isEmpty ? '' : null,
           ),
         ],
       ),
@@ -899,68 +1125,114 @@ class _EditListingPageState extends State<EditListingPage> {
   }
 
   Widget _buildDatePicker() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-      ),
-      child: ListTile(
-        leading:
-            Icon(Icons.calendar_today, color: Theme.of(context).primaryColor),
-        title: const Text('Available From'),
-        subtitle: Text(
-          '${_availableFrom.day}/${_availableFrom.month}/${_availableFrom.year}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Available From',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
-        trailing: const Icon(Icons.edit_calendar),
-        onTap: () async {
-          final date = await showDatePicker(
-            context: context,
-            initialDate: _availableFrom,
-            firstDate: DateTime.now(),
-            lastDate: DateTime.now().add(const Duration(days: 365)),
-          );
-          if (date != null) {
-            setState(() {
-              _availableFrom = date;
-            });
-          }
-        },
-      ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _availableFrom,
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: ColorScheme.light(
+                      primary: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (date != null) {
+              setState(() {
+                _availableFrom = date;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_rounded,
+                    size: 20, color: Colors.grey[600]),
+                const SizedBox(width: 12),
+                Text(
+                  '${_availableFrom.day}/${_availableFrom.month}/${_availableFrom.year}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildModernDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-      ),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: 'Minimum Tenure',
-          border: InputBorder.none,
-          prefixIcon:
-              Icon(Icons.access_time, color: Theme.of(context).primaryColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Minimum Tenure',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
-        value: _minimumTenure,
-        items: const [
-          DropdownMenuItem(value: '3 months', child: Text('3 months')),
-          DropdownMenuItem(value: '6 months', child: Text('6 months')),
-          DropdownMenuItem(value: '12 months', child: Text('12 months')),
-          DropdownMenuItem(value: '24 months', child: Text('24 months')),
-        ],
-        onChanged: (value) {
-          if (value != null) {
-            setState(() {
-              _minimumTenure = value;
-            });
-          }
-        },
-      ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _minimumTenure,
+              isExpanded: true,
+              icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+              items: const [
+                DropdownMenuItem(value: '3 months', child: Text('3 months')),
+                DropdownMenuItem(value: '6 months', child: Text('6 months')),
+                DropdownMenuItem(value: '12 months', child: Text('12 months')),
+                DropdownMenuItem(value: '24 months', child: Text('24 months')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _minimumTenure = value;
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1185,6 +1457,7 @@ class _EditListingPageState extends State<EditListingPage> {
     _bedroomsController.dispose();
     _bathroomsController.dispose();
     _areaSqftController.dispose();
+    _maxTenantsController.dispose(); // <--- NEW: Dispose max tenants controller
     _descriptionController.dispose();
     for (var controller in _videoControllers.values) {
       controller.dispose();
