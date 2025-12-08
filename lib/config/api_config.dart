@@ -9,7 +9,6 @@ class ApiConfig {
   static const String _baseUrl = 'http://192.168.0.4'; //URL RUMAHSEWA
   //static String _baseUrl = 'http://192.168.0.117'; //URL RUMAH
   //static String _baseUrl = 'http://172.20.10.5'; //URL PHONE
-  //static String _baseUrl = 'https://databasetest.infinityfree.me'; //URL ONLINE
 
   // API endpoints
   static const String _apiPath = '/smartstay';

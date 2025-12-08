@@ -3,12 +3,9 @@ import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/dashboard_models.dart';
 import 'package:my_app/services/dashboard_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// For kDebugMode
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
 import 'listings_page.dart';
 import 'reservations_page.dart';
-import 'messages_page.dart' as owner_messaging; // Add prefix to avoid conflicts
+import 'messages_page.dart' as owner_messaging;
 import 'profile_page.dart';
 import 'add_listing_page.dart';
 
@@ -25,6 +22,10 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late AnimationController _animationController;
 
+  // App color theme - consistent with login/register
+  static const Color primaryColor = Color(0xFF1E3A5F);
+  static const Color accentColor = Color(0xFF3D5A80);
+
   // Dashboard data
   DashboardStats? _dashboardStats;
   List<RecentActivity> _recentActivities = [];
@@ -35,32 +36,19 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    
-    print('🚀 OwnerPage initState called');
-    
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    // Debug user data first
     _debugUserData();
-
-    // Initialize screens first
     _initializeScreens();
-
-    // Load dashboard data immediately
-    print('🔄 Triggering dashboard data load...');
+    
     _loadDashboardData().then((_) {
-      print('✅ Dashboard data load completed');
-      // Rebuild screens after data loads
       if (mounted) {
-        setState(() {
-          print('🔄 Rebuilding after dashboard load');
-        });
+        setState(() {});
       }
     }).catchError((error) {
-      print('❌ Dashboard data load failed: $error');
       if (mounted) {
         setState(() {});
       }
@@ -69,23 +57,14 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     _animationController.forward();
   }
 
-  // Add debug method to check user data
   void _debugUserData() {
     print('🔍 DEBUG: User data check');
     print('   User ID: "${widget.user.id}"');
-    print('   User ID type: ${widget.user.id.runtimeType}');
-    print('   User ID length: ${widget.user.id.toString().length}');
     print('   User name: "${widget.user.fullName}"');
     print('   User email: "${widget.user.email}"');
     print('   User type: "${widget.user.userType}"');
   }
 
-  // --- REMOVED ---
-  // The _getSafeUserId() method was removed as it's no longer needed.
-  // We will pass the String ID directly.
-  // ---
-
-  // Add this helper method:
   void _initializeScreens() {}
 
   @override
@@ -95,8 +74,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadDashboardData() async {
-    print('🔄 Starting _loadDashboardData...');
-
     if (!mounted) return;
 
     setState(() {
@@ -105,16 +82,11 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     });
 
     try {
-      // Check if user ID is valid using the new service method
       if (!DashboardService.isValidUserId(widget.user.id)) {
         throw Exception('Invalid user session. Please log in again.');
       }
 
-      print('🔄 Loading dashboard data for user ID: ${widget.user.id}');
-
-      // Option 1: Use the new getAllDashboardData method (recommended)
-      final allData =
-          await DashboardService.getAllDashboardData(widget.user.id);
+      final allData = await DashboardService.getAllDashboardData(widget.user.id);
 
       if (!mounted) return;
 
@@ -125,16 +97,6 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         _notifications = allData['notifications'] as List<NotificationItem>;
         _errorMessage = null;
       });
-
-      print('✅ All dashboard data loaded successfully');
-      print('📊 Stats object: $_dashboardStats');
-      print('📊 Stats is null: ${_dashboardStats == null}');
-      if (_dashboardStats != null) {
-        print('   Total Properties: ${_dashboardStats!.totalProperties}');
-        print('   Occupied: ${_dashboardStats!.propertyOccupancyDisplay}');
-      }
-      print('📝 Activities: ${_recentActivities.length}');
-      print('🔔 Notifications: ${_notifications.length}');
     } catch (e, stackTrace) {
       print('❌ Error in _loadDashboardData: $e');
       print('📍 Stack trace: $stackTrace');
@@ -148,257 +110,163 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     }
   }
 
-  // Refresh dashboard data
   Future<void> _refreshDashboard() async {
     await _loadDashboardData();
   }
 
   @override
   Widget build(BuildContext context) {
-    print(
-        '🏗️ Building OwnerPage - Current index: $_currentIndex, Loading: $_isLoading');
-
     return Scaffold(
-      key: ValueKey(
-          'owner_page_${_isLoading}_${_dashboardStats != null}'), // Force rebuild
+      key: ValueKey('owner_page_${_isLoading}_${_dashboardStats != null}'),
       body: IndexedStack(
         index: _currentIndex,
         children: [
           _buildDashboard(),
           const ListingsPage(),
           ReservationsPage(currentUser: widget.user),
-          _buildMessagesPage(), // ✅ Now uses the MODIFIED helper method
+          _buildMessagesPage(),
           ProfilePage(user: widget.user),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF190152),
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_work),
-              label: 'Properties',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today),
-              label: 'Bookings',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.message),
-              label: 'Messages',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
-        ),
-      ),
-      // appBar: AppBar(
-      //   backgroundColor: const Color(0xFF190152),
-      //   elevation: 0,
-      //   title: Text(
-      //     //_getAppBarTitle(),
-      //     style: const TextStyle(color: Colors.white),
-      //   ),
-      //   actions: [
-      //     IconButton(
-      //       icon: Stack(
-      //         children: [
-      //           const Icon(Icons.notifications_outlined, color: Colors.white),
-      //           if (_notifications.where((n) => !n.isRead).isNotEmpty)
-      //             Positioned(
-      //               right: 0,
-      //               top: 0,
-      //               child: Container(
-      //                 width: 8,
-      //                 height: 8,
-      //                 decoration: const BoxDecoration(
-      //                   color: Colors.red,
-      //                   shape: BoxShape.circle,
-      //                 ),
-      //               ),
-      //             ),
-      //         ],
-      //       ),
-      //       onPressed: _showNotifications,
-      //     ),
-      //     IconButton(
-      //       icon: const Icon(Icons.logout, color: Colors.white),
-      //       onPressed: _logout,
-      //     ),
-      //   ],
-      // ),
+      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
-  // --- MODIFIED ---
-  // This function is now much simpler and passes the String ID directly.
-  // This fixes the crash you would see when tapping the "Messages" tab.
-  Widget _buildMessagesPage() {
-    // Your User ID is already a String and is valid if the dashboard loaded.
-    // We just pass it directly to the messages page.
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Row(
+            children: [
+              _buildNavItem(0, Icons.dashboard_rounded, 'Home'),
+              _buildNavItem(1, Icons.home_work_rounded, 'Property'),
+              _buildNavItem(2, Icons.calendar_today_rounded, 'Bookings'),
+              _buildNavItem(3, Icons.message_rounded, 'Messages'),
+              _buildNavItem(4, Icons.person_rounded, 'Profile'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    // Add a simple check in case the ID is somehow empty.
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor.withOpacity(0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? primaryColor : Colors.grey.shade500,
+                size: 22,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? primaryColor : Colors.grey.shade500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessagesPage() {
     if (widget.user.id.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 60),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.error_outline, color: Colors.red.shade400, size: 50),
+            ),
+            const SizedBox(height: 20),
             const Text(
               'Error: Invalid User ID',
-              style: TextStyle(color: Colors.red, fontSize: 18),
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _logout,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF190152),
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text(
-                'Login Again',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text('Login Again', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
       );
     }
 
-    // This will now pass the 'String' ID to your owner_messaging.MessagesPage
-    // You MUST update that file to accept a String.
-    return owner_messaging.MessagesPage(
-        currentUserId: int.parse(widget.user.id));
+    return owner_messaging.MessagesPage(currentUserId: int.parse(widget.user.id));
   }
-  // --- END MODIFICATION ---
-
-  // String _getAppBarTitle() {
-  //   switch (_currentIndex) {
-  //     case 0:
-  //       return 'Dashboard';
-  //     case 1:
-  //       return 'My Properties';
-  //     case 2:
-  //       return 'Bookings';
-  //     case 3:
-  //       return 'Messages';
-  //     case 4:
-  //       return 'Profile';
-  //     default:
-  //       return 'Owner Dashboard';
-  //   }
-  // }
 
   Widget _buildDashboard() {
-    print(
-        '🏗️ Building dashboard - Loading: $_isLoading, Error: $_errorMessage, Stats: ${_dashboardStats != null}');
-
-    return SafeArea(
-      child: Container(
-        key: ValueKey(
-            'dashboard_${_isLoading}_${_dashboardStats != null}'), // Force rebuild
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.grey[50]!, Colors.white],
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.grey.shade50, Colors.white],
         ),
+      ),
+      child: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshDashboard,
+          color: primaryColor,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 8), // Extra spacing at top
-                // Welcome Section
-                Container(
-                  margin: const EdgeInsets.all(16.0),
-                  padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF190152),
-                        const Color(0xFF190152).withOpacity(0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF190152).withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        child: const Icon(
-                          Icons.person,
-                          size: 35,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Welcome, ${widget.user.fullName.split(' ')[0]}!',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Manage your properties easily',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Show loading OR content - never both
+                const SizedBox(height: 8),
+                _buildWelcomeCard(),
                 _isLoading
                     ? _buildLoadingState()
                     : _errorMessage != null
                         ? _buildErrorState()
                         : _buildDashboardContent(),
-
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -407,63 +275,127 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(50.0),
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF190152)),
+  Widget _buildWelcomeCard() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryColor, accentColor],
         ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            child: CircleAvatar(
+              radius: 32,
+              backgroundColor: Colors.white,
+              child: Text(
+                widget.user.fullName.isNotEmpty 
+                    ? widget.user.fullName[0].toUpperCase() 
+                    : 'O',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back,',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.user.fullName.split(' ')[0],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Property Owner',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
+  Widget _buildLoadingState() {
+    return Container(
+      padding: const EdgeInsets.all(60),
+      child: Center(
         child: Column(
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 60,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.red,
+            SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                strokeWidth: 3,
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _refreshDashboard,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF190152),
-                  ),
-                  child: const Text(
-                    'Retry',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: _logout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                  ),
-                  child: const Text(
-                    'Re-login',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 20),
+            Text(
+              'Loading dashboard...',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+              ),
             ),
           ],
         ),
@@ -471,45 +403,109 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDashboardContent() {
-    print('🏗️ Building dashboard content - Stats: $_dashboardStats');
+  Widget _buildErrorState() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.shade100),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.error_outline, size: 50, color: Colors.red.shade400),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage!,
+            style: TextStyle(fontSize: 15, color: Colors.red.shade700),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _refreshDashboard,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout, size: 18),
+                label: const Text('Re-login'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildDashboardContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Stats Overview Section
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Overview',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF190152),
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Overview',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3142),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-
-              // Updated stats cards with new format
               Row(
                 children: [
                   _buildStatCard(
                     'Total Properties',
                     _dashboardStats?.totalProperties.toString() ?? '0',
-                    Icons.home_work,
-                    Colors.blue,
+                    Icons.home_work_rounded,
+                    const Color(0xFF4361EE),
                     () => setState(() => _currentIndex = 1),
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
-                    'Occupied/Total', // ✅ New label
-                    _dashboardStats?.propertyOccupancyDisplay ??
-                        '0/0', // ✅ New format "0/2"
-                    Icons.people,
-                    Colors.green,
+                    'Occupied/Total',
+                    _dashboardStats?.propertyOccupancyDisplay ?? '0/0',
+                    Icons.people_rounded,
+                    const Color(0xFF2EC4B6),
                     () => setState(() => _currentIndex = 2),
                   ),
                 ],
@@ -520,16 +516,16 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                   _buildStatCard(
                     'This Month',
                     _dashboardStats?.formattedIncome ?? 'RM 0',
-                    Icons.attach_money,
-                    Colors.purple,
+                    Icons.account_balance_wallet_rounded,
+                    const Color(0xFF9B5DE5),
                     null,
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
                     'Messages',
                     _dashboardStats?.unreadMessages.toString() ?? '0',
-                    Icons.message,
-                    Colors.orange,
+                    Icons.message_rounded,
+                    const Color(0xFFF77F00),
                     () => setState(() => _currentIndex = 3),
                   ),
                 ],
@@ -538,28 +534,42 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
           ),
         ),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 28),
+
         // Quick Actions Section
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF190152),
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Quick Actions',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3142),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   _buildQuickAction(
                     'Add Property',
-                    Icons.add_home,
-                    Colors.blue,
+                    Icons.add_home_rounded,
+                    const Color(0xFF4361EE),
                     () {
                       Navigator.push(
                         context,
@@ -572,15 +582,15 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                   const SizedBox(width: 12),
                   _buildQuickAction(
                     'View Bookings',
-                    Icons.calendar_today,
-                    Colors.green,
+                    Icons.calendar_today_rounded,
+                    const Color(0xFF2EC4B6),
                     () => setState(() => _currentIndex = 2),
                   ),
                   const SizedBox(width: 12),
                   _buildQuickAction(
                     'Messages',
-                    Icons.message,
-                    Colors.orange,
+                    Icons.message_rounded,
+                    const Color(0xFFF77F00),
                     () => setState(() => _currentIndex = 3),
                   ),
                 ],
@@ -589,21 +599,34 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
           ),
         ),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 28),
 
         // Recent Activities Section
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Recent Activities',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF190152),
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Recent Activities',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3142),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               if (_recentActivities.isEmpty)
@@ -624,19 +647,37 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
 
   Widget _buildNoActivitiesMessage() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: const Center(
-        child: Text(
-          'No recent activities',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 16,
+      child: Column(
+        children: [
+          Icon(
+            Icons.inbox_rounded,
+            size: 48,
+            color: Colors.grey.shade400,
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            'No recent activities',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Your activity will appear here',
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -652,15 +693,15 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
                 color: color.withOpacity(0.1),
-                blurRadius: 10.0,
-                offset: const Offset(0, 4),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
               ),
             ],
             border: Border.all(color: color.withOpacity(0.1)),
@@ -669,18 +710,18 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -689,8 +730,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -714,16 +755,30 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.symmetric(vertical: 18),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withOpacity(0.1),
+                  color.withOpacity(0.05),
+                ],
+              ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: color.withOpacity(0.2)),
             ),
             child: Column(
               children: [
-                Icon(icon, color: color, size: 28),
-                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(height: 10),
                 Text(
                   title,
                   textAlign: TextAlign.center,
@@ -746,237 +801,87 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: activity.color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(activity.icon, color: activity.color, size: 20),
-        ),
-        title: Text(
-          activity.title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        subtitle: Text(
-          activity.timeAgo,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey[400],
-        ),
-        onTap: () {
-          // Handle activity tap based on type
-          switch (activity.type) {
-            case 'booking_request':
-              setState(() => _currentIndex = 2);
-              break;
-            case 'new_message':
-              setState(() => _currentIndex = 3);
-              break;
-            case 'property_added':
-              setState(() => _currentIndex = 1);
-              break;
-          }
-        },
-      ),
-    );
-  }
-
-  void _showNotifications() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF190152),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            switch (activity.type) {
+              case 'booking_request':
+                setState(() => _currentIndex = 2);
+                break;
+              case 'new_message':
+                setState(() => _currentIndex = 3);
+                break;
+              case 'property_added':
+                setState(() => _currentIndex = 1);
+                break;
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: activity.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(activity.icon, color: activity.color, size: 20),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Notifications',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: _notifications.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No notifications',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        activity.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Color(0xFF2D3142),
                         ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _notifications.length,
-                      itemBuilder: (context, index) =>
-                          _buildNotificationItem(_notifications[index]),
-                    ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationItem(NotificationItem notification) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: notification.isRead ? Colors.grey[50] : Colors.blue[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: notification.isRead
-              ? Colors.grey.withOpacity(0.2)
-              : Colors.blue.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: notification.color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(notification.icon, color: notification.color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.title,
-                  style: TextStyle(
-                    fontWeight:
-                        notification.isRead ? FontWeight.w500 : FontWeight.w600,
-                    fontSize: 14,
+                      const SizedBox(height: 4),
+                      Text(
+                        activity.timeAgo,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.message,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.timeAgo,
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 11,
-                  ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: Colors.grey.shade400,
                 ),
               ],
             ),
           ),
-          if (!notification.isRead)
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
 
-  // --- NO CHANGE TO LOGOUT ---
-  // Your _logout function is already correct.
-  // Using prefs.clear() will fix your "ghost session" problem.
   Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout, color: Colors.red),
-            SizedBox(width: 10),
-            Text('Logout'),
-          ],
-        ),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Logout', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
 
-    if (confirm == true) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
+    if (!mounted) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 }

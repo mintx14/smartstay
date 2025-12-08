@@ -12,6 +12,7 @@ import 'package:my_app/models/booking_status.dart';
 // We import your REAL models and give them aliases to avoid naming conflicts
 import 'package:my_app/models/user_model.dart' as MainUser;
 import 'package:my_app/models/chat_message.dart' as MainChatMessage;
+import 'package:my_app/services/message_service.dart';
 // --- END NEW IMPORTS ---
 
 class MessagesScreen extends StatefulWidget {
@@ -34,6 +35,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
   int _currentTabIndex = 0;
+  final Set<int> _recentlyReadConversationIds = {}; // Track recently read chats to prevent UI flicker
 
   @override
   void initState() {
@@ -64,15 +66,7 @@ class _MessagesScreenState extends State<MessagesScreen>
 
     _loadData();
     _animationController.forward();
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (!mounted) return;
-      if (_currentTabIndex == 1) {
-        _loadBookings();
-      } else {
-        _loadConversations();
-      }
-    });
+    _startAutoRefresh();
   }
 
   @override
@@ -101,9 +95,15 @@ class _MessagesScreenState extends State<MessagesScreen>
         final data = json.decode(response.body);
         if (data['conversations'] != null) {
           setState(() {
-            messages = (data['conversations'] as List)
-                .map((conv) => MessagePreview.fromJson(conv))
-                .toList();
+            messages = (data['conversations'] as List).map((conv) {
+              final preview = MessagePreview.fromJson(conv);
+              // Force unread count to 0 if we recently read this conversation
+              // This prevents stale server data from showing unread badges
+              if (_recentlyReadConversationIds.contains(preview.conversationId)) {
+                return preview.copyWith(unread: 0);
+              }
+              return preview;
+            }).toList();
             isLoading = false;
           });
         }
@@ -121,47 +121,28 @@ class _MessagesScreenState extends State<MessagesScreen>
   Future<void> _loadBookings() async {
     if (!mounted) return;
     try {
-      print('=== Loading Tenant Bookings ===');
-      print('User ID: ${widget.currentUserId}');
-
       final response = await http.get(
         Uri.parse(ApiConfig.getTenantBookings(int.parse(widget.currentUserId))),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
         if (data['success'] == true && data['bookings'] != null) {
-          final bookingsList =
-              List<Map<String, dynamic>>.from(data['bookings'] ?? []);
-
+          final bookingsList = List<Map<String, dynamic>>.from(data['bookings'] ?? []);
           setState(() {
-            bookings = bookingsList.map((booking) {
-              return BookingStatus.fromJson(booking);
-            }).toList();
+            bookings = bookingsList.map((booking) => BookingStatus.fromJson(booking)).toList();
           });
-
-          print('Successfully loaded ${bookings.length} bookings');
         } else {
-          print('No bookings found or success is false');
-          setState(() {
-            bookings = [];
-          });
+          setState(() => bookings = []);
         }
       } else {
-        throw Exception('Failed to load bookings: ${response.body}');
+        throw Exception('Failed to load bookings');
       }
     } catch (e) {
-      print('Error loading bookings: $e');
-      setState(() {
-        bookings = [];
-      });
+      debugPrint('Error loading bookings: $e');
+      setState(() => bookings = []);
     }
   }
 
@@ -195,24 +176,62 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   void _openChat(MessagePreview message) {
+    final conversationId = message.conversationId;
+    
+    // Optimistic update: Mark as read locally immediately for better UX
+    setState(() {
+      final index = messages.indexWhere((m) => m.conversationId == conversationId);
+      if (index != -1) {
+        messages[index] = messages[index].copyWith(unread: 0);
+      }
+      // Track recently read to prevent stale server data from showing unread badges
+      _recentlyReadConversationIds.add(conversationId);
+    });
+
+    // Remove from "recently read" list after 15 seconds (enough time for server to sync)
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted) {
+        _recentlyReadConversationIds.remove(conversationId);
+      }
+    });
+
+    // Pause auto-refresh while in chat
+    _refreshTimer?.cancel();
+    
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => OwnerChatScreen(
           currentUserId: widget.currentUserId,
-          // --- UPDATED ---
-          // Use your main user model and its constructor
           otherUser: MainUser.User(
             id: message.otherUserId,
             fullName: message.name,
-            email: '', // Not available in MessagePreview
+            email: '',
             userType: message.otherUserType,
-            phoneNumber: '', // Not available in MessagePreview
+            phoneNumber: '',
           ),
-          // --- END UPDATE ---
+          conversationId: conversationId,
         ),
       ),
-    ).then((_) => _loadData());
+    ).then((_) {
+      // Resume auto-refresh when returning from chat
+      if (!mounted) return;
+      _loadData();
+      _startAutoRefresh();
+    });
+  }
+
+  /// Starts the auto-refresh timer for conversations/bookings
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!mounted) return;
+      if (_currentTabIndex == 1) {
+        _loadBookings();
+      } else {
+        _loadConversations();
+      }
+    });
   }
 
   @override
@@ -221,83 +240,114 @@ class _MessagesScreenState extends State<MessagesScreen>
       backgroundColor: const Color(0xFFF7FAFC),
       body: Column(
         children: [
+          // Custom Header
           Container(
+            padding: const EdgeInsets.only(bottom: 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
             ),
             child: SafeArea(
               bottom: false,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 10),
+
+                  const SizedBox(height: 20),
+
+                  // Screen Title
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.chat_bubble,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Messages & Bookings',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _currentTabIndex == 0
-                              ? '${filteredMessages.length} conversations'
-                              : '${bookings.length} bookings',
+                        const SizedBox(width: 16),
+                        const Text(
+                          'Messages & Bookings',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: Colors.white,
-                    indicatorWeight: 3,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white.withOpacity(0.6),
-                    labelStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+
+                  const SizedBox(height: 8),
+
+                  // Subtitle / Count
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 52),
+                      child: Text(
+                        _currentTabIndex == 0
+                            ? '${filteredMessages.length} conversations'
+                            : '${bookings.length} bookings',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                    tabs: const [
-                      Tab(text: 'Messages'),
-                      Tab(text: 'Bookings'),
-                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Tab Bar
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.white,
+                      indicatorWeight: 4,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white.withOpacity(0.6),
+                      labelStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      dividerColor: Colors.transparent,
+                      tabs: const [
+                        Tab(text: 'Messages'),
+                        Tab(text: 'Bookings'),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -1211,13 +1261,16 @@ class OwnerChatScreen extends StatefulWidget {
   final String currentUserId;
   // --- UPDATED ---
   // Use your main user model
+  // Use your main user model
   final MainUser.User otherUser;
+  final int? conversationId;
   // --- END UPDATE ---
 
   const OwnerChatScreen({
     super.key,
     required this.currentUserId,
     required this.otherUser,
+    this.conversationId,
   });
 
   @override
@@ -1254,9 +1307,22 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     ));
     _messageController.addListener(_onMessageChanged);
     _loadMessages();
+    _markMessagesAsRead();
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _loadMessages(showLoading: false);
     });
+  }
+
+  Future<void> _markMessagesAsRead() async {
+    if (widget.conversationId == null) return;
+    try {
+      final userId = int.tryParse(widget.currentUserId);
+      if (userId != null) {
+        await MessageService.markAsRead(widget.conversationId!, userId);
+      }
+    } catch (e) {
+      print('Error marking messages as read: $e');
+    }
   }
 
   void _onMessageChanged() {
@@ -1291,10 +1357,21 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     }
 
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.getMessagesUrlWithParams(
-            int.parse(widget.currentUserId), int.parse(widget.otherUser.id))),
-      );
+      // Validate IDs first
+      int currentUserIdInt;
+      int otherUserIdInt;
+      try {
+        currentUserIdInt = int.parse(widget.currentUserId);
+        otherUserIdInt = int.parse(widget.otherUser.id);
+      } catch (e) {
+        throw Exception('Invalid User ID format: $e');
+      }
+
+      final url =
+          ApiConfig.getMessagesUrlWithParams(currentUserIdInt, otherUserIdInt);
+      print('Loading messages from: $url');
+
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -1309,11 +1386,22 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
             isLoading = false;
           });
           _scrollToBottom();
+        } else {
+          // Handle case where messages key is missing but status is 200
+          print(
+              'Warning: "messages" key not found in response: ${response.body}');
+          setState(() {
+            messages = [];
+            isLoading = false;
+          });
         }
       } else {
-        throw Exception('Failed to load messages');
+        print('Server Error (${response.statusCode}): ${response.body}');
+        throw Exception(
+            'Failed to load messages. Status: ${response.statusCode}, Body: ${response.body}');
       }
     } catch (e) {
+      print('Error in _loadMessages: $e');
       setState(() {
         isLoading = false;
       });
@@ -1357,12 +1445,15 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
         if (data['success']) {
           _loadMessages(showLoading: false);
         } else {
-          throw Exception(data['error'] ?? 'Failed to send message');
+          throw Exception(
+              data['error'] ?? 'Failed to send message: ${response.body}');
         }
       } else {
-        throw Exception('Failed to send message');
+        throw Exception(
+            'Failed to send message (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
+      print('Error sending message: $e');
       _showError('Error sending message: $e');
       _messageController.text = messageText;
     }
@@ -1794,6 +1885,26 @@ class MessagePreview {
       time: _formatTime(json['last_message_time']),
       unread: json['unread_count'] ?? 0,
       otherUserType: json['other_user_type'] ?? 'Unknown',
+    );
+  }
+
+  MessagePreview copyWith({
+    int? conversationId,
+    String? otherUserId,
+    String? name,
+    String? lastMessage,
+    String? time,
+    int? unread,
+    String? otherUserType,
+  }) {
+    return MessagePreview(
+      conversationId: conversationId ?? this.conversationId,
+      otherUserId: otherUserId ?? this.otherUserId,
+      name: name ?? this.name,
+      lastMessage: lastMessage ?? this.lastMessage,
+      time: time ?? this.time,
+      unread: unread ?? this.unread,
+      otherUserType: otherUserType ?? this.otherUserType,
     );
   }
 

@@ -39,15 +39,15 @@ class ContractViewerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title, style: const TextStyle(fontSize: 16)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+        title: Text(title, style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFF1E3A5F),
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           // This is the Optional Download Button
           IconButton(
             onPressed: _downloadFile,
-            icon: const Icon(Icons.download_rounded),
+            icon: const Icon(Icons.download_rounded, color: Colors.white),
             tooltip: 'Download PDF',
           ),
         ],
@@ -492,7 +492,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               label: const Text('Edit'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor: const Color(0xFF1E3A5F),
                 foregroundColor: Colors.white,
                 elevation: 4,
                 shape: RoundedRectangleBorder(
@@ -579,12 +579,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     width: 5,
                     height: 28,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Theme.of(context).primaryColor,
-                          Theme.of(context).primaryColor.withOpacity(0.7),
+                          Color(0xFF1E3A5F),
+                          Color(0xFF3D5A80),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(3),
@@ -627,20 +627,20 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.15),
-                        Theme.of(context).primaryColor.withOpacity(0.08),
+                        const Color(0xFF1E3A5F).withOpacity(0.15),
+                        const Color(0xFF1E3A5F).withOpacity(0.08),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Theme.of(context).primaryColor.withOpacity(0.2),
+                      color: const Color(0xFF1E3A5F).withOpacity(0.2),
                       width: 1,
                     ),
                   ),
                   child: Icon(
                     icon,
                     size: 22,
-                    color: Theme.of(context).primaryColor,
+                    color: const Color(0xFF1E3A5F),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -683,14 +683,15 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   }
 
   Widget _buildPriceCard() {
+    const primaryColor = Color(0xFF1E3A5F);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
+            Color(0xFF1E3A5F),
+            Color(0xFF3D5A80),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -698,7 +699,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            color: primaryColor.withOpacity(0.3),
             blurRadius: 15,
             spreadRadius: 0,
             offset: const Offset(0, 5),

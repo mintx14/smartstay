@@ -63,7 +63,12 @@ class MyApp extends StatelessWidget {
       title: 'SmartStay',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primaryColor: const Color(0xFF1E3A5F),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E3A5F),
+          primary: const Color(0xFF1E3A5F),
+          secondary: const Color(0xFF3D5A80),
+        ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,

@@ -144,14 +144,8 @@ class _FavoritesPageState extends State<FavoritesPage>
           top: index == 0 ? 8 : 0,
         ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Material(
           color: Colors.white,
@@ -227,13 +221,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                              border: Border.all(color: Colors.grey[100]!),
                             ),
                             child: IconButton(
                               onPressed: () => _toggleFavorite(listing),
@@ -393,13 +381,7 @@ class _FavoritesPageState extends State<FavoritesPage>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 25,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              border: Border.all(color: Colors.grey[200]!),
             ),
             child: const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
@@ -558,6 +540,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                     : Column(
                         children: [
                           // Header
+
                           Container(
                             padding: const EdgeInsets.all(20),
                             child: Row(
@@ -565,9 +548,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Colors.red, Colors.pink],
-                                    ),
+                                    color: Colors.red,
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                   child: const Icon(

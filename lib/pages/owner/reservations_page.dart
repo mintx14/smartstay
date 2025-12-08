@@ -25,11 +25,11 @@ class _ReservationsPageState extends State<ReservationsPage> {
   bool _isLoading = true;
   String _selectedTab = 'Pending'; // 'Pending', 'Confirmed', 'History'
 
-  // Colors
-  final Color _primaryColor = const Color(0xFF190152);
-  final Color _successColor = const Color(0xFF27AE60);
-  final Color _warningColor = const Color(0xFFE67E22);
-  final Color _backgroundColor = const Color(0xFFF5F7FA);
+  // App color theme
+  static const Color primaryColor = Color(0xFF1E3A5F);
+  final Color _successColor = const Color(0xFF2EC4B6);
+  final Color _warningColor = const Color(0xFFF77F00);
+  final Color _backgroundColor = const Color(0xFFF8FAFC);
 
   @override
   void initState() {
@@ -167,54 +167,18 @@ class _ReservationsPageState extends State<ReservationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _backgroundColor,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF190152),
-                Color(0xFF2D1B69),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Bookings',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Manage your booking requests',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        elevation: 0,
+        title: const Text(
+          'Bookings',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: false,
       ),
       body: Column(
         children: [
@@ -223,7 +187,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
             child: _isLoading
                 ? Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                     ),
                   )
                 : _buildContent(),
@@ -240,8 +204,8 @@ class _ReservationsPageState extends State<ReservationsPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -249,9 +213,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
       child: Row(
         children: [
           _buildTabItem('Pending', _pendingReservations.length),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           _buildTabItem('Confirmed', _confirmedReservations.length),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           _buildTabItem('History', _historyReservations.length),
         ],
       ),
@@ -269,7 +233,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
         case 'Confirmed':
           return _successColor;
         default:
-          return _primaryColor;
+          return primaryColor;
       }
     }
 
@@ -282,20 +246,20 @@ class _ReservationsPageState extends State<ReservationsPage> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected ? getBgColor() : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? getBgColor() : Colors.grey[300]!,
-              width: 1,
+              color: isSelected ? getBgColor() : Colors.grey[200]!,
+              width: 1.5,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
                       color: getBgColor().withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ]
                 : null,
@@ -306,9 +270,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
               Text(
                 count.toString(),
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black87,
+                  color: isSelected ? Colors.white : Colors.grey[700],
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 2),
@@ -316,10 +280,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
                 label,
                 style: TextStyle(
                   color: isSelected
-                      ? Colors.white.withOpacity(0.9)
-                      : Colors.grey[600],
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                      ? Colors.white.withOpacity(0.95)
+                      : Colors.grey[500],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -351,7 +315,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
 
     return RefreshIndicator(
       onRefresh: _loadReservations,
-      color: _primaryColor,
+      color: primaryColor,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: currentList.length,
@@ -485,10 +449,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: _primaryColor.withOpacity(0.05),
+                    color: primaryColor.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.home_work_rounded, color: _primaryColor),
+                  child: Icon(Icons.home_work_rounded, color: primaryColor),
                 ),
                 const SizedBox(width: 12),
                 // Title and ID
@@ -558,12 +522,12 @@ class _ReservationsPageState extends State<ReservationsPage> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: _primaryColor.withOpacity(0.1),
+                      backgroundColor: primaryColor.withOpacity(0.1),
                       child: Text(
                         tenant['full_name']?.substring(0, 1).toUpperCase() ??
                             'T',
                         style: TextStyle(
-                          color: _primaryColor,
+                          color: primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -702,7 +666,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: isHighlight ? _primaryColor : const Color(0xFF1A1A1A),
+            color: isHighlight ? primaryColor : const Color(0xFF1A1A1A),
           ),
         ),
       ],

@@ -545,14 +545,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               // Search Input
               Container(
                 decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+                  border: Border.all(color: Colors.grey[200]!),
                 ),
                 child: TextField(
                   controller: _searchController,
@@ -670,13 +665,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -786,13 +775,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Material(
           color: Colors.white,
@@ -1064,21 +1047,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.red[50]!,
-            Colors.red[25] ?? Colors.red[50]!,
-          ],
-        ),
-        border: Border.all(color: Colors.red[300]!),
+        color: Colors.red[50], // Flat solid color
+        border: Border.all(color: Colors.red[200]!),
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -1476,8 +1447,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
+      appBar: (_currentIndex == 0 || _currentIndex == 1)
+          ? AppBar(
+              backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -1527,10 +1499,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: _getCurrentScreen(),
-      ),
+      ) : null,
+      body: _getCurrentScreen(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [

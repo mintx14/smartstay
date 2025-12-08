@@ -350,13 +350,11 @@ class _AddListingPageState extends State<AddListingPage> {
           centerTitle: true,
           elevation: 0,
           flexibleSpace: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Theme.of(context).primaryColor,
-                  Theme.of(context)
-                      .primaryColor
-                      .withBlue(Theme.of(context).primaryColor.blue + 20),
+                  Color(0xFF1E3A5F),
+                  Color(0xFF3D5A80),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -749,18 +747,16 @@ class _AddListingPageState extends State<AddListingPage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Theme.of(context)
-                                  .primaryColor
+                              color: const Color(0xFF1E3A5F)
                                   .withOpacity(0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
                           ],
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             colors: [
-                              Theme.of(context).primaryColor,
-                              Theme.of(context).primaryColor.withBlue(
-                                  Theme.of(context).primaryColor.blue + 20),
+                              Color(0xFF1E3A5F),
+                              Color(0xFF3D5A80),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,

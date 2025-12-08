@@ -31,7 +31,6 @@ class _ListingsPageState extends State<ListingsPage>
   // Filter state
   String _selectedFilter = 'All';
   final List<String> _filterOptions = ['All', 'Active', 'Inactive'];
-  Map<String, int> _listingsCount = {};
 
   @override
   bool get wantKeepAlive => false;
@@ -65,13 +64,8 @@ class _ListingsPageState extends State<ListingsPage>
     }
 
     try {
-      final count = await _databaseService.getListingsCount(
-        int.parse(_currentUserId!),
-      );
       if (mounted) {
-        setState(() {
-          _listingsCount = count;
-        });
+        setState(() {});
       }
     } catch (e) {
       print('Error loading listings count: $e');
@@ -206,13 +200,13 @@ class _ListingsPageState extends State<ListingsPage>
           Color getFilterColor() {
             switch (filter) {
               case 'All':
-                return const Color(0xFF190152);
+                return const Color(0xFF1E3A5F);
               case 'Active':
                 return const Color(0xFF27AE60);
               case 'Inactive':
                 return const Color(0xFFE67E22);
               default:
-                return const Color(0xFF190152);
+                return const Color(0xFF1E3A5F);
             }
           }
 
@@ -276,19 +270,6 @@ class _ListingsPageState extends State<ListingsPage>
         }).toList(),
       ),
     );
-  }
-
-  int _getFilterCount(String filter) {
-    switch (filter) {
-      case 'All':
-        return _listingsCount['total'] ?? 0;
-      case 'Active':
-        return _listingsCount['active'] ?? 0;
-      case 'Inactive':
-        return _listingsCount['inactive'] ?? 0;
-      default:
-        return 0;
-    }
   }
 
   Widget _buildPropertyCard(Listing listing) {
@@ -539,7 +520,7 @@ class _ListingsPageState extends State<ListingsPage>
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: listing.isActive
-                                  ? const Color(0xFF190152)
+                                  ? const Color(0xFF1E3A5F)
                                   : Colors.grey[400],
                               height: 1,
                             ),
@@ -573,7 +554,7 @@ class _ListingsPageState extends State<ListingsPage>
                             child: Icon(
                               Icons.more_horiz,
                               color: listing.isActive
-                                  ? const Color(0xFF190152)
+                                  ? const Color(0xFF1E3A5F)
                                   : Colors.grey[400],
                               size: 24,
                             ),
@@ -604,14 +585,14 @@ class _ListingsPageState extends State<ListingsPage>
           Icon(
             icon,
             size: 16,
-            color: isActive ? const Color(0xFF190152) : Colors.grey[400],
+            color: isActive ? const Color(0xFF1E3A5F) : Colors.grey[400],
           ),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: isActive ? const Color(0xFF190152) : Colors.grey[400],
+              color: isActive ? const Color(0xFF1E3A5F) : Colors.grey[400],
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1021,7 +1002,7 @@ class _ListingsPageState extends State<ListingsPage>
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Container(
@@ -1030,8 +1011,8 @@ class _ListingsPageState extends State<ListingsPage>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF190152),
-                Color(0xFF2D1B69),
+                Color(0xFF1E3A5F),
+                Color(0xFF3D5A80),
               ],
             ),
           ),
@@ -1121,11 +1102,11 @@ class _ListingsPageState extends State<ListingsPage>
                 await _loadListings(refresh: true);
                 await _loadListingsCount();
               },
-              color: const Color(0xFF190152),
+              color: const Color(0xFF1E3A5F),
               child: _isLoading && _filteredListings.isEmpty
                   ? const Center(
                       child: CircularProgressIndicator(
-                      color: Color(0xFF190152),
+                      color: Color(0xFF1E3A5F),
                     ))
                   : _filteredListings.isEmpty
                       ? _buildEmptyWidget()
@@ -1149,7 +1130,7 @@ class _ListingsPageState extends State<ListingsPage>
                                   child: Padding(
                                     padding: EdgeInsets.all(16.0),
                                     child: CircularProgressIndicator(
-                                      color: Color(0xFF190152),
+                                      color: Color(0xFF1E3A5F),
                                     ),
                                   ),
                                 );
@@ -1199,11 +1180,11 @@ class _ListingsPageState extends State<ListingsPage>
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0EDF8),
+                color: const Color(0xFFE8EDF4),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF190152).withOpacity(0.1),
+                    color: const Color(0xFF1E3A5F).withOpacity(0.1),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -1212,7 +1193,7 @@ class _ListingsPageState extends State<ListingsPage>
               child: Icon(
                 getIcon(),
                 size: 64,
-                color: const Color(0xFF190152),
+                color: const Color(0xFF1E3A5F),
               ),
             ),
             const SizedBox(height: 24),
@@ -1258,10 +1239,10 @@ class _ListingsPageState extends State<ListingsPage>
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF190152),
+                  backgroundColor: const Color(0xFF1E3A5F),
                   foregroundColor: Colors.white,
                   elevation: 4,
-                  shadowColor: const Color(0xFF190152).withOpacity(0.4),
+                  shadowColor: const Color(0xFF1E3A5F).withOpacity(0.4),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 16,
@@ -1283,9 +1264,9 @@ class _ListingsPageState extends State<ListingsPage>
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF190152),
+                  foregroundColor: const Color(0xFF1E3A5F),
                   side: const BorderSide(
-                    color: Color(0xFF190152),
+                    color: Color(0xFF1E3A5F),
                     width: 2,
                   ),
                   padding: const EdgeInsets.symmetric(

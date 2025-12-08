@@ -537,13 +537,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Row(
         children: [
@@ -642,13 +636,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         children: [
@@ -863,13 +851,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         children: [
@@ -961,17 +943,10 @@ class _BookingRequestPageState extends State<BookingRequestPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF667EEA).withOpacity(0.05),
-            const Color(0xFF764BA2).withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white, // No gradient, clean white
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF667EEA).withOpacity(0.2),
+          color: Colors.grey[200]!, // Subtle border
         ),
       ),
       child: Column(

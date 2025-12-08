@@ -101,8 +101,8 @@ class _MessagesPageState extends State<MessagesPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF190152),
-                  const Color(0xFF2D1B69),
+                  const Color(0xFF1E3A5F),
+                  const Color(0xFF3D5A80),
                 ],
               ),
             ),
@@ -789,8 +789,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF190152),
-                  const Color(0xFF2D1B69),
+                  const Color(0xFF1E3A5F),
+                  const Color(0xFF3D5A80),
                 ],
               ),
             ),

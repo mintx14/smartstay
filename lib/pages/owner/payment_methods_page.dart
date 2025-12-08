@@ -161,7 +161,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF190152),
+        backgroundColor: const Color(0xFF1E3A5F),
         title: const Text(
           'Payment & Banking',
           style: TextStyle(color: Colors.white),
@@ -210,7 +210,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF190152), Color(0xFF2D0B6E)],
+                  colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -334,7 +334,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
               icon: const Icon(Icons.add),
               label: const Text('Add Bank Account'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF190152),
+                backgroundColor: const Color(0xFF1E3A5F),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -492,12 +492,12 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: const Color(0xFF190152).withOpacity(0.1),
+            color: const Color(0xFF1E3A5F).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(
             Icons.account_balance,
-            color: Color(0xFF190152),
+            color: Color(0xFF1E3A5F),
             size: 30,
           ),
         ),
@@ -766,7 +766,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage>
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF190152),
+              backgroundColor: const Color(0xFF1E3A5F),
             ),
             child: const Text('Add', style: TextStyle(color: Colors.white)),
           ),
