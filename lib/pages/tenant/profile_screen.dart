@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_app/models/user_model.dart';
-import 'package:my_app/pages/owner/personal_info_page.dart';
-import 'package:my_app/pages/owner/rental_history_page.dart';
+import 'package:my_app/pages/tenant/personal_info_page.dart';
+import 'package:my_app/pages/tenant/rental_history_page.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User user;
@@ -99,8 +99,8 @@ class ProfileScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF667EEA),
-            Color(0xFF764BA2),
+            Color(0xFF1E3A5F),
+            Color(0xFF3D5A80),
           ],
         ),
         borderRadius: BorderRadius.only(
@@ -133,7 +133,7 @@ class ProfileScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF667EEA),
+                    color: Color(0xFF1E3A5F),
                   ),
                 ),
               ),

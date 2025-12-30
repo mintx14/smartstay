@@ -46,7 +46,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
     try {
       final response = await http.get(
         Uri.parse(
-            '${ApiConfig.baseUrl}/bookings/tenant/${widget.currentUser.id}'),
+            ApiConfig.getTenantBookings(int.parse(widget.currentUser.id))),
         headers: {
           'Content-Type': 'application/json',
           // Add authorization header if needed
@@ -116,7 +116,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
     if (confirm == true) {
       try {
         final response = await http.put(
-          Uri.parse('${ApiConfig.baseUrl}/bookings/$bookingId/cancel'),
+          Uri.parse(ApiConfig.updateBookingStatus(bookingId, 'cancel')),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -165,15 +165,15 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
             Tab(text: 'Confirmed (${_confirmedBookings.length})'),
             Tab(text: 'History (${_historyBookings.length})'),
           ],
-          labelColor: const Color(0xFF667EEA),
+          labelColor: const Color(0xFF1E3A5F),
           unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF667EEA),
+          indicatorColor: const Color(0xFF1E3A5F),
         ),
       ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               ),
             )
           : TabBarView(
@@ -411,7 +411,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
                       icon: const Icon(Icons.visibility, size: 18),
                       label: const Text('View Details'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF667EEA),
+                        backgroundColor: const Color(0xFF1E3A5F),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -430,7 +430,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Payment feature coming soon'),
-                          backgroundColor: Color(0xFF667EEA),
+                          backgroundColor: Color(0xFF1E3A5F),
                         ),
                       );
                     },

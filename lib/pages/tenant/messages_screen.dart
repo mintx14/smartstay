@@ -17,8 +17,13 @@ import 'package:my_app/services/message_service.dart';
 
 class MessagesScreen extends StatefulWidget {
   final String currentUserId;
+  final int initialTabIndex;
 
-  const MessagesScreen({super.key, required this.currentUserId});
+  const MessagesScreen({
+    super.key,
+    required this.currentUserId,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -34,13 +39,16 @@ class _MessagesScreenState extends State<MessagesScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
-  int _currentTabIndex = 0;
-  final Set<int> _recentlyReadConversationIds = {}; // Track recently read chats to prevent UI flicker
+  late int _currentTabIndex;
+  final Set<int> _recentlyReadConversationIds =
+      {}; // Track recently read chats to prevent UI flicker
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _currentTabIndex = widget.initialTabIndex;
+    _tabController = TabController(
+        length: 2, vsync: this, initialIndex: widget.initialTabIndex);
     _tabController.addListener(() {
       if (_tabController.index != _currentTabIndex) {
         setState(() {
@@ -99,7 +107,8 @@ class _MessagesScreenState extends State<MessagesScreen>
               final preview = MessagePreview.fromJson(conv);
               // Force unread count to 0 if we recently read this conversation
               // This prevents stale server data from showing unread badges
-              if (_recentlyReadConversationIds.contains(preview.conversationId)) {
+              if (_recentlyReadConversationIds
+                  .contains(preview.conversationId)) {
                 return preview.copyWith(unread: 0);
               }
               return preview;
@@ -130,9 +139,12 @@ class _MessagesScreenState extends State<MessagesScreen>
         final data = json.decode(response.body);
 
         if (data['success'] == true && data['bookings'] != null) {
-          final bookingsList = List<Map<String, dynamic>>.from(data['bookings'] ?? []);
+          final bookingsList =
+              List<Map<String, dynamic>>.from(data['bookings'] ?? []);
           setState(() {
-            bookings = bookingsList.map((booking) => BookingStatus.fromJson(booking)).toList();
+            bookings = bookingsList
+                .map((booking) => BookingStatus.fromJson(booking))
+                .toList();
           });
         } else {
           setState(() => bookings = []);
@@ -177,10 +189,11 @@ class _MessagesScreenState extends State<MessagesScreen>
 
   void _openChat(MessagePreview message) {
     final conversationId = message.conversationId;
-    
+
     // Optimistic update: Mark as read locally immediately for better UX
     setState(() {
-      final index = messages.indexWhere((m) => m.conversationId == conversationId);
+      final index =
+          messages.indexWhere((m) => m.conversationId == conversationId);
       if (index != -1) {
         messages[index] = messages[index].copyWith(unread: 0);
       }
@@ -197,7 +210,7 @@ class _MessagesScreenState extends State<MessagesScreen>
 
     // Pause auto-refresh while in chat
     _refreshTimer?.cancel();
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -245,7 +258,7 @@ class _MessagesScreenState extends State<MessagesScreen>
             padding: const EdgeInsets.only(bottom: 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -375,7 +388,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       opacity: _fadeAnimation,
       child: RefreshIndicator(
         onRefresh: _loadData,
-        color: const Color(0xFF667EEA),
+        color: const Color(0xFF1E3A5F),
         child: ListView.builder(
           padding: const EdgeInsets.only(top: 16),
           itemCount: filteredMessages.length,
@@ -400,7 +413,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       opacity: _fadeAnimation,
       child: RefreshIndicator(
         onRefresh: _loadBookings,
-        color: const Color(0xFF667EEA),
+        color: const Color(0xFF1E3A5F),
         child: ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: bookings.length,
@@ -525,7 +538,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF667EEA).withOpacity(0.05),
+                        color: const Color(0xFF1E3A5F).withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -533,7 +546,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                           const Icon(
                             Icons.person,
                             size: 16,
-                            color: Color(0xFF667EEA),
+                            color: Color(0xFF1E3A5F),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -582,7 +595,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF667EEA),
+                          backgroundColor: const Color(0xFF1E3A5F),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
@@ -804,7 +817,7 @@ class _MessagesScreenState extends State<MessagesScreen>
               booking.isPaymentCompleted ? Icons.payment : Icons.receipt_long,
               color: booking.isPaymentCompleted
                   ? Colors.green
-                  : const Color(0xFF667EEA),
+                  : const Color(0xFF1E3A5F),
             ),
             const SizedBox(width: 8),
             Text('Booking #${booking.id}'),
@@ -886,7 +899,7 @@ class _MessagesScreenState extends State<MessagesScreen>
               icon: const Icon(Icons.payment),
               label: const Text('Pay Deposit'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
+                backgroundColor: const Color(0xFF1E3A5F),
                 foregroundColor: Colors.white,
               ),
             ),
@@ -999,14 +1012,14 @@ class _MessagesScreenState extends State<MessagesScreen>
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Color(0xFF667EEA),
-                                Color(0xFF764BA2),
+                                Color(0xFF1E3A5F),
+                                Color(0xFF3D5A80),
                               ],
                             ),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF667EEA).withOpacity(0.3),
+                                color: const Color(0xFF1E3A5F).withOpacity(0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -1075,7 +1088,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                               style: TextStyle(
                                 fontSize: 12,
                                 color: message.unread > 0
-                                    ? const Color(0xFF667EEA)
+                                    ? const Color(0xFF1E3A5F)
                                     : Colors.grey.shade500,
                                 fontWeight: message.unread > 0
                                     ? FontWeight.w600
@@ -1113,8 +1126,8 @@ class _MessagesScreenState extends State<MessagesScreen>
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
-                                      Color(0xFF667EEA),
-                                      Color(0xFF764BA2),
+                                      Color(0xFF1E3A5F),
+                                      Color(0xFF3D5A80),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(12),
@@ -1162,7 +1175,7 @@ class _MessagesScreenState extends State<MessagesScreen>
               ],
             ),
             child: const CircularProgressIndicator(
-              color: Color(0xFF667EEA),
+              color: Color(0xFF1E3A5F),
               strokeWidth: 3,
             ),
           ),
@@ -1485,8 +1498,8 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF667EEA),
-                Color(0xFF764BA2),
+                Color(0xFF1E3A5F),
+                Color(0xFF3D5A80),
               ],
             ),
           ),
@@ -1512,7 +1525,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
                         ? widget.otherUser.fullName[0].toUpperCase()
                         : 'U',
                     style: const TextStyle(
-                      color: Color(0xFF667EEA),
+                      color: Color(0xFF1E3A5F),
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -1567,7 +1580,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
             child: isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFF667EEA),
+                      color: Color(0xFF1E3A5F),
                     ),
                   )
                 : messages.isEmpty
@@ -1701,7 +1714,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
             if (!isOwnMessage) ...[
               CircleAvatar(
                 radius: 18,
-                backgroundColor: const Color(0xFF667EEA),
+                backgroundColor: const Color(0xFF1E3A5F),
                 child: Text(
                   widget.otherUser.fullName.isNotEmpty
                       ? widget.otherUser.fullName[0].toUpperCase()
@@ -1727,7 +1740,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
                 decoration: BoxDecoration(
                   gradient: isOwnMessage
                       ? const LinearGradient(
-                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                          colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                         )
                       : null,
                   color: isOwnMessage ? null : Colors.white,
@@ -1824,12 +1837,12 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
               child: Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                    colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF667EEA).withOpacity(0.3),
+                      color: const Color(0xFF1E3A5F).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),

@@ -297,7 +297,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                         ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                            colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -384,7 +384,7 @@ class _FavoritesPageState extends State<FavoritesPage>
               border: Border.all(color: Colors.grey[200]!),
             ),
             child: const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               strokeWidth: 3,
             ),
           ),
@@ -450,7 +450,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.3),
+                    color: const Color(0xFF1E3A5F).withOpacity(0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -505,7 +505,7 @@ class _FavoritesPageState extends State<FavoritesPage>
               icon: const Icon(Icons.refresh),
               label: const Text('Try Again'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
+                backgroundColor: const Color(0xFF1E3A5F),
                 foregroundColor: Colors.white,
               ),
             ),
@@ -530,7 +530,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       ),
       child: RefreshIndicator(
         onRefresh: _loadFavoriteListings,
-        color: const Color(0xFF667EEA),
+        color: const Color(0xFF1E3A5F),
         child: _isLoading
             ? _buildLoadingState()
             : _errorMessage != null
@@ -718,7 +718,7 @@ class _InlineImageSliderState extends State<InlineImageSlider>
                     : null,
                 strokeWidth: isGridItem ? 2 : 3,
                 valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               ),
             ),
           );

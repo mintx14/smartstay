@@ -19,15 +19,23 @@ import 'property_details_page.dart';
 
 class HomePage extends StatefulWidget {
   final User user;
+  final int initialIndex;
+  final int initialMessageTabIndex;
 
-  const HomePage({super.key, required this.user});
+  const HomePage({
+    super.key,
+    required this.user,
+    this.initialIndex = 0,
+    this.initialMessageTabIndex = 0,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
-  int _currentIndex = 0;
+  late int _currentIndex;
+  late int _messageTabIndex;
   final PropertyService _propertyService = PropertyService();
   bool _isLoading = true;
   List<Listing> _allListings = [];
@@ -62,6 +70,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
+    _messageTabIndex = widget.initialMessageTabIndex;
     _initializeAnimations();
     _loadFavoriteIds();
     _loadInitialData();
@@ -272,7 +282,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF667EEA),
+              backgroundColor: const Color(0xFF1E3A5F),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -561,7 +571,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     prefixIcon: Container(
                       margin: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF667EEA).withOpacity(0.1),
+                        color: const Color(0xFF1E3A5F).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: _isSearching
@@ -571,12 +581,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF667EEA)),
+                                    Color(0xFF1E3A5F)),
                               ),
                             )
                           : const Icon(
                               Icons.search,
-                              color: Color(0xFF667EEA),
+                              color: Color(0xFF1E3A5F),
                               size: 24,
                             ),
                     ),
@@ -595,7 +605,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
                       borderSide: const BorderSide(
-                        color: Color(0xFF667EEA),
+                        color: Color(0xFF1E3A5F),
                         width: 2,
                       ),
                     ),
@@ -621,7 +631,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667EEA).withOpacity(0.1),
+                    color: const Color(0xFF1E3A5F).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -629,14 +639,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     children: [
                       const Icon(
                         Icons.location_on,
-                        color: Color(0xFF667EEA),
+                        color: Color(0xFF1E3A5F),
                         size: 18,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Showing properties in ${_selectedLocation!.name}',
                         style: const TextStyle(
-                          color: Color(0xFF667EEA),
+                          color: Color(0xFF1E3A5F),
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -705,14 +715,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667EEA).withOpacity(0.1),
+                    color: const Color(0xFF1E3A5F).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     suggestion.name.startsWith('Taman')
                         ? Icons.home_work
                         : Icons.location_city,
-                    color: const Color(0xFF667EEA),
+                    color: const Color(0xFF1E3A5F),
                     size: 20,
                   ),
                 ),
@@ -880,7 +890,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF667EEA).withOpacity(0.9),
+                              color: const Color(0xFF1E3A5F).withOpacity(0.9),
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
@@ -968,7 +978,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                            colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -1111,7 +1121,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             await _loadAllListings();
           }
         },
-        color: const Color(0xFF667EEA),
+        color: const Color(0xFF1E3A5F),
         child: GestureDetector(
           onTap: () {
             if (_showSuggestions) {
@@ -1211,7 +1221,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
       areaSqft: property.areaSqft,
-      maxTenants: 1, // <--- NEW: Default to 1 until PropertyListing model is updated
+      maxTenants:
+          1, // <--- NEW: Default to 1 until PropertyListing model is updated
       availableFrom:
           DateTime.tryParse(property.availableFrom) ?? DateTime.now(),
       minimumTenure: property.minimumTenure,
@@ -1259,7 +1270,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             icon: const Icon(Icons.clear),
             label: const Text('Clear Search'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF667EEA),
+              backgroundColor: const Color(0xFF1E3A5F),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(
                 horizontal: 24,
@@ -1294,7 +1305,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ],
             ),
             child: const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               strokeWidth: 3,
             ),
           ),
@@ -1332,8 +1343,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFF667EEA).withOpacity(0.1),
-                    const Color(0xFF764BA2).withOpacity(0.1),
+                    const Color(0xFF1E3A5F).withOpacity(0.1),
+                    const Color(0xFF3D5A80).withOpacity(0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(40),
@@ -1369,7 +1380,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.3),
+                    color: const Color(0xFF1E3A5F).withOpacity(0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -1380,7 +1391,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 icon: const Icon(Icons.refresh),
                 label: const Text('Refresh'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF667EEA),
+                  backgroundColor: const Color(0xFF1E3A5F),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
@@ -1416,9 +1427,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
         );
       case 2:
-        // Pass the String ID directly
         return messaging.MessagesScreen(
           currentUserId: widget.user.id,
+          initialTabIndex: _messageTabIndex,
         );
       // case 2:
       //   // Convert string ID to int for MessagesScreen with error handling
@@ -1450,56 +1461,57 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       appBar: (_currentIndex == 0 || _currentIndex == 1)
           ? AppBar(
               backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+              elevation: 0,
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
               ),
-              child: const Icon(
-                Icons.home,
-                color: Colors.white,
-                size: 24,
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.home,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'SmartStay',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'SmartStay',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: _logout,
-              tooltip: 'Logout',
-            ),
-          ),
-        ],
-      ) : null,
+              actions: [
+                Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    onPressed: _logout,
+                    tooltip: 'Logout',
+                  ),
+                ),
+              ],
+            )
+          : null,
       body: _getCurrentScreen(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -1525,7 +1537,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             },
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.white,
-            selectedItemColor: const Color(0xFF667EEA),
+            selectedItemColor: const Color(0xFF1E3A5F),
             unselectedItemColor: Colors.grey[400],
             selectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
@@ -1682,7 +1694,7 @@ class _InlineImageSliderState extends State<InlineImageSlider>
                     : null,
                 strokeWidth: isGridItem ? 2 : 3,
                 valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               ),
             ),
           );
