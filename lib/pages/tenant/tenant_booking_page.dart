@@ -46,7 +46,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
     try {
       final response = await http.get(
         Uri.parse(
-            '${ApiConfig.baseUrl}/bookings/tenant/${widget.currentUser.id}'),
+            ApiConfig.getTenantBookings(int.parse(widget.currentUser.id))),
         headers: {
           'Content-Type': 'application/json',
           // Add authorization header if needed
@@ -61,11 +61,15 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
         setState(() {
           _pendingBookings =
               bookings.where((b) => b['status'] == 'pending').toList();
-          _confirmedBookings =
-              bookings.where((b) => b['status'] == 'confirmed').toList();
+          // Include both 'confirmed' and 'paid' in confirmed bookings
+          _confirmedBookings = bookings
+              .where((b) => b['status'] == 'confirmed' || b['status'] == 'paid')
+              .toList();
           _historyBookings = bookings
               .where((b) =>
-                  b['status'] == 'rejected' || b['status'] == 'completed')
+                  b['status'] == 'rejected' ||
+                  b['status'] == 'completed' ||
+                  b['status'] == 'cancelled')
               .toList();
           _isLoading = false;
         });
@@ -116,7 +120,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
     if (confirm == true) {
       try {
         final response = await http.put(
-          Uri.parse('${ApiConfig.baseUrl}/bookings/$bookingId/cancel'),
+          Uri.parse(ApiConfig.updateBookingStatus(bookingId, 'cancel')),
           headers: {
             'Content-Type': 'application/json',
           },
@@ -165,15 +169,15 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
             Tab(text: 'Confirmed (${_confirmedBookings.length})'),
             Tab(text: 'History (${_historyBookings.length})'),
           ],
-          labelColor: const Color(0xFF667EEA),
+          labelColor: const Color(0xFF1E3A5F),
           unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF667EEA),
+          indicatorColor: const Color(0xFF1E3A5F),
         ),
       ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               ),
             )
           : TabBarView(
@@ -235,7 +239,13 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
 
   Widget _buildBookingCard(Map<String, dynamic> booking, String status) {
     final property = booking['property'] ?? {};
-    final statusColor = _getStatusColor(booking['status']);
+    // Use payment_status if paid, otherwise use main status
+    final effectiveStatus =
+        (booking['payment_status']?.toString().toLowerCase() == 'paid' ||
+                booking['status']?.toString().toLowerCase() == 'paid')
+            ? 'paid'
+            : booking['status']?.toString() ?? 'pending';
+    final statusColor = _getStatusColor(effectiveStatus);
     final checkInDate = DateTime.parse(booking['check_in_date']);
 
     return Card(
@@ -279,7 +289,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
                       ),
                     ),
                     child: Text(
-                      booking['status'].toString().toUpperCase(),
+                      _getDisplayStatus(booking),
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 12,
@@ -411,7 +421,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
                       icon: const Icon(Icons.visibility, size: 18),
                       label: const Text('View Details'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF667EEA),
+                        backgroundColor: const Color(0xFF1E3A5F),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -430,7 +440,7 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Payment feature coming soon'),
-                          backgroundColor: Color(0xFF667EEA),
+                          backgroundColor: Color(0xFF1E3A5F),
                         ),
                       );
                     },
@@ -479,18 +489,33 @@ class _TenantBookingsPageState extends State<TenantBookingsPage>
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'pending':
         return Colors.orange;
       case 'confirmed':
+        return Colors.blue;
+      case 'paid':
         return Colors.green;
       case 'rejected':
+      case 'cancelled':
         return Colors.red;
       case 'completed':
-        return Colors.blue;
+        return Colors.teal;
       default:
         return Colors.grey;
     }
+  }
+
+  String _getDisplayStatus(Map<String, dynamic> booking) {
+    final status = booking['status']?.toString().toLowerCase() ?? '';
+    final paymentStatus =
+        booking['payment_status']?.toString().toLowerCase() ?? '';
+
+    // If payment is paid, show PAID regardless of main status
+    if (paymentStatus == 'paid' || status == 'paid') {
+      return 'PAID';
+    }
+    return status.toUpperCase();
   }
 
   void _showBookingDetails(Map<String, dynamic> booking) {

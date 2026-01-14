@@ -30,7 +30,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
   late Animation<double> _slideAnimation;
 
   bool _isProcessing = false;
-  String _selectedPaymentMethod = 'fpx';
+  final String _selectedPaymentMethod = 'fpx';
   bool _isMockMode = false; // Will be set based on API response
 
   @override
@@ -156,7 +156,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
             Icon(
               isMockMode ? Icons.code : Icons.launch,
               size: 64,
-              color: isMockMode ? Colors.orange : const Color(0xFF667EEA),
+              color: isMockMode ? Colors.orange : const Color(0xFF1E3A5F),
             ),
             const SizedBox(height: 16),
             Text(
@@ -208,7 +208,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
             },
             style: ElevatedButton.styleFrom(
               backgroundColor:
-                  isMockMode ? Colors.orange : const Color(0xFF667EEA),
+                  isMockMode ? Colors.orange : const Color(0xFF1E3A5F),
             ),
             child: Text(
                 isMockMode ? 'Check Mock Payment' : 'Check Payment Status'),
@@ -298,7 +298,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+              colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -403,12 +403,12 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF667EEA).withOpacity(0.1),
+                  color: const Color(0xFF1E3A5F).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.receipt_long,
-                  color: Color(0xFF667EEA),
+                  color: Color(0xFF1E3A5F),
                   size: 24,
                 ),
               ),
@@ -442,7 +442,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF667EEA),
+                  color: Color(0xFF1E3A5F),
                 ),
               ),
               Text(
@@ -450,7 +450,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF667EEA),
+                  color: Color(0xFF1E3A5F),
                 ),
               ),
             ],
@@ -541,10 +541,10 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
   //       padding: const EdgeInsets.all(16),
   //       decoration: BoxDecoration(
   //         color: isSelected
-  //             ? const Color(0xFF667EEA).withOpacity(0.1)
+  //             ? const Color(0xFF1E3A5F).withOpacity(0.1)
   //             : Colors.white,
   //         border: Border.all(
-  //           color: isSelected ? const Color(0xFF667EEA) : Colors.grey.shade300,
+  //           color: isSelected ? const Color(0xFF1E3A5F) : Colors.grey.shade300,
   //           width: 2,
   //         ),
   //         borderRadius: BorderRadius.circular(12),
@@ -553,7 +553,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
   //         children: [
   //           Icon(
   //             icon,
-  //             color: isSelected ? const Color(0xFF667EEA) : Colors.grey,
+  //             color: isSelected ? const Color(0xFF1E3A5F) : Colors.grey,
   //             size: 28,
   //           ),
   //           const SizedBox(height: 8),
@@ -561,7 +561,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
   //             title,
   //             style: TextStyle(
   //               fontWeight: FontWeight.bold,
-  //               color: isSelected ? const Color(0xFF667EEA) : Colors.black87,
+  //               color: isSelected ? const Color(0xFF1E3A5F) : Colors.black87,
   //             ),
   //           ),
   //           Text(
@@ -584,7 +584,7 @@ class _ToyyibPayPaymentScreenState extends State<ToyyibPayPaymentScreen>
       child: ElevatedButton(
         onPressed: _isProcessing ? null : _processPayment,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF667EEA),
+          backgroundColor: const Color(0xFF1E3A5F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -813,7 +813,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                           Navigator.popUntil(context, (route) => route.isFirst);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF667EEA),
+                          backgroundColor: const Color(0xFF1E3A5F),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

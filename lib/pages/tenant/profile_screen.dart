@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_app/models/user_model.dart';
-import 'package:my_app/widgets/profile_menu_item.dart';
-import 'package:my_app/pages/owner/personal_info_page.dart';
-import 'package:my_app/pages/owner/rental_history_page.dart';
+import 'package:my_app/pages/tenant/personal_info_page.dart';
+import 'package:my_app/pages/tenant/rental_history_page.dart';
 
 class ProfileScreen extends StatelessWidget {
   final User user;
@@ -13,9 +13,10 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7FAFC),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF190152),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Profile',
@@ -24,149 +25,58 @@ class ProfileScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => _navigateToEditProfile(context),
+            icon: const Icon(Icons.edit, color: Colors.white),
+            tooltip: 'Edit Profile',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // User profile header
-            Container(
-              color: const Color(0xFF190152),
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Center(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    // Profile picture
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: const Color(0xFF190152).withOpacity(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // User name
-                    Text(
-                      user.fullName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // User email
-                    Text(
-                      user.email,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Edit profile button
-                    ElevatedButton(
-                      onPressed: () {
-                        // Navigate to edit profile page
-                        _navigateToEditProfile(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF190152),
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: const Text('Edit Profile'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Account section
-            _buildSection(
-              title: 'Account',
-              items: [
-                ProfileMenuItem(
-                  icon: Icons.person_outline,
-                  title: 'Personal Information',
-                  onTap: () {
-                    _navigateToPersonalInfo(context);
-                  },
-                ),
-                // ProfileMenuItem(
-                //   icon: Icons.payment_outlined,
-                //   title: 'Payment Methods',
-                //   onTap: () {
-                //     _navigateToPaymentMethods(context);
-                //   },
-                // ),
-              ],
-            ),
-
-            // Housing section
-            _buildSection(
-              title: 'Housing',
-              items: [
-                ProfileMenuItem(
-                  icon: Icons.history_outlined,
-                  title: 'Rental History',
-                  onTap: () {
-                    _navigateToRentalHistory(context);
-                  },
-                ),
-              ],
-            ),
-
-            // Support section
-            // _buildSection(
-            //   title: 'Support',
-            //   items: [
-            //     ProfileMenuItem(
-            //       icon: Icons.help_outline,
-            //       title: 'Help & Support',
-            //       onTap: () {
-            //         _navigateToHelpSupport(context);
-            //       },
-            //     ),
-            //   ],
-            // ),
-
-            // Logout button
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(vertical: 24),
-            //   child: TextButton(
-            //     onPressed: () {
-            //       _showLogoutDialog(context);
-            //     },
-            //     child: const Row(
-            //       mainAxisSize: MainAxisSize.min,
-            //       children: [
-            //         Icon(Icons.logout, color: Colors.red),
-            //         SizedBox(width: 8),
-            //         Text(
-            //           'Logout',
-            //           style: TextStyle(
-            //             color: Colors.red,
-            //             fontWeight: FontWeight.bold,
-            //             fontSize: 16,
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
-
-            // App version
+            _buildHeader(context),
+            const SizedBox(height: 20),
             Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Text(
-                'Version 1.0.1',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _buildSectionTitle('Account'),
+                  _buildMenuCard([
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.person_outline,
+                      title: 'Personal Information',
+                      color: Colors.blue,
+                      onTap: () => _navigateToPersonalInfo(context),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Housing'),
+                  _buildMenuCard([
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.history_rounded,
+                      title: 'Rental History',
+                      color: Colors.orange,
+                      onTap: () => _navigateToRentalHistory(context),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildLogoutButton(context),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Version 2.0.0',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
           ],
@@ -175,39 +85,215 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(
-      {required String title, required List<ProfileMenuItem> items}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Color(0xFF190152),
-            ),
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1E3A5F),
+            Color(0xFF3D5A80),
+          ],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: Offset(0, 5),
           ),
+        ],
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              child: CircleAvatar(
+                radius: 55,
+                backgroundColor: Colors.white,
+                child: Text(
+                  user.fullName.isNotEmpty
+                      ? user.fullName[0].toUpperCase()
+                      : 'U',
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E3A5F),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              user.fullName,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                user.email,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+          ],
         ),
-        Column(
-          children: items.map((item) {
-            return ListTile(
-              leading: Icon(item.icon, color: const Color(0xFF190152)),
-              title: Text(item.title),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: item.onTap,
-            );
-          }).toList(),
-        ),
-      ],
+      ),
     );
   }
 
-  // Navigate to Edit Profile page
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3142),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey[400],
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showLogoutDialog(context),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.logout_rounded, color: Colors.red[400]),
+                const SizedBox(width: 10),
+                Text(
+                  'Log Out',
+                  style: TextStyle(
+                    color: Colors.red[400],
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _navigateToEditProfile(BuildContext context) {
-    // Navigate to personal info which doubles as edit profile
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PersonalInfoPage(user: user),
@@ -215,7 +301,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Personal Information page
   void _navigateToPersonalInfo(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -224,12 +309,72 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Rental History page
   void _navigateToRentalHistory(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const RentalHistoryPage(),
+        builder: (context) =>
+            RentalHistoryPage(userId: int.tryParse(user.id) ?? 0),
       ),
     );
+  }
+
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onPressed: () => _handleLogout(context),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    Navigator.of(context).pop();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      if (!context.mounted) return;
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Successfully logged out'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

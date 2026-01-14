@@ -678,7 +678,7 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                     _buildDetailSection('Property Details', [
                       _buildDetailRow(Icons.location_on_rounded, 'Address',
                           rental.propertyAddress),
-                      _buildDetailRow(Icons.person_rounded, 'Tenant',
+                      _buildDetailRow(Icons.person_rounded, 'Landlord',
                           rental.landlordName ?? 'Not specified'),
                     ]),
 

@@ -6,10 +6,9 @@
 
 class ApiConfig {
   // Change this IP address when needed
-  static const String _baseUrl = 'http://192.168.0.4'; //URL RUMAHSEWA
+  static const String _baseUrl = 'http://192.168.0.15'; //URL RUMAHSEWA
+  //static const String _baseUrl = 'http://172.20.10.5'; //URL PHONE
   //static String _baseUrl = 'http://192.168.0.117'; //URL RUMAH
-  //static String _baseUrl = 'http://172.20.10.5'; //URL PHONE
-  //static String _baseUrl = 'https://databasetest.infinityfree.me'; //URL ONLINE
 
   // API endpoints
   static const String _apiPath = '/smartstay';
@@ -20,7 +19,7 @@ class ApiConfig {
 
   // Complete base URL with debug logging
   static String get baseUrl {
-    final url = '$_baseUrl$_apiPath';
+    const url = '$_baseUrl$_apiPath';
     // Uncomment next line for debugging
     // print("🔍 Current Base URL: $url");
     return url;
@@ -145,13 +144,29 @@ class ApiConfig {
     // If it's already a full URL (e.g. from external source), return it
     if (path.startsWith('http')) return path;
 
-    // Remove leading slash to prevent double slashes if needed,
-    // but usually _baseUrl does NOT end with / and path starts with /
-    // stored path: /smartstay/uploads/3/image.jpg
-    // _baseUrl:    http://192.168.0.4
+    // Convert backslashes to forward slashes (Windows-style paths)
+    String normalizedPath = path.replaceAll('\\', '/');
 
-    // Result: http://192.168.0.4/smartstay/uploads/3/image.jpg
-    return '$rawBaseUrl$path';
+    // Ensure path starts with /
+    if (!normalizedPath.startsWith('/')) {
+      normalizedPath = '/$normalizedPath';
+    }
+
+    // Fix: If path starts with /uploads (missing /smartstay prefix), add it
+    // This handles cases where backend saves path without the /smartstay prefix
+    if (normalizedPath.startsWith('/uploads') &&
+        !normalizedPath.startsWith('/smartstay')) {
+      normalizedPath = '/smartstay$normalizedPath';
+    }
+
+    // Debug: Print the normalized path
+    // print('📷 generateFullImageUrl: $path -> $rawBaseUrl$normalizedPath');
+
+    // stored path: /smartstay/uploads/id_documents/filename.pdf
+    // _baseUrl:    http://192.168.0.15
+
+    // Result: http://192.168.0.15/smartstay/uploads/id_documents/filename.pdf
+    return '$rawBaseUrl$normalizedPath';
   }
 
   // Methods with parameters

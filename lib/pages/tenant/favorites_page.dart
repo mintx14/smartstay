@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For haptic feedback
 import 'package:my_app/config/api_config.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
+import 'package:my_app/widgets/toast_notification.dart';
+import 'package:my_app/widgets/skeleton_loader.dart';
+import 'package:my_app/widgets/empty_state.dart';
+import 'package:my_app/widgets/error_widget.dart';
 import 'package:intl/intl.dart';
 import 'property_details_page.dart';
 
@@ -106,10 +111,21 @@ class _FavoritesPageState extends State<FavoritesPage>
     // Use the callback from HomePage to handle favorite toggle
     widget.onFavoriteToggle(listing);
 
+    // Add haptic feedback
+    HapticFeedback.lightImpact();
+
     // Animate heart
     _heartAnimationController.forward().then((_) {
       _heartAnimationController.reverse();
     });
+
+    // Show toast notification
+    final wasAdded = widget.favoriteIds.contains(listing.id.toString());
+    if (wasAdded) {
+      ToastNotification.success(context, 'Added to favorites');
+    } else {
+      ToastNotification.info(context, 'Removed from favorites');
+    }
 
     // Remove from local list immediately for better UX
     if (!widget.favoriteIds.contains(listing.id.toString())) {
@@ -144,14 +160,8 @@ class _FavoritesPageState extends State<FavoritesPage>
           top: index == 0 ? 8 : 0,
         ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Material(
           color: Colors.white,
@@ -227,13 +237,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                              border: Border.all(color: Colors.grey[100]!),
                             ),
                             child: IconButton(
                               onPressed: () => _toggleFavorite(listing),
@@ -309,7 +313,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                         ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                            colors: [Color(0xFF1E3A5F), Color(0xFF3D5A80)],
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -384,152 +388,37 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 25,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
-              strokeWidth: 3,
-            ),
-          ),
-          const SizedBox(height: 32),
-          const Text(
-            'Loading your favorites...',
-            style: TextStyle(
-              fontSize: 18,
-              color: Color(0xFF4A5568),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 20),
+      itemCount: 3,
+      itemBuilder: (context, index) => const PropertyCardSkeleton(),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.red.withOpacity(0.1),
-                    Colors.pink.withOpacity(0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Icon(
-                Icons.favorite_border,
-                size: 80,
-                color: Colors.grey[400],
-              ),
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'No Favorites Yet',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3748),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Save your favorite properties to view them here.\nTap the heart icon on any property to add it to favorites.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.favorite_border,
+      title: 'No Favorites Yet',
+      message:
+          'Save your favorite properties to view them here.\nTap the heart icon on any property to add it to favorites.',
+      actionLabel: 'Browse Properties',
+      onAction: () {
+        // Navigate to explore tab (index 0)
+        // Parent widget handles tab navigation
+      },
     );
   }
 
   Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Icon(
-                Icons.error_outline,
-                size: 60,
-                color: Colors.red[400],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Error Loading Favorites',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.red[700],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _errorMessage ?? 'Something went wrong',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadFavoriteListings,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      title: 'Error Loading Favorites',
+      message: _errorMessage ?? 'Something went wrong. Please try again.',
+      onRetry: () {
+        setState(() {
+          _errorMessage = null;
+        });
+        _loadFavoriteListings();
+      },
     );
   }
 
@@ -548,7 +437,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       ),
       child: RefreshIndicator(
         onRefresh: _loadFavoriteListings,
-        color: const Color(0xFF667EEA),
+        color: const Color(0xFF1E3A5F),
         child: _isLoading
             ? _buildLoadingState()
             : _errorMessage != null
@@ -558,6 +447,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                     : Column(
                         children: [
                           // Header
+
                           Container(
                             padding: const EdgeInsets.all(20),
                             child: Row(
@@ -565,9 +455,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Colors.red, Colors.pink],
-                                    ),
+                                    color: Colors.red,
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                   child: const Icon(
@@ -737,7 +625,7 @@ class _InlineImageSliderState extends State<InlineImageSlider>
                     : null,
                 strokeWidth: isGridItem ? 2 : 3,
                 valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
               ),
             ),
           );

@@ -118,14 +118,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: _cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Much softer shadow
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,19 +164,19 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       IconData icon, String value, String label, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08), // Very subtle background
-          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 26, color: color),
+            Icon(icon, size: 24, color: color),
             const SizedBox(height: 8),
             Text(
               value,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
@@ -191,7 +185,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
@@ -207,22 +201,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.85),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: Theme.of(context).primaryColor,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -233,8 +213,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               Text(
                 'Monthly Rent',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -245,17 +225,16 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                     const TextSpan(
                       text: 'RM ',
                       style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white),
                     ),
                     TextSpan(
                       text: widget.listing.price.toStringAsFixed(0),
                       style: const TextStyle(
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        letterSpacing: -1,
                       ),
                     ),
                   ],
@@ -264,9 +243,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
             ],
           ),
           Container(
-            height: 50,
+            height: 40,
             width: 1,
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withOpacity(0.2),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -274,8 +253,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
               Text(
                 'Deposit',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -284,7 +263,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 'RM ${widget.listing.deposit.toStringAsFixed(0)}',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -517,28 +496,44 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   // 2. Price Header Card
                   _buildPriceHeader(),
 
-                  // 3. Overview Section (Bed/Bath/Sqft)
+                  // 3. Overview Section (Bed/Bath/Sqft/Max Tenants)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
+                    child: Column(
                       children: [
-                        _buildOverviewItem(
-                            Icons.bed_rounded,
-                            '${widget.listing.bedrooms}',
-                            'Bedrooms',
-                            Colors.blueAccent),
-                        const SizedBox(width: 12),
-                        _buildOverviewItem(
-                            Icons.bathtub_outlined,
-                            '${widget.listing.bathrooms}',
-                            'Bathrooms',
-                            Colors.teal),
-                        const SizedBox(width: 12),
-                        _buildOverviewItem(
-                            Icons.square_foot_rounded,
-                            '${widget.listing.areaSqft}',
-                            'Sqft',
-                            Colors.orangeAccent),
+                        // First Row
+                        Row(
+                          children: [
+                            _buildOverviewItem(
+                                Icons.bed_rounded,
+                                '${widget.listing.bedrooms}',
+                                'Bedrooms',
+                                Colors.blueAccent),
+                            const SizedBox(width: 12),
+                            _buildOverviewItem(
+                                Icons.bathtub_outlined,
+                                '${widget.listing.bathrooms}',
+                                'Bathrooms',
+                                Colors.teal),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Second Row
+                        Row(
+                          children: [
+                            _buildOverviewItem(
+                                Icons.square_foot_rounded,
+                                '${widget.listing.areaSqft}',
+                                'Sqft',
+                                Colors.orangeAccent),
+                            const SizedBox(width: 12),
+                            _buildOverviewItem(
+                                Icons.people_rounded,
+                                '${widget.listing.maxTenants}',
+                                'Max Tenants',
+                                const Color(0xFF9B59B6)),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -587,11 +582,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                         icon: Icons.crop_square,
                       ),
                       const Divider(height: 1),
-                      // _buildDetailRow(
-                      //   'Furnishing',
-                      //   'Fully Furnished', // Example: You might want to add this to your model
-                      //   icon: Icons.chair_outlined,
-                      // ),
+                      _buildDetailRow(
+                        'Max Tenants',
+                        '${widget.listing.maxTenants} ${widget.listing.maxTenants > 1 ? "people" : "person"}',
+                        icon: Icons.people_rounded,
+                      ),
                     ],
                   ),
 

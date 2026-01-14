@@ -11,6 +11,7 @@ class Listing {
   final int bedrooms;
   final int bathrooms;
   final int areaSqft;
+  final int maxTenants; // <--- NEW: Maximum number of tenants allowed
   final DateTime availableFrom;
   final String minimumTenure;
   final String status;
@@ -31,6 +32,7 @@ class Listing {
     required this.bedrooms,
     required this.bathrooms,
     required this.areaSqft,
+    required this.maxTenants, // <--- NEW: Maximum tenants
     required this.availableFrom,
     required this.minimumTenure,
     required this.status,
@@ -81,6 +83,7 @@ class Listing {
       bedrooms: int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
       bathrooms: int.tryParse(json['bathrooms']?.toString() ?? '0') ?? 0,
       areaSqft: int.tryParse(json['area_sqft']?.toString() ?? '0') ?? 0,
+      maxTenants: int.tryParse(json['max_tenants']?.toString() ?? '1') ?? 1, // <--- NEW: Parse max_tenants safely, default to 1
       availableFrom:
           DateTime.tryParse(json['available_from'] ?? '') ?? DateTime.now(),
       minimumTenure: json['minimum_tenure'] ?? '12 months',
@@ -105,6 +108,7 @@ class Listing {
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
       'area_sqft': areaSqft,
+      'max_tenants': maxTenants, // <--- NEW: Include max_tenants in JSON
       'available_from': availableFrom.toIso8601String(),
       'minimum_tenure': minimumTenure,
       'status': status,
@@ -131,6 +135,7 @@ class Listing {
     int? bedrooms,
     int? bathrooms,
     int? areaSqft,
+    int? maxTenants, // <--- NEW: Add maxTenants parameter
     DateTime? availableFrom,
     String? minimumTenure,
     String? status,
@@ -150,6 +155,7 @@ class Listing {
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       areaSqft: areaSqft ?? this.areaSqft,
+      maxTenants: maxTenants ?? this.maxTenants, // <--- NEW: Include maxTenants
       availableFrom: availableFrom ?? this.availableFrom,
       minimumTenure: minimumTenure ?? this.minimumTenure,
       status: status ?? this.status,

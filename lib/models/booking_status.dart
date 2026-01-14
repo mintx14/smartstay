@@ -32,6 +32,7 @@ class BookingStatus {
   final String? tenantEmail;
   final String? tenantPhone;
   final String? receiptUrl;
+  final String? idDocumentUrl;
 
   BookingStatus({
     required this.id,
@@ -60,6 +61,7 @@ class BookingStatus {
     this.tenantEmail,
     this.tenantPhone,
     this.receiptUrl,
+    this.idDocumentUrl,
   });
 
   factory BookingStatus.fromJson(Map<String, dynamic> json) {
@@ -170,6 +172,7 @@ class BookingStatus {
       tenantEmail: json['tenant_email'],
       tenantPhone: json['tenant_phone'],
       receiptUrl: json['receipt_url'],
+      idDocumentUrl: json['id_document_url'] ?? json['id_document_pdf'] ?? json['id_document_image'],
     );
 
     print(
