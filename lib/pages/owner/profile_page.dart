@@ -23,7 +23,7 @@ class ProfilePage extends StatelessWidget {
           children: [
             // Header Section
             _buildHeader(context),
-            
+
             const SizedBox(height: 24),
 
             // Stats Section
@@ -110,9 +110,9 @@ class ProfilePage extends StatelessWidget {
 
                   // Logout Button
                   _buildLogoutButton(context),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Version
                   Text(
                     'Version 2.0.0',
@@ -186,7 +186,7 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 28),
-              
+
               // Profile Picture
               Stack(
                 children: [
@@ -205,8 +205,8 @@ class ProfilePage extends StatelessWidget {
                       radius: 52,
                       backgroundColor: Colors.white,
                       child: Text(
-                        user.fullName.isNotEmpty 
-                            ? user.fullName[0].toUpperCase() 
+                        user.fullName.isNotEmpty
+                            ? user.fullName[0].toUpperCase()
                             : 'O',
                         style: TextStyle(
                           fontSize: 42,
@@ -246,7 +246,7 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 18),
-              
+
               // Name
               Text(
                 user.fullName,
@@ -258,10 +258,11 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              
+
               // Email Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -287,7 +288,7 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              
+
               // Role Badge
               // Container(
               //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -338,48 +339,48 @@ class ProfilePage extends StatelessWidget {
   //   );
   // }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: primaryColor, size: 20),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildStatItem(String label, String value, IconData icon) {
+  //   return Expanded(
+  //     child: Column(
+  //       children: [
+  //         Container(
+  //           padding: const EdgeInsets.all(10),
+  //           decoration: BoxDecoration(
+  //             color: primaryColor.withOpacity(0.1),
+  //             shape: BoxShape.circle,
+  //           ),
+  //           child: Icon(icon, color: primaryColor, size: 20),
+  //         ),
+  //         const SizedBox(height: 10),
+  //         Text(
+  //           value,
+  //           style: TextStyle(
+  //             fontSize: 20,
+  //             fontWeight: FontWeight.bold,
+  //             color: primaryColor,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 2),
+  //         Text(
+  //           label,
+  //           style: TextStyle(
+  //             fontSize: 12,
+  //             color: Colors.grey.shade600,
+  //             fontWeight: FontWeight.w500,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Widget _buildStatDivider() {
-    return Container(
-      height: 50,
-      width: 1,
-      color: Colors.grey.shade200,
-    );
-  }
+  // Widget _buildStatDivider() {
+  //   return Container(
+  //     height: 50,
+  //     width: 1,
+  //     color: Colors.grey.shade200,
+  //   );
+  // }
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -525,7 +526,8 @@ class ProfilePage extends StatelessWidget {
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.logout_rounded, color: Colors.red.shade400, size: 20),
+                  child: Icon(Icons.logout_rounded,
+                      color: Colors.red.shade400, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -563,36 +565,38 @@ class ProfilePage extends StatelessWidget {
   void _navigateToRentalHistory(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const RentalHistoryPage(),
+        builder: (context) =>
+            RentalHistoryPage(userId: int.tryParse(user.id) ?? 0),
       ),
     );
   }
 
   // Show "Coming Soon" message for unimplemented features
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Text('$feature coming soon!'),
-          ],
-        ),
-        backgroundColor: primaryColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+  // void _showComingSoon(BuildContext context, String feature) {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Row(
+  //         children: [
+  //           const Icon(Icons.info_outline, color: Colors.white),
+  //           const SizedBox(width: 12),
+  //           Text('$feature coming soon!'),
+  //         ],
+  //       ),
+  //       backgroundColor: primaryColor,
+  //       behavior: SnackBarBehavior.floating,
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //       duration: const Duration(seconds: 2),
+  //     ),
+  //   );
+  // }
 
   Future<void> _showLogoutDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -704,7 +708,8 @@ class ProfilePage extends StatelessWidget {
           ),
           backgroundColor: Colors.green.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -716,7 +721,8 @@ class ProfilePage extends StatelessWidget {
           content: Text('Logout failed: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }

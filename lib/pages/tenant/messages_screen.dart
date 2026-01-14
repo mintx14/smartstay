@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For haptic feedback
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import 'package:my_app/config/api_config.dart'; // Adjust path as needed
 import 'package:my_app/pages/tenant/toyyibpay_payment_screen.dart';
 import 'package:my_app/models/booking_status.dart';
+import 'package:my_app/widgets/toast_notification.dart';
+import 'package:my_app/widgets/skeleton_loader.dart';
+import 'package:my_app/widgets/empty_state.dart';
 
 // --- NEW IMPORTS ---
 // We import your REAL models and give them aliases to avoid naming conflicts
@@ -469,7 +475,8 @@ class _MessagesScreenState extends State<MessagesScreen>
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.network(
-                            booking.propertyImageUrl!,
+                            ApiConfig.generateFullImageUrl(
+                                booking.propertyImageUrl!),
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
@@ -722,6 +729,75 @@ class _MessagesScreenState extends State<MessagesScreen>
                       ),
                     ),
                   ],
+                  if (booking.idDocumentUrl != null &&
+                      booking.idDocumentUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E3A5F).withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF1E3A5F).withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF1E3A5F).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.badge_outlined,
+                                  color: Color(0xFF1E3A5F),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'ID Verification Document',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1E3A5F),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _viewIdDocument(booking),
+                              icon: const Icon(Icons.visibility_outlined,
+                                  size: 18),
+                              label: const Text('Preview ID Document'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF1E3A5F),
+                                side:
+                                    const BorderSide(color: Color(0xFF1E3A5F)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -804,6 +880,33 @@ class _MessagesScreenState extends State<MessagesScreen>
     );
   }
 
+  void _viewIdDocument(BookingStatus booking) {
+    if (booking.idDocumentUrl == null || booking.idDocumentUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No ID document available for this booking.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Debug: Print the raw and generated URLs
+    debugPrint('📄 Raw ID Document URL: ${booking.idDocumentUrl}');
+    final urlString = ApiConfig.generateFullImageUrl(booking.idDocumentUrl!);
+    debugPrint('📄 Generated Full URL: $urlString');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _IdDocumentViewerPage(
+          documentUrl: urlString,
+          title: 'ID Verification Document',
+        ),
+      ),
+    );
+  }
+
   void _showBookingDetailsDialog(BookingStatus booking) {
     showDialog(
       context: context,
@@ -843,6 +946,26 @@ class _MessagesScreenState extends State<MessagesScreen>
                   'Total', 'RM ${booking.totalAmount.toStringAsFixed(2)}'),
               const SizedBox(height: 12),
               _buildDetailRow('Status', booking.displayStatus),
+              if (booking.idDocumentUrl != null &&
+                  booking.idDocumentUrl!.isNotEmpty) ...[
+                const Divider(),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _viewIdDocument(booking);
+                    },
+                    icon: const Icon(Icons.badge_outlined),
+                    label: const Text('View ID Document'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A5F),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
               if (booking.hasPaymentTransaction) ...[
                 const Divider(),
                 Text(
@@ -867,6 +990,28 @@ class _MessagesScreenState extends State<MessagesScreen>
                       'Paid On',
                       DateFormat('MMMM d, yyyy h:mm a')
                           .format(DateTime.parse(booking.paidAt!))),
+                if (booking.receiptUrl != null &&
+                    booking.receiptUrl!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final receiptUrl =
+                            ApiConfig.generateFullImageUrl(booking.receiptUrl!);
+                        final Uri url = Uri.parse(receiptUrl);
+                        launchUrl(url, mode: LaunchMode.externalApplication);
+                      },
+                      icon: const Icon(Icons.receipt_long),
+                      label: const Text('View Receipt'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
               ],
               if (booking.ownerName != null) ...[
                 const Divider(),
@@ -1157,115 +1302,26 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: const CircularProgressIndicator(
-              color: Color(0xFF1E3A5F),
-              strokeWidth: 3,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Loading...',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 16),
+      itemCount: 5,
+      itemBuilder: (context, index) => const ListItemSkeleton(),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 64,
-                color: Colors.grey.shade400,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No messages yet',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.chat_bubble_outline,
+      title: 'No Messages Yet',
+      message: 'Your conversations with property owners will appear here.',
     );
   }
 
   Widget _buildEmptyBookingsState() {
-    return Center(
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.calendar_today_rounded,
-                size: 64,
-                color: Colors.grey.shade400,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No bookings yet',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your booking history will appear here',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.calendar_today,
+      title: 'No Bookings Yet',
+      message: 'Your booking history and requests will appear here.',
     );
   }
 }
@@ -1440,6 +1496,9 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
     final messageText = _messageController.text.trim();
     if (messageText.isEmpty) return;
 
+    // Add haptic feedback
+    HapticFeedback.mediumImpact();
+
     _messageController.clear();
 
     try {
@@ -1457,6 +1516,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
         final data = json.decode(response.body);
         if (data['success']) {
           _loadMessages(showLoading: false);
+          ToastNotification.success(context, 'Message sent');
         } else {
           throw Exception(
               data['error'] ?? 'Failed to send message: ${response.body}');
@@ -1467,7 +1527,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen>
       }
     } catch (e) {
       print('Error sending message: $e');
-      _showError('Error sending message: $e');
+      ToastNotification.error(context, 'Failed to send message');
       _messageController.text = messageText;
     }
   }
@@ -1950,3 +2010,217 @@ class MessagePreview {
 // --- DELETED ---
 // The old, local 'ChatMessage' class that was here has been removed.
 // ---
+
+// ID Document Viewer Page - Handles both PDF and Image files
+class _IdDocumentViewerPage extends StatelessWidget {
+  final String documentUrl;
+  final String title;
+
+  const _IdDocumentViewerPage({
+    required this.documentUrl,
+    required this.title,
+  });
+
+  bool get _isPdf {
+    final lowerUrl = documentUrl.toLowerCase();
+    return lowerUrl.endsWith('.pdf');
+  }
+
+  bool get _isImage {
+    final lowerUrl = documentUrl.toLowerCase();
+    return lowerUrl.endsWith('.jpg') ||
+        lowerUrl.endsWith('.jpeg') ||
+        lowerUrl.endsWith('.png') ||
+        lowerUrl.endsWith('.gif') ||
+        lowerUrl.endsWith('.webp');
+  }
+
+  Future<void> _downloadFile(BuildContext context) async {
+    final Uri url = Uri.parse(documentUrl);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch document URL');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open document')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    debugPrint('📄 Loading document: $documentUrl');
+    debugPrint('📄 Is PDF: $_isPdf, Is Image: $_isImage');
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+        actions: [
+          IconButton(
+            onPressed: () => _downloadFile(context),
+            icon: const Icon(Icons.download_rounded),
+            tooltip: 'Download Document',
+          ),
+        ],
+      ),
+      body: _buildDocumentViewer(context),
+    );
+  }
+
+  Widget _buildDocumentViewer(BuildContext context) {
+    if (_isPdf) {
+      // PDF Viewer with fallback
+      return Stack(
+        children: [
+          SfPdfViewer.network(
+            documentUrl,
+            canShowScrollHead: false,
+            canShowScrollStatus: false,
+            onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+              debugPrint('❌ PDF Load Failed: ${details.error}');
+              debugPrint('❌ PDF URL was: $documentUrl');
+              // Show error dialog with option to open in browser
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('PDF Load Failed'),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Error: ${details.error}'),
+                      const SizedBox(height: 12),
+                      const Text('URL:',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      SelectableText(
+                        documentUrl,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Try opening the document in a browser to verify the URL is correct.',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Close'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _downloadFile(context);
+                      },
+                      icon: const Icon(Icons.open_in_browser),
+                      label: const Text('Open in Browser'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A5F),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    } else if (_isImage) {
+      // Image Viewer with zoom capability
+      return InteractiveViewer(
+        minScale: 0.5,
+        maxScale: 4.0,
+        child: Center(
+          child: Image.network(
+            documentUrl,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                  color: const Color(0xFF1E3A5F),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint('❌ Image Load Failed: $error');
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Failed to load image',
+                      style: TextStyle(fontSize: 16, color: Colors.red),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      documentUrl,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _downloadFile(context),
+                      icon: const Icon(Icons.open_in_browser),
+                      label: const Text('Open in Browser'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } else {
+      // Unknown format - try to open externally
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.description, size: 64, color: Color(0xFF1E3A5F)),
+            const SizedBox(height: 16),
+            const Text(
+              'Document format not supported for preview',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              documentUrl,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _downloadFile(context),
+              icon: const Icon(Icons.open_in_browser),
+              label: const Text('Open in Browser'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E3A5F),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}

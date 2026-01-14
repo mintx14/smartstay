@@ -6,7 +6,7 @@ import 'package:my_app/models/user_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:my_app/config/api_config.dart';
-import 'package:my_app/pages/tenant/messages_screen.dart' as messages;
+//import 'package:my_app/pages/tenant/messages_screen.dart' as messages;
 import 'package:my_app/pages/tenant/home_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -84,6 +84,23 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       return 1;
     }
   }
+
+  // Helper method to get the current active file (single source of truth)
+  // Returns the most recently selected file, whether from camera or file upload
+  File? get _currentActiveFile {
+    // Priority: generated PDF (from camera) takes precedence if both exist
+    // But since we clear one when the other is set, only one should exist at a time
+    if (_generatedPdf != null && _generatedPdf!.existsSync()) {
+      return _generatedPdf;
+    }
+    if (_uploadedFile != null && _uploadedFile!.existsSync()) {
+      return _uploadedFile;
+    }
+    return null;
+  }
+
+  // Helper method to check if there's an active file
+  bool get _hasActiveFile => _currentActiveFile != null;
 
   @override
   void initState() {
@@ -338,6 +355,12 @@ class _BookingRequestPageState extends State<BookingRequestPage>
         }
 
         setState(() {
+          // Clear camera-generated PDF and images when file is uploaded
+          _generatedPdf = null;
+          _selectedIdFrontImage = null;
+          _selectedIdBackImage = null;
+          _pdfPreviewed = false;
+          // Set the uploaded file
           _uploadedFile = file;
         });
 
@@ -623,6 +646,9 @@ class _BookingRequestPageState extends State<BookingRequestPage>
 
       setState(() {
         _isPdfGenerating = false;
+        // Clear uploaded file when PDF is generated from camera
+        _uploadedFile = null;
+        // Set the generated PDF
         _generatedPdf = outputFile;
       });
 
@@ -858,8 +884,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                   ],
                 ),
               ),
-              if ((_uploadMode == 'camera' && hasFront && hasBack && hasPdf) ||
-                  (_uploadMode == 'file' && hasUploadedFile))
+              if (_hasActiveFile)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1088,15 +1113,16 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // View PDF Button (persistent)
+                  // View PDF Button (persistent) - uses current active file
                   OutlinedButton.icon(
                     onPressed: () {
-                      if (_generatedPdf != null) {
+                      final activeFile = _currentActiveFile;
+                      if (activeFile != null) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ContractViewerPage(
-                              contractUrl: _generatedPdf!.path,
+                              contractUrl: activeFile.path,
                               title: 'ID Verification Document',
                               isLocalFile: true,
                             ),
@@ -1192,7 +1218,7 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                 ),
               ),
             ),
-            if (hasUploadedFile)
+            if (hasUploadedFile) ...[
               Container(
                 margin: const EdgeInsets.only(top: 16),
                 padding: const EdgeInsets.all(16),
@@ -1241,6 +1267,40 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              // View File Button - uses current active file
+              OutlinedButton.icon(
+                onPressed: () {
+                  final activeFile = _currentActiveFile;
+                  if (activeFile != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ContractViewerPage(
+                          contractUrl: activeFile.path,
+                          title: 'ID Verification Document',
+                          isLocalFile: true,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1E3A5F),
+                  side: const BorderSide(color: Color(0xFF1E3A5F)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                icon: const Icon(Icons.visibility_outlined, size: 20),
+                label: const Text(
+                  'View File',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ],
         ],
       ),
@@ -1410,12 +1470,13 @@ class _BookingRequestPageState extends State<BookingRequestPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
+                // ignore: deprecated_member_use
                 color: Colors.black.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(Icons.zoom_in, color: Colors.white, size: 14),
                   SizedBox(width: 4),
                   Text(
@@ -1437,17 +1498,17 @@ class _BookingRequestPageState extends State<BookingRequestPage>
         onTap: onCapture,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          height: 180,
+          padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: const Color(0xFFE2E8F0),
               width: 2,
+              style: BorderStyle.solid,
             ),
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1457,25 +1518,43 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                 ),
                 child: const Icon(
                   Icons.camera_alt_rounded,
-                  size: 36,
+                  size: 48,
                   color: Color(0xFF1E3A5F),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Text(
                 'Capture $title',
                 style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                   color: Color(0xFF1E3A5F),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 'Tap to take a photo',
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E3A5F),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Capture',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1726,11 +1805,14 @@ class _BookingRequestPageState extends State<BookingRequestPage>
                     _buildCostSummaryCard(),
                     const SizedBox(height: 24),
 
-                    // --- NEW: INSERT CONTRACT CARD HERE ---
-                    _buildSectionTitle('Contract'),
-                    const SizedBox(height: 12),
-                    _buildContractCard(),
-                    const SizedBox(height: 24),
+                    // --- Contract Section (only show if contract exists) ---
+                    if (widget.listing.contractUrl != null &&
+                        widget.listing.contractUrl!.isNotEmpty) ...[
+                      _buildSectionTitle('Contract'),
+                      const SizedBox(height: 12),
+                      _buildContractCard(),
+                      const SizedBox(height: 24),
+                    ],
                     // --------------------------------------
 
                     // Terms and Conditions
@@ -2614,28 +2696,16 @@ class _BookingRequestPageState extends State<BookingRequestPage>
       return;
     }
 
-    // Validate ID document upload
-    if (_uploadMode == 'camera') {
-      if (_generatedPdf == null || !_generatedPdf!.existsSync()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Please capture both sides of your ID and generate PDF'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-    } else if (_uploadMode == 'file') {
-      if (_uploadedFile == null || !_uploadedFile!.existsSync()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please upload your ID document'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+    // Validate ID document upload - use current active file
+    final activeFile = _currentActiveFile;
+    if (activeFile == null || !activeFile.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload or scan your ID document'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
     }
 
     if (_hasExistingBooking) {
@@ -2670,30 +2740,16 @@ class _BookingRequestPageState extends State<BookingRequestPage>
         'status': 'pending',
       });
 
-      // Handle ID document upload based on mode
-      if (_uploadMode == 'camera') {
-        // Camera mode: Upload the generated PDF
-        if (_generatedPdf != null && _generatedPdf!.existsSync()) {
-          request.files.add(await http.MultipartFile.fromPath(
-            'id_document_pdf',
-            _generatedPdf!.path,
-          ));
-        } else {
-          throw Exception('Please generate PDF before submitting');
-        }
-      } else if (_uploadMode == 'file') {
-        // File upload mode: Upload the selected file
-        if (_uploadedFile != null && _uploadedFile!.existsSync()) {
-          final extension = _uploadedFile!.path.split('.').last.toLowerCase();
-          request.files.add(await http.MultipartFile.fromPath(
-            extension == 'pdf' ? 'id_document_pdf' : 'id_document_image',
-            _uploadedFile!.path,
-          ));
-        } else {
-          throw Exception('Please upload an ID document');
-        }
+      // Handle ID document upload - use current active file
+      final activeFile = _currentActiveFile;
+      if (activeFile != null && activeFile.existsSync()) {
+        final extension = activeFile.path.split('.').last.toLowerCase();
+        request.files.add(await http.MultipartFile.fromPath(
+          extension == 'pdf' ? 'id_document_pdf' : 'id_document_image',
+          activeFile.path,
+        ));
       } else {
-        throw Exception('Please upload your ID verification');
+        throw Exception('Please upload or scan your ID document');
       }
 
       // Send request

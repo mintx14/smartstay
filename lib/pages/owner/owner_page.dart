@@ -29,7 +29,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
   // Dashboard data
   DashboardStats? _dashboardStats;
   List<RecentActivity> _recentActivities = [];
-  List<NotificationItem> _notifications = [];
+  //List<NotificationItem> _notifications = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -43,7 +43,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
 
     _debugUserData();
     _initializeScreens();
-    
+
     _loadDashboardData().then((_) {
       if (mounted) {
         setState(() {});
@@ -86,7 +86,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         throw Exception('Invalid user session. Please log in again.');
       }
 
-      final allData = await DashboardService.getAllDashboardData(widget.user.id);
+      final allData =
+          await DashboardService.getAllDashboardData(widget.user.id);
 
       if (!mounted) return;
 
@@ -94,7 +95,7 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         _isLoading = false;
         _dashboardStats = allData['stats'] as DashboardStats?;
         _recentActivities = allData['activities'] as List<RecentActivity>;
-        _notifications = allData['notifications'] as List<NotificationItem>;
+        //_notifications = allData['notifications'] as List<NotificationItem>;
         _errorMessage = null;
       });
     } catch (e, stackTrace) {
@@ -169,7 +170,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor.withOpacity(0.1) : Colors.transparent,
+            color:
+                isSelected ? primaryColor.withOpacity(0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -209,7 +211,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                 color: Colors.red.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.error_outline, color: Colors.red.shade400, size: 50),
+              child: Icon(Icons.error_outline,
+                  color: Colors.red.shade400, size: 50),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -226,19 +229,22 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Login Again', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: const Text('Login Again',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
       );
     }
 
-    return owner_messaging.MessagesPage(currentUserId: int.parse(widget.user.id));
+    return owner_messaging.MessagesPage(
+        currentUserId: int.parse(widget.user.id));
   }
 
   Widget _buildDashboard() {
@@ -306,8 +312,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
               radius: 32,
               backgroundColor: Colors.white,
               child: Text(
-                widget.user.fullName.isNotEmpty 
-                    ? widget.user.fullName[0].toUpperCase() 
+                widget.user.fullName.isNotEmpty
+                    ? widget.user.fullName[0].toUpperCase()
                     : 'O',
                 style: TextStyle(
                   fontSize: 28,
@@ -341,7 +347,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -432,7 +439,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -446,7 +454,8 @@ class _OwnerPageState extends State<OwnerPage> with TickerProviderStateMixin {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

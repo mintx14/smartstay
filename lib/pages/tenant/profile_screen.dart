@@ -53,9 +53,7 @@ class ProfileScreen extends StatelessWidget {
                       onTap: () => _navigateToPersonalInfo(context),
                     ),
                   ]),
-
                   const SizedBox(height: 24),
-
                   _buildSectionTitle('Housing'),
                   _buildMenuCard([
                     _buildMenuItem(
@@ -66,13 +64,9 @@ class ProfileScreen extends StatelessWidget {
                       onTap: () => _navigateToRentalHistory(context),
                     ),
                   ]),
-
                   const SizedBox(height: 24),
-
                   _buildLogoutButton(context),
-                  
                   const SizedBox(height: 24),
-                  
                   Text(
                     'Version 2.0.0',
                     style: TextStyle(
@@ -129,7 +123,9 @@ class ProfileScreen extends StatelessWidget {
                 radius: 55,
                 backgroundColor: Colors.white,
                 child: Text(
-                  user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
+                  user.fullName.isNotEmpty
+                      ? user.fullName[0].toUpperCase()
+                      : 'U',
                   style: const TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
@@ -316,7 +312,8 @@ class ProfileScreen extends StatelessWidget {
   void _navigateToRentalHistory(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const RentalHistoryPage(),
+        builder: (context) =>
+            RentalHistoryPage(userId: int.tryParse(user.id) ?? 0),
       ),
     );
   }
@@ -326,7 +323,8 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Logout'),
           content: const Text('Are you sure you want to logout?'),
           actions: <Widget>[

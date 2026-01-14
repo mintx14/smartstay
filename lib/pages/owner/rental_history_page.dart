@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:my_app/config/api_config.dart';
 
 class RentalHistoryPage extends StatefulWidget {
-  const RentalHistoryPage({super.key});
+  final int userId;
+
+  const RentalHistoryPage({super.key, required this.userId});
 
   @override
   State<RentalHistoryPage> createState() => _RentalHistoryPageState();
@@ -16,7 +18,6 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
   List<RentalHistory> activeRentals = [];
   List<RentalHistory> pastRentals = [];
   bool isLoading = true;
-  int userId = 1;
 
   // App color theme
   static const Color primaryColor = Color(0xFF1E3A5F);
@@ -38,7 +39,7 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
   Future<void> _loadRentalHistory() async {
     try {
       final response = await http.get(
-        Uri.parse(ApiConfig.getRentalHistoryUrlWithUserId(userId)),
+        Uri.parse(ApiConfig.getRentalHistoryUrlWithUserId(widget.userId)),
       );
 
       if (response.statusCode == 200) {
@@ -68,7 +69,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.white, size: 20),
         ),
         title: const Text(
           'Rental History',
@@ -117,7 +119,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                         if (activeRentals.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: const Color(0xFF2EC4B6),
                               borderRadius: BorderRadius.circular(10),
@@ -145,7 +148,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                         if (pastRentals.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade400,
                               borderRadius: BorderRadius.circular(10),
@@ -178,7 +182,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                           width: 45,
                           height: 45,
                           child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(primaryColor),
                             strokeWidth: 3,
                           ),
                         ),
@@ -264,7 +269,7 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
 
   Widget _buildRentalCard(RentalHistory rental, bool isActive) {
     Color statusColor = _getStatusColor(rental.status);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -286,31 +291,73 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Property Image Placeholder
+              // Property Image
               Container(
                 height: 140,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      primaryColor.withOpacity(0.1),
-                      lightAccent.withOpacity(0.2),
-                    ],
-                  ),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
                 ),
                 child: Stack(
                   children: [
-                    Center(
-                      child: Icon(
-                        Icons.home_rounded,
-                        size: 50,
-                        color: primaryColor.withOpacity(0.3),
+                    // Property Image or Placeholder
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
                       ),
+                      child: rental.propertyImageUrl != null &&
+                              rental.propertyImageUrl!.isNotEmpty
+                          ? Image.network(
+                              ApiConfig.generateFullImageUrl(
+                                  rental.propertyImageUrl!),
+                              width: double.infinity,
+                              height: 140,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 140,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        primaryColor.withOpacity(0.1),
+                                        lightAccent.withOpacity(0.2),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.home_rounded,
+                                      size: 50,
+                                      color: primaryColor.withOpacity(0.3),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : Container(
+                              height: 140,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    primaryColor.withOpacity(0.1),
+                                    lightAccent.withOpacity(0.2),
+                                  ],
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.home_rounded,
+                                  size: 50,
+                                  color: primaryColor.withOpacity(0.3),
+                                ),
+                              ),
+                            ),
                     ),
                     // Status Badge
                     Positioned(
@@ -528,8 +575,18 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
@@ -616,28 +673,34 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                       ],
                     ),
                     const SizedBox(height: 28),
-                    
+
                     // Details Section
                     _buildDetailSection('Property Details', [
-                      _buildDetailRow(Icons.location_on_rounded, 'Address', rental.propertyAddress),
-                      _buildDetailRow(Icons.person_rounded, 'Landlord', rental.landlordName ?? 'Not specified'),
+                      _buildDetailRow(Icons.location_on_rounded, 'Address',
+                          rental.propertyAddress),
+                      _buildDetailRow(Icons.person_rounded, 'Tenant',
+                          rental.landlordName ?? 'Not specified'),
                     ]),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     _buildDetailSection('Rental Period', [
                       _buildDetailRow(
-                        Icons.calendar_today_rounded, 
+                        Icons.calendar_today_rounded,
                         'Duration',
                         '${_formatDate(rental.startDate)} - ${rental.endDate != null ? _formatDate(rental.endDate!) : 'Present'}',
                       ),
                     ]),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     _buildDetailSection('Payment Summary', [
-                      _buildDetailRow(Icons.attach_money_rounded, 'Monthly Rent', 'RM ${rental.monthlyRent.toStringAsFixed(2)}'),
-                      _buildDetailRow(Icons.payments_rounded, 'Total Paid', 'RM ${rental.totalPaid.toStringAsFixed(2)}'),
+                      _buildDetailRow(
+                          Icons.attach_money_rounded,
+                          'Monthly Rent',
+                          'RM ${rental.monthlyRent.toStringAsFixed(2)}'),
+                      _buildDetailRow(Icons.payments_rounded, 'Total Paid',
+                          'RM ${rental.totalPaid.toStringAsFixed(2)}'),
                     ]),
 
                     // Review section (for past rentals)
@@ -661,7 +724,9 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                                   ...List.generate(
                                     5,
                                     (i) => Icon(
-                                      i < rental.rating! ? Icons.star_rounded : Icons.star_border_rounded,
+                                      i < rental.rating!
+                                          ? Icons.star_rounded
+                                          : Icons.star_border_rounded,
                                       size: 26,
                                       color: Colors.amber.shade600,
                                     ),
@@ -723,12 +788,14 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                                     Navigator.pop(context);
                                     _showAddReviewDialog(rental);
                                   },
-                                  icon: const Icon(Icons.edit_rounded, size: 18),
+                                  icon:
+                                      const Icon(Icons.edit_rounded, size: 18),
                                   label: const Text('Write a Review'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: primaryColor,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
@@ -852,7 +919,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 10),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -901,7 +969,9 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Icon(
-                        i < rating ? Icons.star_rounded : Icons.star_border_rounded,
+                        i < rating
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
                         size: 40,
                         color: Colors.amber.shade500,
                       ),
@@ -959,7 +1029,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
                   child: ElevatedButton(
                     onPressed: rating > 0
                         ? () {
-                            _submitReview(rental, rating, reviewController.text);
+                            _submitReview(
+                                rental, rating, reviewController.text);
                             Navigator.pop(context);
                           }
                         : null,
@@ -988,13 +1059,14 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
     );
   }
 
-  Future<void> _submitReview(RentalHistory rental, int rating, String review) async {
+  Future<void> _submitReview(
+      RentalHistory rental, int rating, String review) async {
     try {
       final response = await http.post(
         Uri.parse(ApiConfig.rentalHistoryUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'user_id': userId,
+          'user_id': widget.userId,
           'rental_id': rental.id,
           'rating': rating,
           'review': review,
@@ -1015,7 +1087,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
               ),
               backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           );
           _loadRentalHistory();
@@ -1027,7 +1100,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
           content: Text('Error: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -1035,7 +1109,7 @@ class _RentalHistoryPageState extends State<RentalHistoryPage>
 }
 
 class RentalHistory {
-  final int id;
+  final dynamic id; // Can be int or string (e.g., 'booking_6')
   final String propertyName;
   final String propertyAddress;
   final String? propertyImageUrl;
@@ -1047,6 +1121,7 @@ class RentalHistory {
   final String status;
   final int? rating;
   final String? review;
+  final bool isFromBooking; // Flag to identify if from bookings table
 
   RentalHistory({
     required this.id,
@@ -1061,14 +1136,18 @@ class RentalHistory {
     required this.status,
     this.rating,
     this.review,
+    this.isFromBooking = false,
   });
 
   factory RentalHistory.fromJson(Map<String, dynamic> json) {
+    // Handle both 'property_image_url' and 'property_image' field names
+    String? imageUrl = json['property_image_url'] ?? json['property_image'];
+
     return RentalHistory(
-      id: json['id'],
-      propertyName: json['property_name'],
-      propertyAddress: json['property_address'],
-      propertyImageUrl: json['property_image_url'],
+      id: json['id'], // Keep as dynamic (int or string)
+      propertyName: json['property_name'] ?? 'Unknown Property',
+      propertyAddress: json['property_address'] ?? '',
+      propertyImageUrl: imageUrl,
       landlordName: json['landlord_name'],
       startDate: DateTime.parse(json['rental_start_date']),
       endDate: json['rental_end_date'] != null
@@ -1076,9 +1155,12 @@ class RentalHistory {
           : null,
       monthlyRent: double.parse(json['monthly_rent'].toString()),
       totalPaid: double.parse(json['total_paid'].toString()),
-      status: json['status'],
-      rating: json['rating'],
+      status: json['status'] ?? 'active',
+      rating: json['rating'] != null
+          ? int.tryParse(json['rating'].toString())
+          : null,
       review: json['review'],
+      isFromBooking: json['is_from_booking'] == true,
     );
   }
 }

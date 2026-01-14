@@ -1,12 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For haptic feedback
 import 'package:my_app/config/api_config.dart';
 import 'package:my_app/models/user_model.dart';
 import 'package:my_app/models/listing.dart';
 import 'package:my_app/services/property_service.dart';
 //import 'package:my_app/services/search_service.dart';
 import 'package:my_app/services/property_search_service.dart';
+import 'package:my_app/widgets/toast_notification.dart';
+import 'package:my_app/widgets/skeleton_loader.dart';
+import 'package:my_app/widgets/empty_state.dart';
+import 'package:my_app/widgets/error_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -15,6 +20,7 @@ import 'package:my_app/login.dart';
 import 'favorites_page.dart';
 import 'messages_screen.dart' as messaging;
 import 'profile_screen.dart';
+import 'package:my_app/widgets/liquid_nav_bar.dart';
 import 'property_details_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -151,6 +157,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _toggleFavorite(Listing listing) async {
     final listingId = listing.id.toString();
 
+    // Add haptic feedback
+    HapticFeedback.lightImpact();
+
     setState(() {
       if (_favoriteIds.contains(listingId)) {
         _favoriteIds.remove(listingId);
@@ -167,25 +176,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _heartAnimationController.reverse();
     });
 
-    // Show feedback
+    // Show toast notification
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _favoriteIds.contains(listingId)
-                ? 'Added to favorites'
-                : 'Removed from favorites',
-          ),
-          backgroundColor: _favoriteIds.contains(listingId)
-              ? const Color(0xFF48BB78)
-              : const Color(0xFFED8936),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      if (_favoriteIds.contains(listingId)) {
+        ToastNotification.success(context, 'Added to favorites');
+      } else {
+        ToastNotification.info(context, 'Removed from favorites');
+      }
     }
   }
 
@@ -1053,50 +1050,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildErrorDisplay() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red[50], // Flat solid color
-        border: Border.all(color: Colors.red[200]!),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.red[100],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.error_outline, color: Colors.red[700], size: 24),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Error Loading Properties',
-                  style: TextStyle(
-                    color: Colors.red[700],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _errorMessage ?? 'Unknown error occurred',
-                  style: TextStyle(
-                    color: Colors.red[600],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return ErrorStateWidget(
+      title: 'Error Loading Properties',
+      message: _errorMessage ?? 'Something went wrong. Please try again.',
+      onRetry: () {
+        setState(() {
+          _errorMessage = null;
+        });
+        _loadAllListings();
+      },
     );
   }
 
@@ -1237,176 +1199,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildNoResultsState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No properties found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'No properties available in ${_selectedLocation?.name}',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _clearSearch,
-            icon: const Icon(Icons.clear),
-            label: const Text('Clear Search'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A5F),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: Icons.search_off,
+      title: 'No Properties Found',
+      message:
+          'No properties available in ${_selectedLocation?.name ?? 'this area'}.\nTry adjusting your search or filters.',
+      actionLabel: 'Clear Search',
+      onAction: _clearSearch,
     );
   }
 
   Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 25,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A5F)),
-              strokeWidth: 3,
-            ),
-          ),
-          const SizedBox(height: 32),
-          const Text(
-            'Finding your perfect home...',
-            style: TextStyle(
-              fontSize: 18,
-              color: Color(0xFF4A5568),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Please wait while we load the best properties',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 20),
+      itemCount: 5,
+      itemBuilder: (context, index) => const PropertyCardSkeleton(),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF1E3A5F).withOpacity(0.1),
-                    const Color(0xFF3D5A80).withOpacity(0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Icon(
-                Icons.home_work_outlined,
-                size: 80,
-                color: Colors.grey[400],
-              ),
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'No Properties Found',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3748),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'We couldn\'t find any properties matching your search.\nTry adjusting your filters or search terms.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1E3A5F).withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: _loadAllListings,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Refresh'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A5F),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.home_work_outlined,
+      title: 'No Properties Found',
+      message:
+          'We couldn\'t find any properties matching your search.\nTry adjusting your filters or search terms.',
+      actionLabel: 'Refresh',
+      onAction: _loadAllListings,
     );
   }
 
@@ -1513,69 +1331,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             )
           : null,
       body: _getCurrentScreen(),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(25),
-            topRight: Radius.circular(25),
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: const Color(0xFF1E3A5F),
-            unselectedItemColor: Colors.grey[400],
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 12,
-            ),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.explore_outlined),
-                activeIcon: Icon(Icons.explore),
-                label: 'Explore',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.favorite_border),
-                activeIcon: Icon(Icons.favorite),
-                label: 'Favorites',
-              ),
-              // BottomNavigationBarItem(
-              //   icon: Icon(Icons.map_outlined),
-              //   activeIcon: Icon(Icons.map),
-              //   label: 'Map',
-              // ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.chat_bubble_outline),
-                activeIcon: Icon(Icons.chat_bubble),
-                label: 'Messages',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
-          ),
-        ),
+      bottomNavigationBar: LiquidNavBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }

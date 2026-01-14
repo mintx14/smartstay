@@ -13,13 +13,14 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -35,20 +36,20 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _checkLoginStatus();
-    
+
     // Initialize animations
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -58,7 +59,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
       ),
     );
-    
+
     _animationController.forward();
   }
 
@@ -150,7 +151,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               content: Text('Welcome back, ${user.fullName}!'),
               backgroundColor: primaryColor,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           );
 
@@ -161,7 +163,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               content: Text('Login failed: ${result['message']}'),
               backgroundColor: Colors.red.shade400,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           );
         }
@@ -175,7 +178,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             content: Text('An error occurred: $e'),
             backgroundColor: Colors.red.shade400,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
@@ -190,7 +194,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     return InputDecoration(
       hintText: hintText,
       hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-      prefixIcon: Icon(prefixIcon, color: primaryColor.withOpacity(0.7), size: 22),
+      prefixIcon:
+          Icon(prefixIcon, color: primaryColor.withOpacity(0.7), size: 22),
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.grey.shade50,
@@ -246,34 +251,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Logo Section
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.home_rounded,
-                            size: 50,
-                            color: primaryColor,
-                          ),
+                      Center(
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          height: 200,
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      
+                      const SizedBox(height: 0),
+
                       // Welcome Text
                       const Text(
                         'Welcome Back',
@@ -331,12 +317,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                               ),
                               const SizedBox(height: 28),
-                              
+
                               // Email Field
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
-                                style: const TextStyle(fontSize: 15, color: Colors.black87),
+                                style: const TextStyle(
+                                    fontSize: 15, color: Colors.black87),
                                 decoration: _buildInputDecoration(
                                   hintText: 'Email Address',
                                   prefixIcon: Icons.email_outlined,
@@ -357,7 +344,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: !_isPasswordVisible,
-                                style: const TextStyle(fontSize: 15, color: Colors.black87),
+                                style: const TextStyle(
+                                    fontSize: 15, color: Colors.black87),
                                 decoration: _buildInputDecoration(
                                   hintText: 'Password',
                                   prefixIcon: Icons.lock_outline_rounded,
@@ -371,7 +359,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     ),
                                     onPressed: () {
                                       setState(() {
-                                        _isPasswordVisible = !_isPasswordVisible;
+                                        _isPasswordVisible =
+                                            !_isPasswordVisible;
                                       });
                                     },
                                   ),
@@ -444,10 +433,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               Navigator.push(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) =>
+                                  pageBuilder: (context, animation,
+                                          secondaryAnimation) =>
                                       const RegisterPage(),
-                                  transitionsBuilder:
-                                      (context, animation, secondaryAnimation, child) {
+                                  transitionsBuilder: (context, animation,
+                                      secondaryAnimation, child) {
                                     return SlideTransition(
                                       position: Tween<Offset>(
                                         begin: const Offset(1.0, 0.0),
@@ -459,12 +449,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                       child: child,
                                     );
                                   },
-                                  transitionDuration: const Duration(milliseconds: 400),
+                                  transitionDuration:
+                                      const Duration(milliseconds: 400),
                                 ),
                               );
                             },
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
                             ),
                             child: const Text(
                               'Sign Up',

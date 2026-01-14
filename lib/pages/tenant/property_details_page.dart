@@ -496,28 +496,44 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                   // 2. Price Header Card
                   _buildPriceHeader(),
 
-                  // 3. Overview Section (Bed/Bath/Sqft)
+                  // 3. Overview Section (Bed/Bath/Sqft/Max Tenants)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
+                    child: Column(
                       children: [
-                        _buildOverviewItem(
-                            Icons.bed_rounded,
-                            '${widget.listing.bedrooms}',
-                            'Bedrooms',
-                            Colors.blueAccent),
-                        const SizedBox(width: 12),
-                        _buildOverviewItem(
-                            Icons.bathtub_outlined,
-                            '${widget.listing.bathrooms}',
-                            'Bathrooms',
-                            Colors.teal),
-                        const SizedBox(width: 12),
-                        _buildOverviewItem(
-                            Icons.square_foot_rounded,
-                            '${widget.listing.areaSqft}',
-                            'Sqft',
-                            Colors.orangeAccent),
+                        // First Row
+                        Row(
+                          children: [
+                            _buildOverviewItem(
+                                Icons.bed_rounded,
+                                '${widget.listing.bedrooms}',
+                                'Bedrooms',
+                                Colors.blueAccent),
+                            const SizedBox(width: 12),
+                            _buildOverviewItem(
+                                Icons.bathtub_outlined,
+                                '${widget.listing.bathrooms}',
+                                'Bathrooms',
+                                Colors.teal),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Second Row
+                        Row(
+                          children: [
+                            _buildOverviewItem(
+                                Icons.square_foot_rounded,
+                                '${widget.listing.areaSqft}',
+                                'Sqft',
+                                Colors.orangeAccent),
+                            const SizedBox(width: 12),
+                            _buildOverviewItem(
+                                Icons.people_rounded,
+                                '${widget.listing.maxTenants}',
+                                'Max Tenants',
+                                const Color(0xFF9B59B6)),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -566,11 +582,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                         icon: Icons.crop_square,
                       ),
                       const Divider(height: 1),
-                      // _buildDetailRow(
-                      //   'Furnishing',
-                      //   'Fully Furnished', // Example: You might want to add this to your model
-                      //   icon: Icons.chair_outlined,
-                      // ),
+                      _buildDetailRow(
+                        'Max Tenants',
+                        '${widget.listing.maxTenants} ${widget.listing.maxTenants > 1 ? "people" : "person"}',
+                        icon: Icons.people_rounded,
+                      ),
                     ],
                   ),
 
