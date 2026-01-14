@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 // ADD THIS IMPORT
-import 'package:my_app/config/api_config.dart'; // Adjust path as needed
+import 'package:smartstay/config/api_config.dart'; // Adjust path as needed
 
 class MessageService {
   // REMOVE THIS LINE - No longer needed

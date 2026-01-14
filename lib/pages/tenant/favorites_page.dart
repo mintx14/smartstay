@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For haptic feedback
-import 'package:my_app/config/api_config.dart';
-import 'package:my_app/models/user_model.dart';
-import 'package:my_app/models/listing.dart';
-import 'package:my_app/services/property_service.dart';
-import 'package:my_app/widgets/toast_notification.dart';
-import 'package:my_app/widgets/skeleton_loader.dart';
-import 'package:my_app/widgets/empty_state.dart';
-import 'package:my_app/widgets/error_widget.dart';
+import 'package:smartstay/config/api_config.dart';
+import 'package:smartstay/models/user_model.dart';
+import 'package:smartstay/models/listing.dart';
+import 'package:smartstay/services/property_service.dart';
+import 'package:smartstay/widgets/toast_notification.dart';
+import 'package:smartstay/widgets/skeleton_loader.dart';
+import 'package:smartstay/widgets/empty_state.dart';
+import 'package:smartstay/widgets/error_widget.dart';
 import 'package:intl/intl.dart';
 import 'property_details_page.dart';
 

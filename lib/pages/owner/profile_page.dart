@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:my_app/models/user_model.dart';
-import 'package:my_app/pages/owner/personal_info_page.dart';
-import 'package:my_app/pages/owner/rental_history_page.dart';
+import 'package:smartstay/models/user_model.dart';
+import 'package:smartstay/pages/owner/personal_info_page.dart';
+import 'package:smartstay/pages/owner/rental_history_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final User user;

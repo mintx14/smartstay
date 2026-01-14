@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/models/listing.dart';
+import 'package:smartstay/models/listing.dart';
 import 'package:intl/intl.dart';
-// import 'package:my_app/widgets/fullscreen_image_viewer.dart'; // Updated import path
+// import 'package:smartstay/widgets/fullscreen_image_viewer.dart'; // Updated import path
 import 'package:video_player/video_player.dart';
-import 'package:my_app/pages/owner/edit_listing_page.dart';
-import 'package:my_app/services/database_service.dart';
+import 'package:smartstay/pages/owner/edit_listing_page.dart';
+import 'package:smartstay/services/database_service.dart';
 import 'package:url_launcher/url_launcher.dart'; // Add this
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/models/listing.dart';
+import 'package:smartstay/models/listing.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:my_app/config/api_config.dart';
+import 'package:smartstay/config/api_config.dart';
 import 'booking_request_page.dart';
-import 'package:my_app/models/user_model.dart' as UserModel;
+import 'package:smartstay/models/user_model.dart' as UserModel;
 import 'package:video_player/video_player.dart';
-import 'package:my_app/pages/tenant/messages_screen.dart' as chat_screen;
+import 'package:smartstay/pages/tenant/messages_screen.dart' as chat_screen;
 
 class PropertyDetailsPage extends StatefulWidget {
   final Listing listing;

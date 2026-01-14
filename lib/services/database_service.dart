@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:my_app/models/listing.dart';
-import 'package:my_app/config/api_config.dart';
+import 'package:smartstay/models/listing.dart';
+import 'package:smartstay/config/api_config.dart';
 import 'package:http_parser/http_parser.dart';
 
 class DatabaseService {

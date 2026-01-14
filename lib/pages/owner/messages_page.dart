@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
-import 'package:my_app/config/api_config.dart'; // Adjust path as needed
+import 'package:smartstay/config/api_config.dart'; // Adjust path as needed
 
 class MessagesPage extends StatefulWidget {
   final int currentUserId; // Tenant's user ID

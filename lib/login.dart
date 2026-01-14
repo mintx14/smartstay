@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'register.dart';
-import 'package:my_app/services/api_service.dart';
-import 'package:my_app/models/user_model.dart';
-import 'package:my_app/pages/tenant/home_page.dart';
-import 'package:my_app/pages/owner/owner_page.dart';
+import 'package:smartstay/services/api_service.dart';
+import 'package:smartstay/models/user_model.dart';
+import 'package:smartstay/pages/tenant/home_page.dart';
+import 'package:smartstay/pages/owner/owner_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

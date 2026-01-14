@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/models/listing.dart';
-import 'package:my_app/pages/owner/add_listing_page.dart';
-import 'package:my_app/pages/owner/property_details_page.dart';
-import 'package:my_app/services/database_service.dart';
+import 'package:smartstay/models/listing.dart';
+import 'package:smartstay/pages/owner/add_listing_page.dart';
+import 'package:smartstay/pages/owner/property_details_page.dart';
+import 'package:smartstay/services/database_service.dart';
 import 'package:intl/intl.dart';
-import 'package:my_app/pages/owner/edit_listing_page.dart';
-// Remove duplicate import: import 'package:my_app/pages/owner/edit_listing_page.dart';
+import 'package:smartstay/pages/owner/edit_listing_page.dart';
+// Remove duplicate import: import 'package:smartstay/pages/owner/edit_listing_page.dart';
 
 class ListingsPage extends StatefulWidget {
   const ListingsPage({super.key});

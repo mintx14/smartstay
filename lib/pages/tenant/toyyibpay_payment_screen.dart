@@ -6,8 +6,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:my_app/config/api_config.dart';
-import 'package:my_app/models/booking_status.dart';
+import 'package:smartstay/config/api_config.dart';
+import 'package:smartstay/models/booking_status.dart';
 
 class ToyyibPayPaymentScreen extends StatefulWidget {
   final BookingStatus booking;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/models/user_model.dart';
+import 'package:smartstay/models/user_model.dart';
 
 class MapPage extends StatefulWidget {
   final User user;

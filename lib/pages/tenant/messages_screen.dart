@@ -7,18 +7,18 @@ import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
-import 'package:my_app/config/api_config.dart'; // Adjust path as needed
-import 'package:my_app/pages/tenant/toyyibpay_payment_screen.dart';
-import 'package:my_app/models/booking_status.dart';
-import 'package:my_app/widgets/toast_notification.dart';
-import 'package:my_app/widgets/skeleton_loader.dart';
-import 'package:my_app/widgets/empty_state.dart';
+import 'package:smartstay/config/api_config.dart'; // Adjust path as needed
+import 'package:smartstay/pages/tenant/toyyibpay_payment_screen.dart';
+import 'package:smartstay/models/booking_status.dart';
+import 'package:smartstay/widgets/toast_notification.dart';
+import 'package:smartstay/widgets/skeleton_loader.dart';
+import 'package:smartstay/widgets/empty_state.dart';
 
 // --- NEW IMPORTS ---
 // We import your REAL models and give them aliases to avoid naming conflicts
-import 'package:my_app/models/user_model.dart' as MainUser;
-import 'package:my_app/models/chat_message.dart' as MainChatMessage;
-import 'package:my_app/services/message_service.dart';
+import 'package:smartstay/models/user_model.dart' as MainUser;
+import 'package:smartstay/models/chat_message.dart' as MainChatMessage;
+import 'package:smartstay/services/message_service.dart';
 // --- END NEW IMPORTS ---
 
 class MessagesScreen extends StatefulWidget {

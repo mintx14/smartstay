@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:my_app/models/listing.dart';
-import 'package:my_app/models/user_model.dart';
+import 'package:smartstay/models/listing.dart';
+import 'package:smartstay/models/user_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:my_app/config/api_config.dart';
-//import 'package:my_app/pages/tenant/messages_screen.dart' as messages;
-import 'package:my_app/pages/tenant/home_page.dart';
+import 'package:smartstay/config/api_config.dart';
+//import 'package:smartstay/pages/tenant/messages_screen.dart' as messages;
+import 'package:smartstay/pages/tenant/home_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
@@ -17,7 +17,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:my_app/widgets/id_card_camera.dart';
+import 'package:smartstay/widgets/id_card_camera.dart';
 import 'package:image/image.dart' as img;
 
 class BookingRequestPage extends StatefulWidget {

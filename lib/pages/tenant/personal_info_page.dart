@@ -1,8 +1,8 @@
 // lib/pages/personal_info_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:my_app/models/user_model.dart';
-import 'package:my_app/services/user_service.dart';
+import 'package:smartstay/models/user_model.dart';
+import 'package:smartstay/services/user_service.dart';
 
 class PersonalInfoPage extends StatefulWidget {
   final User user;

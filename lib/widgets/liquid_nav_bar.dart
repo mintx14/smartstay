@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
-import 'package:my_app/widgets/badge_widget.dart' as custom;
+import 'package:smartstay/widgets/badge_widget.dart' as custom;
 
 class LiquidNavBar extends StatefulWidget {
   final int currentIndex;

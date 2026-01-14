@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:my_app/models/listing.dart';
-import 'package:my_app/services/database_service.dart';
+import 'package:smartstay/models/listing.dart';
+import 'package:smartstay/services/database_service.dart';
 import 'package:file_picker/file_picker.dart'; // 1. ADD IMPORT
 
 class EditListingPage extends StatefulWidget {

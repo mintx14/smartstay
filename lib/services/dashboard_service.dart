@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/dashboard_models.dart';
 // ADD THIS IMPORT
-import 'package:my_app/config/api_config.dart'; // Adjust path as needed
+import 'package:smartstay/config/api_config.dart'; // Adjust path as needed
 
 class DashboardService {
   // Helper method to safely convert user ID to int

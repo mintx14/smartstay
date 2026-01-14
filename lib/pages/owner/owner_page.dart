@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/models/user_model.dart';
-import 'package:my_app/models/dashboard_models.dart';
-import 'package:my_app/services/dashboard_service.dart';
+import 'package:smartstay/models/user_model.dart';
+import 'package:smartstay/models/dashboard_models.dart';
+import 'package:smartstay/services/dashboard_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'listings_page.dart';
 import 'reservations_page.dart';
